@@ -1,0 +1,74 @@
+setwd("~/Git/k-similar-neighbor/")
+source("R/alpha_adv_api_key.R")
+library(rvest)
+library(RCurl)
+library(jsonlite)
+
+# Pull List of S&P 500 companies and their stock tickers from wikipedia
+u <- "https://en.wikipedia.org/wiki/List_of_S&P_500_companies"
+doc <- read_html(u)
+tables <- html_nodes(doc, "table")
+dtfCos <- html_table(tables[1])[[1]]
+names(dtfCos) <- c("ticker", "security", "secfilings", "sector", "subindustry",
+                   "hq", "added_date", "cik", "some_year")
+
+
+# Use stock ticker to pull data from alpha advantage api
+hit_api <- function(tickers, outputsize=c("compact", "full"), saveJSON=FALSE)
+{
+  
+  outputsize <- match.arg(outputsize)
+  
+  save_file <- function(json, tick)
+  {
+    dir_ <- "/Users/lucasdowiak/Git/k-similar-neighbor/data/"
+    file_ <- paste0(tick, ".json")
+    write(minify(json), file=paste0(dir_, file_))
+  }
+  
+  baseuri <- "https://www.alphavantage.co/query"
+  parstring <- "function=TIME_SERIES_DAILY&symbol=%s&outputsize=%s&apikey=%s"
+  uri <- paste(baseuri, 
+               sprintf(parstring, tickers, outputsize, .APIKEY),
+               sep="?")
+  
+  if (length(uri) > 1) {
+    jsonText <- getURIAsynchronous(uri)
+  } else {
+    jsonText <- getForm(uri)
+  }
+  
+  if (saveJSON) {
+    mapply(save_file, jsonText, tickers)
+  }
+  
+  jsonText
+}
+
+for (tick in dtfCos$ticker) {
+  hit_api(tick, outputsize="full", saveJSON=TRUE)
+  Sys.sleep(15)
+}
+
+
+files <- dir("data/", pattern="*.json")
+
+# Check for failed data pulls and re-run data pull from AlphaAdvantage API
+for (f_ in files) {
+  dir_ <- paste0("data/", f_)
+  fs <- file.size(dir_)
+  if (fs < 300) {
+    print(sprintf("Re-running %s", dir_))
+    tick <- unlist(strsplit(f_, "\\."))[1]
+    hit_api(tick, outputsize="full", saveJSON=TRUE)
+    fs <- file.size(dir_)
+    if (fs > 300) {
+      print(sprintf("Cured %s. New file size %s", dir_, fs))
+    } else {
+      print(sprintf("Not Cured %s", dir_))
+    }
+    Sys.sleep(15)
+  }
+}
+
+

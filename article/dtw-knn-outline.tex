@@ -1,0 +1,96 @@
+\documentclass[12pt]{article}
+
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{mathbbol}
+\usepackage{threeparttable}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{pdflscape}
+%\usepackage{algorithmic}
+%\usepackage{algorithm}
+\usepackage{graphicx}
+
+\usepackage[parfill]{parskip}
+
+\graphicspath{{/Users/lucasdowiak/Git/k-similar-neighbor/article/images/}}
+
+\usepackage[
+  backend=biber,
+  url=true,
+  doi=true,
+  style=authoryear
+]{biblatex}
+
+\addbibresource{dtw_references.bib}
+\bibliography{dtw_references}
+
+\begin{document}
+
+\section{Introduction}
+
+Measuring the association of two assets is a fundamental concept in finance and economics. Portfolio managers have to think about it when they open or close a position. Regulators and large Bank Holding Companies (BHC) have to consider it when designing stress tests. The most common method of measuring association is the pearson correlation coefficient:
+
+\begin{equation} \label{eq:pearsons_rho}
+\rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x}) \sum_{t=1}^{T} (y_{t} - \bar{y})}}
+\end{equation}
+
+There's certainly nothing wrong about this statistic as the measure of association. I use it all the time. And even though the economic literature is clear-eyed about it's shortcomings (asymmetry, fat-tails) when trying to capture true return correlations between different financial time series, it's still the first measure researches estimate. When looking at the covariance expression on the numerator of equation (\ref{eq:pearsons_rho}), the correlation's assesment of association is based on the co-movements of the two variables for each time unit. This tight pairing is completely logical but it can also be restrictive. For instance, if I were to sample T draws from the following multivariate normal distribution:
+
+\begin{equation}
+    \boldsymbol{Z_{t}} \thicksim N(\boldsymbol{0}, \boldsymbol{\Sigma})
+\end{equation}
+
+with 
+
+\begin{equation}
+    \boldsymbol{\Sigma} = \begin{bmatrix}
+        \sigma_{1}^{2}             & \rho \sigma_{1}\sigma_{2} \\
+        \rho \sigma_{1} \sigma_{2} & \sigma_{2}^{2} 
+    \end{bmatrix}
+\end{equation}
+
+and I estimated the sample variance-covariance matrix, we should not be suprised to find that the sample statistics are close to the population values: $\sigma_{1} \approx \hat{s}_{1}$, $\sigma_{2} \approx \hat{s}_{2}$, and $\rho \approx \hat{\rho}$. Now, if we create a second multivariate sample $\boldsymbol{Z}^\prime = [\boldsymbol{Z}_{(-T), 1}, \, \boldsymbol{Z}_{(-1), 2}]$ where the first column is the all but the last value of $\boldsymbol{Z}_{1}$ while the second column is all but the first value of $\boldsymbol{Z}_{2}$. In this case we still have $\sigma^{\prime}_{1} \approx \hat{s}^{\prime}_{1}$ and $\sigma^{\prime}_{2} \approx \hat{s}^{\prime}_{2}$ but $\hat{\rho}^{\prime}$ will be a completely untrustworthy estimate of the original correlation because of the misalignment of the time index. This does not mean that the two variables are unreleated, they still are, but the relationship has been masked.
+
+For this paper, I want to investigate other approaches for measuring the association of different time series and compare the results of those approaches to the standard correlation approach used in finance. My main point of reference has been an article by \cite{ElsingAgon2012} that explores topics in time series data mining. The authors provide a detailed survey of time series representations, various distance metrics for measures of association, and proper ways to index time series data for efficient querying and information retreival. The discussions around various distance metrics are very interesting. \cite{ElsingAgon2012} categorize the these distance measures into four categories collected in figure \ref{fig:ds_dist_meas_table}. A very similary paper was published in Computational Economics very recently by \cite{FrancesWiemann2020}.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{ts_distance_measures}
+    \caption{List of distance measures included in \cite{ElsingAgon2012}}
+    \label{fig:ds_dist_meas_table}
+  \end{figure}
+
+Instead of focusing on exact synchronous co-movements, many of the distance measures discussed in the data mining literature focus on comparing the shape or global structure of two different series. Below are a handful of distance measures that are mentioned in figure \ref{fig:ds_dist_meas_table} that I believe can be easily implemented.
+
+\begin{itemize}
+    \item Pearson Correlation
+    \item $L_{p}$ norms
+    \item Dynamic Time Warping
+    \item Time Warp Edit distance
+    \item Autocorrelation
+    \item Kullback-Leibler
+\end{itemize}
+
+
+\section{Data}
+
+Studying the companies that make up the Standard and Poors 500 will provide a rich sample to look for comparisons. If we focus on the most recent two years, we can use the market upheaval surrounding Covid-19 as a natural experiment. Some industries have bounced back strongly (Technology) while other's have struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
+
+To benchmark the shape based measures, we will design a process to estimate a valid ARMA-GARCH model for each member of the S\&P 500. For model validation, I will follow the same process as in section 4.3 of \cite{DowiakTV-COP}, checking that each model is well specified and the model residuals are tested to see if they are independently and identically distributed.
+
+I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} to collect the stock ticker symbol for each company and the extra industry and sector information. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See figure \ref{fig:SandP_missing_map} for a visual summary. Analyzing the entire S\&P adds a level computational complexity to this project, but I think the extra scale helps give the article some heft considering the task at hand isn't very complicated.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{SandP_missing_map_pptx.png}
+    \caption{Missing map of the S\&P data set. The red horizontal bar demarks the minimum amount of history needed to be included in the study. X of the 505 tickers have enough history}
+    \label{fig:SandP_missing_map}
+\end{figure}
+
+
+
+\printbibliography
+
+\end{document}
