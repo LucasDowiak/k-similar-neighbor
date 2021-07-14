@@ -1,3 +1,16 @@
+library(dtw)
+
+# Similarity metrics -----------------------------------------------------------
+
+# For all similarity metrics:
+#
+#   nm - specific ticker to set as reference
+#
+#   columns - subset of columns in M to calculate the sim to against the reference
+#
+#   M - data.table of pre-processed stock price series as columnar series
+#
+#   ... 
 euclidean_dist <- function(nm, columns, M)
 {
   j <- M[[nm]]
@@ -6,7 +19,7 @@ euclidean_dist <- function(nm, columns, M)
 }
 
 
-covariance <- function(nm, columns, M, method="pearson")
+correlation <- function(nm, columns, M, method="pearson")
 {
   j <- M[[nm]]
   f_ <- function(x) cor(x, j, method=method)
@@ -28,16 +41,24 @@ dynamic_time_warp <- function(nm, columns, M, ...)
 }
 
 
+# Functions to run similarity metrics ------------------------------------------
+
+# Reads in a stored similarity matrix located at the supplied file path (or creates
+# a new matrix) and does some validation checks
+#
+#   file_ - path to stored similarity matrices
+#
+#   M - data.table of pre-processed stock price series as columnar series
+#
 check_ref_file <- function(file_, M)
 {
-  
   nms <- names(M)
   nc <- ncol(M)
   
   if (is(file_, "character")) {
     
     if (file.exists(file_)) {
-      
+      # Read in NxN similarity/distanct/correlation matrix
       OMG <- as.matrix(read.table(file_, header=TRUE, row.names = 1))
       cnms <- colnames(OMG)
       # row names must match column names
@@ -61,6 +82,19 @@ check_ref_file <- function(file_, M)
 }
 
 
+# Performs some validation checks between the supplied pairs and data.frame
+#
+#   pairs - named list of lists 
+#           e.g. $AAPL
+#                [1] "AAPL"
+#                [2] "AAPL" "ABC" "ABMD"
+#
+#                $ABC
+#                [1] "ABC"
+#                [2] "AAPL" "ABC" "ABMD"
+#
+#   M - data.table of pre-processed stock price series as columnar series
+#
 check_pairs <- function(pairs, M)
 {
   nms <- setdiff(names(M), "Date")
@@ -89,16 +123,32 @@ check_pairs <- function(pairs, M)
 }
 
 
+# Calculates the similarity of a batch of stock prices
+#
+#   M - data.table of pre-processed stock price series as columnar series
+#   
+#   pairs - named list of lists 
+#           e.g. $AAPL
+#                [1] "AAPL"
+#                [2] "AAPL" "ABC" "ABMD"
+#
+#                $ABC
+#                [1] "ABC"
+#                [2] "AAPL" "ABC" "ABMD"
+#
+#   metric - one of the defined similarity metrics
+#
+#   ref_file - optional path to stored similarity matrices
+#
+#   overwrite - should the recent calculations be written back to disk
+#
+#   ncores - how many processors should be tasked to the job
+#
+#   ... - options to pass to metric
+#
 calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite=FALSE,
                                  ncores=1L, ...)
 {
-  # M - data.table of data
-  # pairs - optional list of binary pairs to calculate the metric for
-  # metric - what similarity metric do we want
-  # ref_file - optional file to read in 
-  # overwrite - should the recent calculations be written back to disk
-  # ncores - how many processors should be tasks to the job
-  # ... - options to pass to metric
   if (is.null(ref_file) && overwrite)
     stop("If `overwrite` is TRUE then ref_file cannot be NULL")
   
@@ -119,6 +169,7 @@ calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite
     
   } else  if (ncores > 1L) {
     # do in parallel
+    require(parallel)
     nc <- detectCores()
     if (ncores > nc) {
       warning(sprintf("`ncores` set to max number of threads available on this machine: %d", nc))
@@ -128,7 +179,7 @@ calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite
     on.exit(stopCluster(cl))
     rho <- parLapply(cl=cl, pairs, grab_metric)
   } else {
-    stop("`rho` needs to be an integer greater than 1")
+    stop("`ncores` needs to be an integer greater than or equal to 1")
   }
   
   # fill in Matrix OMG with the results
@@ -144,3 +195,54 @@ calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite
   }
   return(list(rho, OMG))
 }
+
+
+# Function that leverages hierarchical clustring to  order similarity matrices
+# into blocks
+# References implementation of https://wil.yegelwel.com/cluster-correlation-matrix/
+# And this one https://www.datanovia.com/en/blog/clustering-using-correlation-as-distance-measures-in-r/
+#
+#   X - Similarity matrix
+#
+#   type - type of similarity
+#
+#   visualize - should the plot of the clustered similarity matrix be rendered
+#
+cluster_similarity <- function(X, type=c("cor", "dtw"), visualize=FALSE)
+{
+  require(ggplot2)
+  type <- match.arg(type)
+  if (type == "cor") {
+    midpoint <- 0
+    limit <- c(-1, 1)
+  } else if (type == "dtw") {
+    midpoint <- 100
+    limit <- c(0, 400)
+  }
+  pairwise_dist <- proxy::dist(X)
+  tree <- hclust(pairwise_dist)
+  
+  if (visualize) {
+    tt <- tree$labels[tree$order]
+    XX <- X[tree$order, tree$order]
+    XP <- as.data.table(XX)
+    XP[, ticks := factor(tt, levels=tt)]
+    XP <- melt(XP, id.vars="ticks", measure.vars=setdiff(names(X), "ticks"))
+    XP[, variable := factor(as.character(variable), levels=tt)]
+    XP <- XP[order(variable, ticks)]
+    
+    p <- ggplot(data=XP, aes(x=ticks, y=variable, fill=value)) +
+      geom_tile(color = "white") +
+      scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                           midpoint = midpoint, limit = limit, space = "Lab", 
+                           name="") +
+      theme_minimal() +
+      theme(axis.text=element_blank())
+    plot(p)
+  }
+  return(tree)
+}
+
+
+
+
