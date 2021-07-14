@@ -14,7 +14,9 @@ st_date <- "2019-02-01"
 ed_date <- "2020-02-14"
 
 # Pull the tickers from the json files
-tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
+#tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
+
+
 
 # Auto_fit each ticker, saving after each tick
 SPECS <- vector("list", length(tickers))
@@ -51,13 +53,46 @@ tst <- specs_to_resid_matrix(SPEC_PATH)
 
 # For the ticks that failed to produce a proper fit, check if forcing the ar component to 7 does the trick
 # ------------------------------------------------------------------------
-SPEC_PATH <- "data/marginal_specifications_20200201_20210215.json"
+SPEC_PATH <- "data/marginal_specifications_20190201_20200214.json"
 SPECIFICATIONS <- read_json(SPEC_PATH)
-SPECS <- SPECIFICATIONS[-length(SPECIFICATIONS)]
+st_date <- "2019-02-01"
+ed_date <- "2020-02-14"
 
 ticks <- good_vs_bad_symbols(SPEC_PATH)
+tickers <- ticks$bad_ticks
+# Auto_fit each ticker, saving after each tick
+SPECS <- vector("list", length(tickers))
+names(SPECS) <- tickers
+for (tick in tickers) {
+  print(sprintf("TICK %s at %s", tick, Sys.time()))
+  dtfU <- try(data.table(parse_json(tick)))
+  if (any(nrow(dtfU) == 0, length(dtfU) == 0, is(dtfU, "NULL"))) {
+    next
+  } else {
+    u <- dtfU[Date >= st_date & Date <= ed_date, diff(log(close))]
+    out <- try(auto_fit(u))
+    if (inherits(out, "try-error"))
+      out <- as.character(out)
+    SPECS[[tick]] <- out
+    #write_json(SPECS, path=SPEC_PATH)
+  }
+}
+
+xx <- sapply(SPECS, length)
+for (tick in names(xx[xx==1])) {
+  dtfU <- data.table(parse_json(tick))
+  print(dtfU[, range(Date)])
+}
+
+for (tick in SPECS)
+
+
+produce_rGARCHfit_from_spec("ABC", SPECIFICATIONS)
 
 out_spec <- run_seasonal_modifications(badticks, SPECS)
 
 write_json(out_spec, path="data/marginal_specifications_seasonal.json")
+
+tmp1 <- fread("data/std_resids_20190201_20200214.csv")
+tmp2 <- fread("data/std_resids_20200323_20210219.csv")
 

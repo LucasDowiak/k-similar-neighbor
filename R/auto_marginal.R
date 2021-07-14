@@ -2,7 +2,28 @@ library(jsonlite)
 library(data.table)
 library(rugarch)
 source("R/normality_tests.R")
-source("R/likelihood_models.R")
+
+# Model specification lists can be given either as:
+# i) a file path to the specification list stored as a json object
+# ii) an R list object
+# This function can handle both inputs and adds some sanity checks
+#
+#   spec_list - either a path to a specification file or the R list object itself
+#
+interpret_spec_list <- function(spec_list)
+{
+  if (is(spec_list, "character")) {
+    if (file.exists(spec_list)) {
+      spec_list <- read_json(spec_list)
+    } else {
+      stop(sprintf("JSON file doesn't exist for specification file located at [%s] ", spec_list))
+    }
+  }
+  if (!is(spec_list, "list")) {
+    stop("spec_list input is not a list.")
+  }
+  return(spec_list)
+}
 
 
 # Check to see which stocks had a successful auto_fit run
@@ -19,7 +40,7 @@ check_spec <- function(lst)
 # Given a path containing lists of model specifications, read in and return list containing 1) good and 2) bad vector of stock symbol
 good_vs_bad_symbols <- function(spec.path)
 {
-  specs <- read_json(spec.path)
+  specs <- interpret_spec_list(spec.path)
   nms <- names(specs)
   goodspecs <- sapply(specs, check_spec)
   return(list(good_ticks=nms[goodspecs], bad_ticks=nms[!goodspecs]))
@@ -133,12 +154,27 @@ auto_fit <- function(x)
       }
     }
   }
+
+  # Default choice that minimizes BIC across specifications
+  choice <- unlist(strsplit(names(which.min(lik[, "bic"])), "_"))
+  
+  # Prefer to consider only specifications that pass
   pass <- any(lik[, "pass_marginal"] == 1)
+  
   if (pass) {
-    lik2 <- lik[which(lik[, "pass_marginal"] > 0), ]
-    choice <- unlist(strsplit(names(which.min(lik2[, "bic"])), "_"))
-  } else {
-    choice <- c("Error", "Error", "Error", "Error")
+    
+    num_pass_specs <- sum(lik[, "pass_marginal"])
+    
+    if (num_pass_specs == 1) {
+      
+      choice <- unlist(strsplit(names(which(lik[, "pass_marginal"] == 1)), "_"))
+      
+    } else if (num_pass_specs > 1) {
+      
+      lik2 <- lik[which(lik[, "pass_marginal"] > 0), ]
+      choice <- unlist(strsplit(names(which.min(lik2[, "bic"])), "_"))
+      
+    }
   }
   return(list(ar=arma[1], ma=arma[2], arch=choice[4], garch=choice[3],
               garchmod=choice[2], distr=choice[1], pass=pass, lik=lik))
@@ -181,7 +217,7 @@ produce_rGARCHfit_s <- function(tick, start_date, end_date)
 
 
 # batch process produce_rGarchfit_s over all failed marginal models
-run_seasonal_modification(ticks, specification)
+run_seasonal_modification <- function(badticks, specification, st_date, ed_date)
 {
   bool <- c()
   names(bool) <- badticks
@@ -267,7 +303,6 @@ produce_rGARCHfit_from_spec <- function(tick, specs, start_date, end_date)
 # stocks standardized residuals
 specs_to_resid_matrix <- function(path, write_to_file=TRUE)
 {
-  
   # grab dates from the path
   m <- gregexpr("[0-9]{8}", path)
   dts <- unlist(regmatches(path, m))
@@ -319,3 +354,31 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
   }
   return(out)
 }
+
+
+# Takes a specification file and produces a table with ARIMA-GARCH specifications
+#
+#   spec_list - either a list of ARIMA-GARCH specifications or a file path to the json object
+#
+#   dtfSpec <- summarize_specs("data/marginal_specifications_20200323_20210219.json")
+#
+summarize_specs <- function(spec_list)
+{
+  spec_list <- interpret_spec_list(spec_list)
+
+  # Extract model specifications
+  grab_specifications <- function(x) {
+    if (length(x) < 2) {
+      out <- data.table(ar=NA, ma=NA, arch=NA, garch=NA, garchmod=NA, distr=NA, pass=NA)
+    } else {
+      out <- data.table(ar=x$ar, ma=x$ma, arch=x$arch, garch=x$garch,
+                        garchmod=x$garchmod, distr=x$distr, pass=x$pass)
+      out <- out[, lapply(.SD, unlist)]
+    }
+    return(out)
+  }
+  dtfSpec <- rbindlist(lapply(spec_list, grab_specifications))
+  dtfSpec[, ticker := names(spec_list)]
+  return(dtfSpec)
+}
+
