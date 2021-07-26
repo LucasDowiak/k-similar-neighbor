@@ -11,6 +11,7 @@
 %\usepackage{algorithmic}
 %\usepackage{algorithm}
 \usepackage{graphicx}
+\usepackage{subfigure}
 
 \usepackage[parfill]{parskip}
 
@@ -20,7 +21,8 @@
   backend=biber,
   url=true,
   doi=true,
-  style=authoryear
+  style=authoryear,
+  citestyle=numeric
 ]{biblatex}
 
 \addbibresource{dtw_references.bib}
@@ -30,7 +32,7 @@
 
 \section{Introduction}
 
-Measuring the association of two assets is a fundamental concept in finance and economics. Portfolio managers have to think about it when they open or close a position. Regulators and large Bank Holding Companies (BHC) have to consider it when designing stress tests. The most common method of measuring association is the pearson correlation coefficient:
+Measuring the association of two assets is a fundamental concept in finance and economics. Portfolio managers have to think about it when they open or close a position \cite{Markowitz1952PortfolioSelection,sharpe1963simplified}. Regulators and large Bank Holding Companies (BHC) have to consider it when designing stress tests. The most common method of measuring association is the pearson correlation coefficient:
 
 \begin{equation} \label{eq:pearsons_rho}
 \rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x}) \sum_{t=1}^{T} (y_{t} - \bar{y})}}
@@ -74,13 +76,84 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 \end{itemize}
 
 
+\section{Relevant Literature}
+
+
 \section{Data}
 
 Studying the companies that make up the Standard and Poors 500 will provide a rich sample to look for comparisons. If we focus on the most recent two years, we can use the market upheaval surrounding Covid-19 as a natural experiment. Some industries have bounced back strongly (Technology) while other's have struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
 
-To benchmark the shape based measures, we will design a process to estimate a valid ARMA-GARCH model for each member of the S\&P 500. For model validation, I will follow the same process as in section 4.3 of \cite{DowiakTV-COP}, checking that each model is well specified and the model residuals are tested to see if they are independently and identically distributed.
+
+
+To benchmark the shape based measures, we will design a procedure to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standarized residuals for each stock.
+
+
+The challenge for automating this process is two-fold. First, the size of the full model space is quite large. To list out all the dimensions that must be considered:
+
+\begin{itemize}
+    \item ARIMA model
+        \begin{itemize}
+            \item Constant term
+            \item Autoregressive order (p)
+            \item Moving average order (q)
+            \item Order of integration (d)
+            \item Seasonal autoregressive order (P)
+            \item Seasonal moving average order (Q)
+            \item Order of seasonal integration (D)
+        \end{itemize}
+        \item GARCH model
+        \begin{itemize}
+            \item Constant term
+            \item Autoregressive order (m)
+            \item Moving average order (k)
+            \item GARCH specification
+            \item Error distribution
+        \end{itemize}
+
+\end{itemize}
+
+A full grid-search over these dimensions is time-consuming and impractical. To reduce the number of specifications in the model set, the fitting procedure takes a divide and conquer approach. The specification for the ARMA process is found first, independently of the GARCH process. Once the AR(p) and MA(q) orders have been found, this specification is set and remains the same as different volatility models are estimated. Note that the parameter estimates are not held constant, just the specification. For each new GARCH fit, the ARMA parameters are all re-estimated. A more detail set of instructions on the modeling strategy can be found in section \ref{sec:ModelEstimationStrategy} of the appendix.
+
+The second challenge 
+
+
+
+
+For model validation, I will follow the same process as in section 4.3 of \cite{DowiakTV-COP}, checking that each model is well specified and the model residuals are tested to see if they are independently and identically distributed
+
+
 
 I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} to collect the stock ticker symbol for each company and the extra industry and sector information. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See figure \ref{fig:SandP_missing_map} for a visual summary. Analyzing the entire S\&P adds a level computational complexity to this project, but I think the extra scale helps give the article some heft considering the task at hand isn't very complicated.
+
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
+    \caption{}
+    \label{fig:Ng1}
+
+    \bigbreak
+
+    \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
+    \caption{}
+    \label{fig:Ng2}
+\end{figure}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{dtw_20190201_20200214.png}
+    \caption{}
+    \label{fig:Ng3}
+
+    \bigbreak
+
+    \includegraphics[width=1\linewidth]{dtw_20200323_20210219.png}
+    \caption{}
+    \label{fig:Ng4}
+\end{figure}
+
 
 \begin{figure}[!ht]
     \centering
@@ -90,6 +163,68 @@ I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\
 \end{figure}
 
 
+\section{Appendix}
+
+\subsection{Model Estimation Strategy} \label{sec:ModelEstimationStrategy}
+
+This section summarizes the modeling strategy for the historical spot series in the S\&P 500. Define the return as $X_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)$, where $S_{t}$ is the spot price at time $t$. The conditional mean for the log-returns can be formulated by the following ARMA process:
+
+\begin{equation} \label{eqn:marginalModel}
+    X_{t} = \mu(X_{t-1}, \phi, \theta) =  \phi_{0} + \sum_{i=1}^{p} \phi_{i} X_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j}
+\end{equation}
+
+where $\varepsilon_{t}$ is an innovation term that satisfies $E[\varepsilon_{t}] = 0$ and $E[\varepsilon^{2}_{t}] = \sigma^{2}_{t}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH flavors. 
+
+\begin{equation}
+    \sigma^{2}_{t} = \emph{C}(\varepsilon^{2}_{t-1}, \, \sigma^{2}_{t-1}) + \sum_{j=1}^{m} \alpha_{j} \emph{A}(\varepsilon^{2}_{t - j}) + \sum_{i=1}^{k} \beta_{i} \emph{B}(\sigma^{2}_{t - i})
+\end{equation}
+
+The conditional mean and variance are used to center and scale the innovation terms.
+
+\begin{equation}
+    z_{t}(\phi, \theta, \alpha, \beta) = \frac{X_{t} - \mu(X_{t-1}, \phi, \theta)}{\sigma(X_{t-1}, \alpha, \beta)}
+\end{equation}
+
+By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta \equiv [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution \emph{g}, and any necessary shape parameters \emph{$\lambda$} of the distribution:
+
+\begin{equation}
+    f(X_{t} | \mu_{t}, \sigma^{2}_{t}, \lambda, \Delta) = \frac{1}{\sigma_{t}} g(z_{t} | \lambda, \Delta)
+\end{equation}
+
+With the stage set, the sequence of steps used to automate the model estimation process for the S\&P log-returns can be summarized as a three-step process:
+
+\begin{enumerate}
+    \item \textbf{Estimate the conditional mean independently of the variance model.} Leverging the work done by Hyndman and Khandakar \cite{HyndmanKhandakar2008AutoArima}, a step-wise strategy is used to search through the ARIMA model space for the best fit, which is evaluated via the Akaike information criterion (AIC). This is accomplished by using the Forecast package \cite{RForecast} running in the R statistical language \cite{RBase}. The following decisions are made: 
+    
+    \begin{itemize}
+        \item Always include a constant term
+        \item Set the integration terms to zero: $d = D = 0$
+    \end{itemize}
+    
+    \item \textbf{Estimate a set of GARCH models.} Set the conditional mean model to the specification found in step 1. Then iterate over every GARCH specification in the model set, estimating the combined ARMA and GARCH parameters at the same time. This is accomplished by using the rugarch package \cite{Rugarch}. The model set that is searched through consideres the following dimensions:
+    
+    \begin{itemize}
+        \item Always include a constant term
+        \item ARCH specification: m = \{1, 2\}
+        \item GARCH specification: k = \{1, 2\}
+        \item Distributions: \emph{g} = \{Normal, Student-t, Skewed Student-t\}
+        \item Model Specification: \emph{A}, \emph{B}, \emph{C} = \{Standard GARCH \cite{Bollerslev1986Garch}, gjr-GARCH \cite{GJR1993Garch}, Component GARCH \cite{EngleLee1993APA} \}
+    \end{itemize}
+    
+    With these dimensions, a total of 36 volatility models are available to choose from.
+
+    \item \textbf{Select the best model specification.} The fitted residuals of a model are checked against a battery of tests to confirm the independent and identical assumptions as well as to veryify the correct distribution has been selected. The tests used include: (a) Moment LM tests to ckeck for any remaining auto-correlation in the first four moments, (b) Kolmogorov-Smirnov test to check the residuals against the choosen theoretical distribution, (c) Hong and Li \cite{HongLi2005} non-parametric density test jointly for i.i.d and correct distribution specification, (d) Shapiro-Wilks \cite{ShapiroWilks1965} test for normality, and (e) Jarque-Bera \cite{JarqueBera1980} test for joint normality for skew and kurtosis.
+    
+    With these tests in hand, finding the best model reduces to selecting the GARCH specification that:
+    
+    \begin{itemize}
+        \item Passes all five distributional tests
+        \item Minimizes the Bayesian information criterion (BIC)
+    \end{itemize}
+
+    If no specifications pass all five tests, then the one that minimizes the BIC across the 36 candidate models is selected.
+
+\end{enumerate}
 
 \printbibliography
 
