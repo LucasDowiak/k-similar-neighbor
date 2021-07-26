@@ -29,9 +29,9 @@ interpret_spec_list <- function(spec_list)
 # Check to see which stocks had a successful auto_fit run
 check_spec <- function(lst)
 {
-  norun <- length(lst) == 1
+  norun <- length(lst) <= 1
   if (norun)
-    return(FALSE)
+    return(NA)
   else
     return(isTRUE(unlist(lst$pass)))
 }
@@ -43,7 +43,9 @@ good_vs_bad_symbols <- function(spec.path)
   specs <- interpret_spec_list(spec.path)
   nms <- names(specs)
   goodspecs <- sapply(specs, check_spec)
-  return(list(good_ticks=nms[goodspecs], bad_ticks=nms[!goodspecs]))
+  return(list(pass_ticks=nms[goodspecs & !is.na(goodspecs)],
+              fail_ticks=nms[!goodspecs & !is.na(goodspecs)],
+              not_run_ticks=nms[is.na(goodspecs)]))
 }
 
 
@@ -217,6 +219,7 @@ produce_rGARCHfit_s <- function(tick, start_date, end_date)
 
 
 # batch process produce_rGarchfit_s over all failed marginal models
+# Not a actually working
 run_seasonal_modification <- function(badticks, specification, st_date, ed_date)
 {
   bool <- c()
@@ -281,21 +284,18 @@ produce_rGARCHfit_from_spec <- function(tick, specs, start_date, end_date)
     stop("Tick does not exist in `specs`")
   }
   
-  if (unlist(spec[["pass"]])) {
-    # Fit garch model and return along with dates of analysis
-    spec_mod <- ugarchspec(
-      variance.model = list(model = unlist(spec$garchmod),
-                            garchOrder = c(as.integer(unlist(spec$arch)), as.integer(unlist(spec$garch)))),
-      mean.model = list(armaOrder = c(unlist(spec$ar), unlist(spec$ma)), include.mean = TRUE),
-      distribution.model = unlist(spec$distr)
-    )
-    fit_ <- try(ugarchfit(spec=spec_mod, data=x))
-    return(list(fit=fit_, dates=dtfU[2:.N, Date]))
-  } else {
-    print(sprintf("No ARIMA-GARCH specification passed for %s", tick))
-    return(list(fit=NULL, dates=dtfU[2:.N, Date]))
+  if (!unlist(spec[["pass"]])) {
+    warning(sprintf("Tick %s did not pass all the marginal tests", tick))
   }
-  
+  # Fit garch model and return along with dates of analysis
+  spec_mod <- ugarchspec(
+    variance.model = list(model = unlist(spec$garchmod),
+                          garchOrder = c(as.integer(unlist(spec$arch)), as.integer(unlist(spec$garch)))),
+    mean.model = list(armaOrder = c(unlist(spec$ar), unlist(spec$ma)), include.mean = TRUE),
+    distribution.model = unlist(spec$distr)
+  )
+  fit_ <- try(ugarchfit(spec=spec_mod, data=x))
+  return(list(fit=fit_, dates=dtfU[2:.N, Date]))
 }
 
 
@@ -310,14 +310,18 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
   
   spec_list <- read_json(path)
   good_vs_bad <- good_vs_bad_symbols(path)
-  warning(sprintf("Removed the following tickers with bad specifications: [%s]",
-                  paste0(good_vs_bad[['bad_ticks']], collapse=", ")))
-  for (bad_tick in good_vs_bad[['bad_ticks']])
-    spec_list[[bad_tick]] <- NULL
+  warning(sprintf("The following ticks fialed to pass the full marginal tests: [%s] \n\n",
+                  paste0(good_vs_bad[['fail_ticks']], collapse=", ")))
+  warning(sprintf("Removed the following tickers that failed to run model fitting: [%s] \n\n",
+                  paste0(good_vs_bad[['not_run_ticks']], collapse=", ")))
+  for (rm_tick in good_vs_bad[['not_run_ticks']])
+    spec_list[[rm_tick]] <- NULL
   
   tickers <- names(spec_list)
-  resid_list <- vector("list", length(spec_list))
-  names(resid_list) <- tickers
+  resid_list_U <- vector("list", length(spec_list))
+  resid_list_Z <- vector("list", length(spec_list))
+  names(resid_list_U) <- tickers
+  names(resid_list_Z) <- tickers
   
   for (tick in tickers) {
     ii <- which(tick == tickers)
@@ -327,9 +331,13 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
     # If successfully fit from the specification
     if (inherits(obj$fit, "uGARCHfit")) {
       
-      z <- PIT(obj$fit)
-      tmp <- data.table(Date=obj[['dates']], Z=z)
-      setnames(tmp, "Z", tick)
+      # Standardized residuals
+      tmpZ <- data.table(Date=obj[['dates']], residuals(obj$fit, standardize=TRUE))
+      names(tmpZ) <- c("Date", tick)
+      
+      # Uniform marginals by way of the probability intergral transform
+      tmpU <- data.table(Date=obj[['dates']], PIT(obj$fit))
+      names(tmpU) <- c("Date", tick)
       
     } else {
       
@@ -340,19 +348,28 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
         
       } else {
         # No ARIMA-GARCH specification passed all the marginal tests
-        tmp <- data.table(Date=obj[['dates']], Z=NA_real_)
-        setnames(tmp, "Z", tick) 
+        tmpU <- data.table(Date=obj[['dates']], NA_real_)
+        setnames(tmpU, "V1", tick)
+        
+        tmpZ <- data.table(Date=obj[['dates']], NA_real_)
+        setnames(tmpZ, "V1", tick) 
       }
     }
-    resid_list[[tick]] <- tmp
+    resid_list_U[[tick]] <- tmpU
+    resid_list_Z[[tick]] <- tmpZ
   }
-  out <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list)
+  outZ <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_Z)
+  outU <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_U)
   if (write_to_file) {
+    file_name <- paste0("uni_marg_", dts[1], "_", dts[2], ".csv")
+    file_path <- paste0("~/Git/k-similar-neighbor/data/", file_name)
+    fwrite(outU, file=file_path)
+    
     file_name <- paste0("std_resids_", dts[1], "_", dts[2], ".csv")
     file_path <- paste0("~/Git/k-similar-neighbor/data/", file_name)
-    fwrite(out, file=file_path)
+    fwrite(outZ, file=file_path)
   }
-  return(out)
+  return(list(uni_marg=outU, std_resids=outZ))
 }
 
 

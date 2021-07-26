@@ -197,18 +197,20 @@ calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite
 }
 
 
-# Function that leverages hierarchical clustring to  order similarity matrices
+# Function that leverages hierarchical clustering to  order similarity matrices
 # into blocks
 # References implementation of https://wil.yegelwel.com/cluster-correlation-matrix/
 # And this one https://www.datanovia.com/en/blog/clustering-using-correlation-as-distance-measures-in-r/
 #
-#   X - Similarity matrix
+#   X - Similarity/distance/correlation matrix
 #
 #   type - type of similarity
 #
 #   visualize - should the plot of the clustered similarity matrix be rendered
 #
-cluster_similarity <- function(X, type=c("cor", "dtw"), visualize=FALSE)
+#   ... - additional variables to pass to stats::hclust
+#
+cluster_similarity <- function(X, type=c("cor", "dtw"), visualize=FALSE, ...)
 {
   require(ggplot2)
   type <- match.arg(type)
@@ -219,8 +221,9 @@ cluster_similarity <- function(X, type=c("cor", "dtw"), visualize=FALSE)
     midpoint <- 100
     limit <- c(0, 400)
   }
+  # Default euclidean distance
   pairwise_dist <- proxy::dist(X)
-  tree <- hclust(pairwise_dist)
+  tree <- hclust(pairwise_dist, ...)
   
   if (visualize) {
     tt <- tree$labels[tree$order]
