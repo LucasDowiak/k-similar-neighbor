@@ -23,22 +23,34 @@ lm_test <- function(x, moment=1, nlags=10)
 }
 
 
+# Extract distribution parameters from uGARCHfit object
+extract_ugarchfit_dist <- function(obj)
+{
+  if (!inherits(obj, "uGARCHfit"))
+    stop("Object must inherit from uGARCHfit model from rugarch package.")
+  dentype <- obj@model$modeldesc$distribution
+  shape <- coef(obj)[grep("shape", names(coef(obj)))]
+  skew <- coef(obj)[grep("skew", names(coef(obj)))]
+  lambda <- coef(obj)[grep("lambda", names(coef(obj)))]
+  return(list(dentype=dentype, shape=shape, skew=skew, lambda=lambda))
+}
+
+
 # provide the PIT of the residuals to the marginal models
 # obj here is the @fit slot from a uGARCHfit object from the rugarch package
 PIT <- function(obj)
 {
-  if (!inherits(obj, "uGARCHfit"))
-    stop("Object must inherit from uGARCHfit model from rugarch package.")
+  dpars <- extract_ugarchfit_dist(obj)
   z <- residuals(obj, standardize=TRUE)
-  shape <- coef(obj)[grep("shape", names(coef(obj)))]
-  skew <- coef(obj)[grep("skew", names(coef(obj)))]
-  lambda <- coef(obj)[grep("lambda", names(coef(obj)))]
-  dentype <- obj@model$modeldesc$distribution
-  pdist(distribution=dentype, as.numeric(z), lambda=lambda, skew=skew, shape=shape)
+  pdist(distribution=dpars$dentype,
+        as.numeric(z),
+        lambda=dpars$lambda,
+        skew=dpars$skew,
+        shape=dpars$shape)
 }
 
 
-# given a model produced by rugarch, pull out the residuals, perform PIT and run
+# Given a model produced by rugarch, pull out the residuals, perform PIT and run
 # gauntlet of marginal tests
 marginal_tests <- function(obj, lm_lags=10, print=TRUE, plot=TRUE, hl_cl=0.95)
 {
@@ -46,13 +58,10 @@ marginal_tests <- function(obj, lm_lags=10, print=TRUE, plot=TRUE, hl_cl=0.95)
   if (isuGARCHfit) {
     # Standardized residuals force mean = 0 and var = 1
     # u <- PIT(obj)
+    dpars <- extract_ugarchfit_dist(obj)
     z <- residuals(obj, standardize=TRUE) # standardize refers to condition variance
-    shape <- coef(obj)[grep("shape", names(coef(obj)))]
-    skew <- coef(obj)[grep("skew", names(coef(obj)))]
-    lambda <- coef(obj)[grep("lambda", names(coef(obj)))]
-    dentype <- obj@model$modeldesc$distribution
-    u <- pdist(distribution=dentype, z, lambda=lambda, skew=skew, shape=shape)
-    d <- ddist(distribution=dentype, z, lambda=lambda, skew=skew, shape=shape)
+    u <- pdist(distribution=dpars$dentype, z, lambda=dpars$lambda, skew=dpars$skew, shape=dpars$shape)
+    d <- ddist(distribution=dpars$dentype, z, lambda=dpars$lambda, skew=dpars$skew, shape=dpars$shape)
   } else {
     u <- obj
   }
@@ -63,12 +72,10 @@ marginal_tests <- function(obj, lm_lags=10, print=TRUE, plot=TRUE, hl_cl=0.95)
     if (isuGARCHfit) {
       par(mfrow = c(1,2))
       support <- seq(-max(z), max(z), length=500)
-      plot(density(z), col = "darkgoldenrod2", lwd = 2, xlab="", ylab="",
-           main="Empirical vs theoretical")
-      lines(support, ddist(dentype, support, lambda=lambda, skew=skew, shape=shape))
+      plot(density(z), col = "darkgoldenrod2", lwd = 2, xlab="", ylab="", main="Empirical vs theoretical")
+      lines(support, ddist(dpars$dentype, support, lambda=dpars$lambda, skew=dpars$skew, shape=dpars$shape))
     }
-    hist(u, freq = FALSE, breaks = 10, col = "darkgoldenrod2", xlab="", ylab="",
-         main="Hist of PIT")
+    hist(u, freq = FALSE, breaks = 10, col = "darkgoldenrod2", xlab="", ylab="", main="Hist of PIT")
     abline(h=1, col="red", lty=2)
   }
 
@@ -115,6 +122,7 @@ marginal_tests <- function(obj, lm_lags=10, print=TRUE, plot=TRUE, hl_cl=0.95)
 }
 
 
+# Verify if all the distributional checks have been passed
 verify_marginal_test <- function(mt, alpha=0.1)
 {
   lmtests <- all(mt$lm_tests > alpha)

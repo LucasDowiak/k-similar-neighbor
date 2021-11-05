@@ -29,7 +29,7 @@ correlation <- function(nm, columns, M, method="pearson")
 }
 
 
-dynamic_time_warp <- function(nm, columns, M, ...) 
+dynamic_time_warp <- function(nm, columns, M) 
 {
   j <-  matrix(M[[nm]], ncol=nrow(M))
   #f_ <- function(x) dtw::dtw(x, j, ...)$distance
@@ -37,6 +37,23 @@ dynamic_time_warp <- function(nm, columns, M, ...)
   #out <- matrix(out, ncol=length(out), dim=list(nm, columns))
   out <- t(proxy::dist(t(as.matrix(M[, columns, with=FALSE])), j, method="DTW"))
   row.names(out) <- nm
+  return(out)
+}
+
+
+kullback_leibler <- function(nm, columns, M, epsilon=0.00001)
+{
+  p <- M[[nm]]
+  # Censor very small values; trying to get all non-negative results for the KL dist
+  p[p < epsilon] <- epsilon
+  
+  # KL divergence
+  KL <- function(q) {
+    q[q < epsilon] <- epsilon
+    return(sum(p * ( log(p) - log(q) ) ))
+  }
+  out <- apply(as.matrix(M[, columns, with=FALSE]), 2, FUN=KL)
+  out <- matrix(out, ncol=length(out), dim=list(nm, columns))
   return(out)
 }
 
@@ -125,7 +142,7 @@ check_pairs <- function(pairs, M)
 
 # Calculates the similarity of a batch of stock prices
 #
-#   M - data.table of pre-processed stock price series as columnar series
+#   M - data.table of pre-processed stock price series
 #   
 #   pairs - named list of lists 
 #           e.g. $AAPL
@@ -163,6 +180,8 @@ calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite
   
   # lapply over the pairs
   grab_metric <- function(x) metric(x[[1L]], x[[2L]], M=M, ...)
+  
+  # Multi-core options
   if (ncores == 1L) {
     # do in sequence
     rho <- lapply(pairs, grab_metric)
@@ -197,7 +216,7 @@ calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite
 }
 
 
-# Function that leverages hierarchical clustering to  order similarity matrices
+# Function that leverages hierarchical clustering to order similarity matrices
 # into blocks
 # References implementation of https://wil.yegelwel.com/cluster-correlation-matrix/
 # And this one https://www.datanovia.com/en/blog/clustering-using-correlation-as-distance-measures-in-r/
