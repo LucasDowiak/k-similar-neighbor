@@ -15,6 +15,10 @@
 
 \usepackage[parfill]{parskip}
 
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
 \graphicspath{{/Users/lucasdowiak/Git/k-similar-neighbor/article/images/}}
 
 \usepackage[
@@ -32,13 +36,13 @@
 
 \section{Introduction}
 
-Measuring the association of two assets is a fundamental concept in finance and economics. Portfolio managers have to think about it when they open or close a position \cite{Markowitz1952PortfolioSelection,sharpe1963simplified}. Regulators and large Bank Holding Companies (BHC) have to consider it when designing stress tests. The most common method of measuring association is the pearson correlation coefficient:
+Measuring the association of two assets is a fundamental concept in finance and economics. Portfolio managers have to think about it when they open or close a position \cite{Markowitz1952PortfolioSelection,sharpe1963simplified}. Regulators and large Bank Holding Companies (BHC) have to consider it when designing stress tests. The most common method of measuring association is the Pearson correlation coefficient:
 
 \begin{equation} \label{eq:pearsons_rho}
 \rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x}) \sum_{t=1}^{T} (y_{t} - \bar{y})}}
 \end{equation}
 
-There's certainly nothing wrong about this statistic as the measure of association. I use it all the time. And even though the economic literature is clear-eyed about it's shortcomings (asymmetry, fat-tails) when trying to capture true return correlations between different financial time series, it's still the first measure researches estimate. When looking at the covariance expression on the numerator of equation (\ref{eq:pearsons_rho}), the correlation's assesment of association is based on the co-movements of the two variables for each time unit. This tight pairing is completely logical but it can also be restrictive. For instance, if I were to sample T draws from the following multivariate normal distribution:
+There's certainly nothing wrong about this statistic as the measure of association. I use it all the time. And even though the economic literature is clear-eyed about it's shortcomings (asymmetry, fat-tails) when trying to capture true return correlations between different financial time series, it's still the first measure researches estimate. When looking at the covariance expression on the numerator of equation (\ref{eq:pearsons_rho}), the correlation's assessment of association is based on the co-movements of the two variables for each time unit. This tight pairing is completely logical but it can also be restrictive. For instance, if I were to sample T draws from the following multivariate normal distribution:
 
 \begin{equation}
     \boldsymbol{Z_{t}} \thicksim N(\boldsymbol{0}, \boldsymbol{\Sigma})
@@ -53,13 +57,13 @@ with
     \end{bmatrix}
 \end{equation}
 
-and I estimated the sample variance-covariance matrix, we should not be suprised to find that the sample statistics are close to the population values: $\sigma_{1} \approx \hat{s}_{1}$, $\sigma_{2} \approx \hat{s}_{2}$, and $\rho \approx \hat{\rho}$. Now, if we create a second multivariate sample $\boldsymbol{Z}^\prime = [\boldsymbol{Z}_{(-T), 1}, \, \boldsymbol{Z}_{(-1), 2}]$ where the first column is the all but the last value of $\boldsymbol{Z}_{1}$ while the second column is all but the first value of $\boldsymbol{Z}_{2}$. In this case we still have $\sigma^{\prime}_{1} \approx \hat{s}^{\prime}_{1}$ and $\sigma^{\prime}_{2} \approx \hat{s}^{\prime}_{2}$ but $\hat{\rho}^{\prime}$ will be a completely untrustworthy estimate of the original correlation because of the misalignment of the time index. This does not mean that the two variables are unreleated, they still are, but the relationship has been masked.
+and I estimated the sample variance-covariance matrix, we should not be surprised to find that the sample statistics are close to the population values: $\sigma_{1} \approx \hat{s}_{1}$, $\sigma_{2} \approx \hat{s}_{2}$, and $\rho \approx \hat{\rho}$. Now, if we create a second multivariate sample $\boldsymbol{Z}^\prime = [\boldsymbol{Z}_{(-T), 1}, \, \boldsymbol{Z}_{(-1), 2}]$ where the first column is the all but the last value of $\boldsymbol{Z}_{1}$ while the second column is all but the first value of $\boldsymbol{Z}_{2}$. In this case we still have $\sigma^{\prime}_{1} \approx \hat{s}^{\prime}_{1}$ and $\sigma^{\prime}_{2} \approx \hat{s}^{\prime}_{2}$ but $\hat{\rho}^{\prime}$ will be a completely untrustworthy estimate of the original correlation because of the misalignment of the time index. This does not mean that the two variables are unrelated, they still are, but the relationship has been masked.
 
-For this paper, I want to investigate other approaches for measuring the association of different time series and compare the results of those approaches to the standard correlation approach used in finance. My main point of reference has been an article by \cite{ElsingAgon2012} that explores topics in time series data mining. The authors provide a detailed survey of time series representations, various distance metrics for measures of association, and proper ways to index time series data for efficient querying and information retreival. The discussions around various distance metrics are very interesting. \cite{ElsingAgon2012} categorize the these distance measures into four categories collected in figure \ref{fig:ds_dist_meas_table}. A very similary paper was published in Computational Economics very recently by \cite{FrancesWiemann2020}.
+For this paper, I want to investigate other approaches for measuring the association of different time series and compare the results of those approaches to the standard correlation approach used in finance. My main point of reference has been an article by \cite{ElsingAgon2012} that explores topics in time series data mining. The authors provide a detailed survey of time series representations, various distance metrics for measures of association, and proper ways to index time series data for efficient querying and information retrieval. The discussions around various distance metrics are very interesting. \cite{ElsingAgon2012} categorize the these distance measures into four categories collected in figure \ref{fig:ds_dist_meas_table}. A very similar paper was published in Computational Economics very recently by \cite{FrancesWiemann2020}.
 
 \begin{figure}[!ht]
     \centering
-    \includegraphics[width=\textwidth]{ts_distance_measures}
+    \includegraphics[width=\textwidth]{ts_distance_method.png}
     \caption{List of distance measures included in \cite{ElsingAgon2012}}
     \label{fig:ds_dist_meas_table}
   \end{figure}
@@ -81,11 +85,11 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \section{Data}
 
-Studying the companies that make up the Standard and Poors 500 will provide a rich sample to look for comparisons. If we focus on the most recent two years, we can use the market upheaval surrounding Covid-19 as a natural experiment. Some industries have bounced back strongly (Technology) while other's have struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
+Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. If we focus on the most recent two years, we can use the market upheaval surrounding Covid-19 as a natural experiment. Some industries have bounced back strongly (Technology) while other's have struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
 
 
 
-To benchmark the shape based measures, we will design a procedure to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standarized residuals for each stock.
+To benchmark the shape based measures, we will design a procedure to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standardized residuals for each stock.
 
 
 The challenge for automating this process is two-fold. First, the size of the full model space is quite large. To list out all the dimensions that must be considered:
@@ -123,7 +127,7 @@ For model validation, I will follow the same process as in section 4.3 of \cite{
 
 
 
-I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} to collect the stock ticker symbol for each company and the extra industry and sector information. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See figure \ref{fig:SandP_missing_map} for a visual summary. Analyzing the entire S\&P adds a level computational complexity to this project, but I think the extra scale helps give the article some heft considering the task at hand isn't very complicated.
+I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} to collect the stock ticker symbol for each company and the extra industry and sector information. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary. Analyzing the entire S\&P adds a level computational complexity to this project, but I think the extra scale helps give the article some heft considering the task at hand isn't very complicated.
 
 
 
@@ -170,10 +174,14 @@ I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\
 This section summarizes the modeling strategy for the historical spot series in the S\&P 500. Define the return as $X_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)$, where $S_{t}$ is the spot price at time $t$. The conditional mean for the log-returns can be formulated by the following ARMA process:
 
 \begin{equation} \label{eqn:marginalModel}
-    X_{t} = \mu(X_{t-1}, \phi, \theta) =  \phi_{0} + \sum_{i=1}^{p} \phi_{i} X_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j}
+    X_{t} = \mu_{t} + \epsilon_{t}
 \end{equation}
 
-where $\varepsilon_{t}$ is an innovation term that satisfies $E[\varepsilon_{t}] = 0$ and $E[\varepsilon^{2}_{t}] = \sigma^{2}_{t}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH flavors. 
+\begin{equation}
+    \mu_{t} = \mu(\phi, \theta, X_{\{s:\, s < t\}}, \varepsilon_{\{s:\, s < t\}}) = \phi_{0} + \sum_{i=1}^{p} \phi_{i} X_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j} + \varepsilon_{t}
+\end{equation}
+
+where $\varepsilon_{s}$ is an innovation term that satisfies $E[\varepsilon_{s}] = 0$ and $E[\varepsilon^{2}_{s}] = \sigma^{2}_{s}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH flavors.
 
 \begin{equation}
     \sigma^{2}_{t} = \emph{C}(\varepsilon^{2}_{t-1}, \, \sigma^{2}_{t-1}) + \sum_{j=1}^{m} \alpha_{j} \emph{A}(\varepsilon^{2}_{t - j}) + \sum_{i=1}^{k} \beta_{i} \emph{B}(\sigma^{2}_{t - i})
@@ -185,7 +193,7 @@ The conditional mean and variance are used to center and scale the innovation te
     z_{t}(\phi, \theta, \alpha, \beta) = \frac{X_{t} - \mu(X_{t-1}, \phi, \theta)}{\sigma(X_{t-1}, \alpha, \beta)}
 \end{equation}
 
-By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta \equiv [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution \emph{g}, and any necessary shape parameters \emph{$\lambda$} of the distribution:
+By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta = [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution $g$, and any necessary shape parameters $\lambda$ of the distribution:
 
 \begin{equation}
     f(X_{t} | \mu_{t}, \sigma^{2}_{t}, \lambda, \Delta) = \frac{1}{\sigma_{t}} g(z_{t} | \lambda, \Delta)
@@ -194,26 +202,26 @@ By collecting all the parameters in the conditional mean and variance equations 
 With the stage set, the sequence of steps used to automate the model estimation process for the S\&P log-returns can be summarized as a three-step process:
 
 \begin{enumerate}
-    \item \textbf{Estimate the conditional mean independently of the variance model.} Leverging the work done by Hyndman and Khandakar \cite{HyndmanKhandakar2008AutoArima}, a step-wise strategy is used to search through the ARIMA model space for the best fit, which is evaluated via the Akaike information criterion (AIC). This is accomplished by using the Forecast package \cite{RForecast} running in the R statistical language \cite{RBase}. The following decisions are made: 
+    \item \textbf{Estimate the conditional mean independently of the variance model.} Leveraging the work done by Hyndman and Khandakar \cite{HyndmanKhandakar2008AutoArima}, a step-wise strategy is used to search through the ARIMA model space for the best fit, which is evaluated via the Akaike information criterion (AIC). This is accomplished by using the Forecast package \cite{RForecast} running in the R statistical language \cite{RBase}. The following decisions are made: 
     
     \begin{itemize}
         \item Always include a constant term
         \item Set the integration terms to zero: $d = D = 0$
     \end{itemize}
     
-    \item \textbf{Estimate a set of GARCH models.} Set the conditional mean model to the specification found in step 1. Then iterate over every GARCH specification in the model set, estimating the combined ARMA and GARCH parameters at the same time. This is accomplished by using the rugarch package \cite{Rugarch}. The model set that is searched through consideres the following dimensions:
+    \item \textbf{Estimate a set of GARCH models.} Set the conditional mean model to the specification found in step 1. Then iterate over every GARCH specification in the model set, re-estimating the combined ARMA and GARCH parameters at the same time for each conditional variance model. This is accomplished by using the rugarch package \cite{Rugarch}. The model set that is searched through considers the following dimensions:
     
     \begin{itemize}
         \item Always include a constant term
         \item ARCH specification: m = \{1, 2\}
         \item GARCH specification: k = \{1, 2\}
-        \item Distributions: \emph{g} = \{Normal, Student-t, Skewed Student-t\}
+        \item Distributions: \emph{g} = \{Normal, Student-t, Skewed Student-t \cite{FernandezSteel1998}\}
         \item Model Specification: \emph{A}, \emph{B}, \emph{C} = \{Standard GARCH \cite{Bollerslev1986Garch}, gjr-GARCH \cite{GJR1993Garch}, Component GARCH \cite{EngleLee1993APA} \}
     \end{itemize}
     
     With these dimensions, a total of 36 volatility models are available to choose from.
 
-    \item \textbf{Select the best model specification.} The fitted residuals of a model are checked against a battery of tests to confirm the independent and identical assumptions as well as to veryify the correct distribution has been selected. The tests used include: (a) Moment LM tests to ckeck for any remaining auto-correlation in the first four moments, (b) Kolmogorov-Smirnov test to check the residuals against the choosen theoretical distribution, (c) Hong and Li \cite{HongLi2005} non-parametric density test jointly for i.i.d and correct distribution specification, (d) Shapiro-Wilks \cite{ShapiroWilks1965} test for normality, and (e) Jarque-Bera \cite{JarqueBera1980} test for joint normality for skew and kurtosis.
+    \item \textbf{Select the best model specification.} The fitted residuals of a model are checked against a battery of tests to confirm the independent and identical assumptions as well as to verify the correct distribution has been selected. The tests used include: (a) Moment LM tests to check for any remaining auto-correlation in the first four moments, (b) Kolmogorov-Smirnov test to check the residuals against the chosen theoretical distribution, (c) Hong and Li \cite{HongLi2005} non-parametric density test jointly for i.i.d and correct distribution specification, (d) Shapiro-Wilks \cite{ShapiroWilks1965} test for normality, and (e) Jarque-Bera \cite{JarqueBera1980} test for joint normality for skew and kurtosis.
     
     With these tests in hand, finding the best model reduces to selecting the GARCH specification that:
     
@@ -225,6 +233,52 @@ With the stage set, the sequence of steps used to automate the model estimation 
     If no specifications pass all five tests, then the one that minimizes the BIC across the 36 candidate models is selected.
 
 \end{enumerate}
+
+
+\subsection{Dynamic Time Warping} \label{sec:DTW}
+
+Dynamic time warping (DTW) is an alternative method for comparing the association between two discrete time series. It differs from Pearson's correlation measure in that the time indices between the two series at moments of comparison are not constrained to equal each other -- like in Equation (\ref{eq:pearsons_rho}). For the following definitions, this article borrows heavily from \cite{Mueller2007}. Suppose there are two time series: $X_{t}$ for $t \in [1:T]$ and $Y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the indices of one series to the other: $p_{l} = (t_{l}, \, w(t_{l})) \in [1:T] \times [1:S]$ for $l \in [1:L]$. All warping paths are subject to the following two conditions:
+
+\begin{itemize}
+    \item Boundary Condition: w(t=1) = 1 and w(t=T) = S
+    \item Step-Size Condition: $\rho_{l} - \rho_{l - 1} \in \{ (1, 0), (0, 1), (1, 1) \} $
+\end{itemize}
+
+The boundary condition ensures that the first and last indices of the two series are mapped to each other while the step-size condition ensures a non-decreasing monotonicity in the indices of \emph{both} series. With these conditions, DTW is designed to compare the global shape of the two series rather than the co-movements of the values that share the same time index. The aim of the DTW algorithm is to find the optimal warping path $\boldsymbol{p}^{*}$ that minimizes the sum of local cost function, c.
+
+
+\begin{equation}
+    \boldsymbol{p}^{*} = \argmin_{w} \sum^{L}_{l} c(X_{t_{l}},\, Y_{w(t_{l})})
+\end{equation}
+    
+
+\subsection{Kullback-Leibler Divergence} \label{sec:KL-Divergence}
+
+The model estimation strategy this article takes is ultimately a maximum likelihood one. As discussed in Section \ref{sec:ModelEstimationStrategy}, every ARIMA-GARCH model is estimated by searching for the parameter vector $\Delta$ that maximizes the log likelihood for a given distribution $g$ with parameter vector $\lambda$
+
+\begin{equation}
+    \hat{\Delta},\, \hat{\lambda} = \argmax_{\Delta,\, \lambda} L(\Delta, \lambda | X)
+\end{equation}
+
+with 
+
+\begin{equation}
+    L(\Delta, \lambda | Z) = \prod_{t=1}^{T} g(z_{t}| \lambda)
+\end{equation}
+
+The Kullback-Leibler divergence is a measure of relative entropy between two distributions and provides another avenue to measure the association between two time series. For two stock tickers (XOM vs AMD), the distributions estimated from the data are used to compare the relative entropy between the log returns of those stocks (e.g: $g_{xom}(\cdot|\hat{\lambda})$). For continuous distributions $Q$,$P$ the relative entropy between the reference distribution $Q$ and a second distribution $P$ is written:
+
+\begin{equation}
+    D_{KL}(P || Q) = \int_{-\infty}^{\infty} p(x) \log \left( \frac{p(x)}{q(x)} \right) dx
+\end{equation}
+
+where $p$ and $q$ are the density functions of $P$ and $Q$, respectively (e.g: $p = \frac{d}{dx}P(x)$). Since KL divergence is not symmetric, this article will use a symmetrized version of KL divergence
+
+\begin{equation}
+    SKL(P, Q) = \frac{1}{2} \left( D_{KL}(P || Q) + D_{KL}(Q || P) \right)
+\end{equation}
+
+Unlike DTW, there is a strong connection in this article between the correlation measure and the symmetric KL divergence. The distributions used here are derived during the estimation of the ARIMA-GARCH model and due to that, the SKL measure is subject to the same dangers of model misspecification as the correlation analysis. 
 
 \printbibliography
 
