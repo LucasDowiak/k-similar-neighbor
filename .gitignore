@@ -1,0 +1,15 @@
+data/*
+
+article/*
+!article/*.pdf
+!article/*.bbl
+!article/*.tex
+
+lit/
+
+R/alpha_adv_api_key.R
+R/SandP_data.R
+
+.DS_store
+.Rapp.history
+.Rhistory
