@@ -37,7 +37,8 @@ check_spec <- function(lst)
 }
 
 
-# Given a path containing lists of model specifications, read in and return list containing 1) good and 2) bad vector of stock symbol
+# Given a path containing lists of model specifications, read in and return list
+# containing 1) good and 2) bad vector of stock symbol
 good_vs_bad_symbols <- function(spec.path)
 {
   specs <- interpret_spec_list(spec.path)
@@ -310,7 +311,7 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
   
   spec_list <- read_json(path)
   good_vs_bad <- good_vs_bad_symbols(path)
-  warning(sprintf("The following ticks fialed to pass the full marginal tests: [%s] \n\n",
+  warning(sprintf("The following ticks failed to pass the full marginal tests: [%s] \n\n",
                   paste0(good_vs_bad[['fail_ticks']], collapse=", ")))
   warning(sprintf("Removed the following tickers that failed to run model fitting: [%s] \n\n",
                   paste0(good_vs_bad[['not_run_ticks']], collapse=", ")))
@@ -318,10 +319,11 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
     spec_list[[rm_tick]] <- NULL
   
   tickers <- names(spec_list)
-  resid_list_U <- vector("list", length(spec_list))
-  resid_list_Z <- vector("list", length(spec_list))
+  resid_list_U <- resid_list_Z <- model_struct <- model_params <- vector("list", length(spec_list))
   names(resid_list_U) <- tickers
   names(resid_list_Z) <- tickers
+  names(model_params) <- tickers
+  names(model_struct) <- tickers
   
   for (tick in tickers) {
     ii <- which(tick == tickers)
@@ -331,45 +333,98 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
     # If successfully fit from the specification
     if (inherits(obj$fit, "uGARCHfit")) {
       
+      nms <- c("Date", tick)
+      
       # Standardized residuals
       tmpZ <- data.table(Date=obj[['dates']], residuals(obj$fit, standardize=TRUE))
-      names(tmpZ) <- c("Date", tick)
+      setnames(tmpZ, names(tmpZ), nms)
       
-      # Uniform marginals by way of the probability intergral transform
+      # Uniform marginals by way of the probability integral transform
       tmpU <- data.table(Date=obj[['dates']], PIT(obj$fit))
-      names(tmpU) <- c("Date", tick)
+      setnames(tmpU, names(tmpU), nms)
+      
+      # Model Summary
+      tmpP <- as.data.table(c(as.list(obj$fit@model$modelinc), obj$fit@model$modeldesc))
+      tmpP[, tick := tick]
+      
+      # ARIMA-GARCH Coefficients
+      tmpM <- as.data.table(t(coef(obj$fit)))
+      tmpM[, tick := tick]
       
     } else {
+      # No ARIMA-GARCH was fitted
       
-      if (is.null(obj[['dates']])) {
-        # No data for this tick
-        print(sprintf("Removing %s from output list.", tick))
-        resid_list[[tick]] <- NULL
-        
-      } else {
-        # No ARIMA-GARCH specification passed all the marginal tests
-        tmpU <- data.table(Date=obj[['dates']], NA_real_)
-        setnames(tmpU, "V1", tick)
-        
-        tmpZ <- data.table(Date=obj[['dates']], NA_real_)
-        setnames(tmpZ, "V1", tick) 
-      }
+      tmpU <- data.table(Date=obj[['dates']], NA_real_)
+      setnames(tmpU, "V1", tick)
+      
+      tmpZ <- data.table(Date=obj[['dates']], NA_real_)
+      setnames(tmpZ, "V1", tick)
+      
+      tmpP <- null_model_spec()[['modelsum']]
+      
+      tmpM <- null_model_spec()[['modelcoef']]
+
     }
     resid_list_U[[tick]] <- tmpU
     resid_list_Z[[tick]] <- tmpZ
+    model_struct[[tick]] <- tmpP
+    model_params[[tick]] <- tmpM
   }
   outZ <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_Z)
   outU <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_U)
+  outP <- rbindlist(model_struct, use.names=TRUE, fill=TRUE)
+  outM <- rbindlist(model_params, use.names=TRUE, fill=TRUE)
+  
   if (write_to_file) {
+    base_path <- "~/Git/k-similar-neighbor/data/"
+    
     file_name <- paste0("uni_marg_", dts[1], "_", dts[2], ".csv")
-    file_path <- paste0("~/Git/k-similar-neighbor/data/", file_name)
-    fwrite(outU, file=file_path)
+    fwrite(outU, file=paste0(base_path, file_name))
     
     file_name <- paste0("std_resids_", dts[1], "_", dts[2], ".csv")
-    file_path <- paste0("~/Git/k-similar-neighbor/data/", file_name)
-    fwrite(outZ, file=file_path)
+    fwrite(outZ, file=paste0(base_path, file_name))
+    
+    file_name <- paste0("model_summary_", dts[1], "_", dts[2], ".csv")
+    fwrite(outP, file=paste0(base_path, file_name))
+    
+    file_name <- paste0("model_coef_", dts[1], "_", dts[2], ".csv")
+    fwrite(outM, file=paste0(base_path, file_name))
   }
-  return(list(uni_marg=outU, std_resids=outZ))
+  return(list(uni_marg=outU, std_resids=outZ, model_summary=outP, model_coef=outM))
+}
+
+
+# Define NULL model spec summary and NULL model coefficients
+null_model_spec <- function()
+{
+  modelsum <-  data.table(
+     mu=          NA_integer_,
+     ar=          NA_integer_,
+     arfima=      NA_integer_,
+     archm=       NA_integer_,
+     mxreg=       NA_integer_,
+     omega=       NA_integer_,
+     alpha=       NA_integer_,
+     beta=        NA_integer_,
+     gamma=       NA_integer_,
+     eta1=        NA_integer_,
+     eta2=        NA_integer_,
+     delta=       NA_integer_,
+     lambda=      NA_integer_,
+     vxreg=       NA_integer_,
+     skew=        NA_integer_,
+     shape=       NA_integer_,
+     ghlambda=    NA_integer_,
+     xi=          NA_integer_,
+     aux=         NA_integer_,
+     aux=         NA_integer_,
+     aux=         NA_integer_,
+     distribution=NA_character_,
+     distno=      NA_integer_,
+     vmodel=      NA_character_
+  )
+  modelcoef <- data.table(mu=NA_real_, omega=NA_real_, shape=NA_real_)
+  return(list(modelsummary=modelsum, modelcoef=modelcoef))
 }
 
 
@@ -379,7 +434,7 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
 #
 #   dtfSpec <- summarize_specs("data/marginal_specifications_20200323_20210219.json")
 #
-summarize_specs <- function(spec_list)
+summarize_model_spec <- function(spec_list)
 {
   spec_list <- interpret_spec_list(spec_list)
 

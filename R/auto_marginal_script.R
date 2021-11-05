@@ -9,12 +9,14 @@ source("R/auto_marginal.R")
 # ------------------------------------------------------------------------
 # code snippet to run through all S&P 500 stock tickers
 
-SPEC_PATH <- "data/marginal_specifications_20190201_20200214.json"
-st_date <- "2019-02-01"
-ed_date <- "2020-02-14"
+SPEC_PATH <- "data/marginal_specifications_20200323_20210219.json"
+st_date <- "2020-03-23"
+ed_date <- "2021-02-19"
 
+tmp <- good_vs_bad_symbols(SPECS)
+tickers <- c(tmp$fail_ticks, tmp$not_run_ticks)
 # Pull the tickers from the json files
-#tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
+tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
 
 
 
@@ -24,7 +26,7 @@ names(SPECS) <- tickers
 for (tick in tickers) {
   print(sprintf("TICK %s at %s", tick, Sys.time()))
   dtfU <- try(data.table(parse_json(tick)))
-  if (nrow(dtfU) == 0) {
+  if (any(nrow(dtfU) == 0, length(dtfU) == 0, is(dtfU, "NULL"))) {
     next
   } else {
     u <- dtfU[Date >= st_date & Date <= ed_date, diff(log(close))]
@@ -35,7 +37,6 @@ for (tick in tickers) {
     write_json(SPECS, path=SPEC_PATH)
   }
 }
-
 
 # Create single data.frame with stock tick values as columns
 lst_dtfs <- lapply(tickers, parse_json)
@@ -84,10 +85,8 @@ for (tick in names(xx[xx==1])) {
   print(dtfU[, range(Date)])
 }
 
-for (tick in SPECS)
 
-
-produce_rGARCHfit_from_spec("ABC", SPECIFICATIONS)
+produce_rGARCHfit_from_spec("ABC", SPECIFICATIONS, )
 
 out_spec <- run_seasonal_modifications(badticks, SPECS)
 
