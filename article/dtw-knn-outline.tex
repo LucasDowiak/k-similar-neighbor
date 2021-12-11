@@ -85,12 +85,15 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \section{Data}
 
-Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. If we focus on the most recent two years, we can use the market upheaval surrounding Covid-19 as a natural experiment. Some industries have bounced back strongly (Technology) while other's have struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
+Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. If we focus on the most recent two years, we can use the market upheaval surrounding Covid-19 as a natural experiment. Some industries have bounced back strongly (Technology) while other's have struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered. Three different time periods will be considered. The financial crisis of 2007-2008, the moderate period between 2014 and 2016, and the dramatic shut down economy of 2019-2020.
 
+I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} to collect the stock ticker symbol for each company and the extra industry and sector information. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary. Analyzing the entire S\&P adds a level computational complexity to this project, but I think the extra scale helps give the article some heft considering the task at hand isn't very complicated.
 
+\section{Distance Measures}
+
+\subsection{ARMA-GARCH Benchmark}
 
 To benchmark the shape based measures, we will design a procedure to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standardized residuals for each stock.
-
 
 The challenge for automating this process is two-fold. First, the size of the full model space is quite large. To list out all the dimensions that must be considered:
 
@@ -127,7 +130,7 @@ For model validation, I will follow the same process as in section 4.3 of \cite{
 
 
 
-I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} to collect the stock ticker symbol for each company and the extra industry and sector information. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary. Analyzing the entire S\&P adds a level computational complexity to this project, but I think the extra scale helps give the article some heft considering the task at hand isn't very complicated.
+
 
 
 
