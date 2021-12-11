@@ -6,12 +6,13 @@ source("R/plots.R")
 
 # Standard scale the flows
 dtf <- fread("data/SandP_tick_history.csv")
-dtfTmp <- dtf[Date >= "2019-02-01" & Date <= "2021-02-19"]
+dtfTmp <- dtf[Date >= "2019-01-01" & Date <= "2020-12-31"]
 pt1 <- dtfTmp[, .(Date)]
+base_date <- pt1[, which(Date == "2020-01-02")]
 pt2 <- Filter(is.numeric, dtfTmp)
-pt2 <- pt2[, lapply(.SD, function(x) x / x[1])]
+pt2 <- pt2[, lapply(.SD, function(x) x / x[base_date])]
 dtfTmp2 <- cbind(pt1, pt2)
-fwrite(dtfTmp2, "data/std_scale_20190201_20210219.csv")
+fwrite(dtfTmp2, "data/std_scale_2019_2020.csv")
 
 
 
@@ -26,28 +27,30 @@ tmp <- specs_to_resid_matrix("data/marginal_specifications_20200323_20210219.jso
 # Pearson Correlation ---------------------------------------------------------- 
 
 # Data Spec
-dtf <- fread("data/std_resids_20200323_20210219.csv")
+dtf <- fread("data/std_resids_19_20.csv")
 dtf1920 <- Filter(function(x) sum(is.na(x)) == 0, dtf)
 tickers <- setdiff(names(dtf1920), "Date")
 
-file_nm <- "data/association_results/corr_20200323_20210219"
+file_nm <- "data/association_results/corr_2019_2020"
 res <- matrix(NA_real_, nrow=length(tickers), ncol=length(tickers),
               dimnames=list(tickers, tickers))
 write.table(res, file=file_nm, sep="\t", col.names=NA)
 
-tst <- calculate_similarity(dtf1920, correlation, ref_file=file_nm, overwrite=TRUE, ncores=4L)
+tst <- calculate_similarity(dtf1920, correlation, ref_file=file_nm, overwrite=TRUE, ncores=3L)
 
 # Correlation Matrix
-plot_sim_matrix("data/association_results/corr_20190201_20210219", type="cor", tits="Correlation: 2019-02-01 to 2021-02-19")
-plot_sim_matrix("data/association_results/corr_20190201_20200214", type="cor", tits="Correlation: 2019-02-01 to 2020-02-14")
-plot_sim_matrix("data/association_results/corr_20200323_20210219", type="cor", tits="Correlation: 2020-03-23 to 2021-02-19")
+plot_sim_matrix("data/association_results/corr_2007_2008", type="cor", tits="Correlation: 2007 to 2008")
+plot_sim_matrix("data/association_results/corr_2015_2016", type="cor", tits="Correlation: 2015 to 2016")
+plot_sim_matrix("data/association_results/corr_2019_2020", type="cor", tits="Correlation: 2019 to 2020")
 
 
 # Kullback-Leibler Divergence --------------------------------------------------
 
 # Data Spec
-dtfModelCoef <- tmp$model_coef # "data/model_coef_20200323_20210219.csv"
-dtfModelSums <- tmp$model_summary # "data/model_coef_20200323_20210219.csv"
+yr <- 2016
+dtfModelCoef <- fread(sprintf("data/model_coef_%d.csv", yr))
+dtfModelSums <- fread(sprintf("data/model_summary_%d.csv", yr))
+file_nm <- sprintf("data/association_results/kld_%d", yr)
 if (!"lambda" %in% dtfModelCoef)
   dtfModelCoef[, lambda := NA_real_]
 
@@ -55,63 +58,37 @@ dtfModelStats <- merge(dtfModelCoef[, .SD, .SDcols=c("tick", "shape", "skew", "l
                        dtfModelSums[, .SD, .SDcols=c("tick", "distribution")],
                        on="tick", how="outer")
 
+Qs <- lapply(dtfModelStats$tick, create_ddist, DT=dtfModelStats)
+names(Qs) <- dtfModelStats$tick
 
-# Distribution factory
-create_ddist <- function(ticker, modelstats)
-{
-  na_to_null <- function(x)
-  {
-    if (is.na(x) || length(x) == 0)
-      return(NULL)
-    else
-      return(x)
-  }
-  shape <- na_to_null(modelstats[tick==ticker, shape])
-  skew <- na_to_null(modelstats[tick==ticker, skew])
-  lambda <- na_to_null(modelstats[tick==ticker, lambda])
-  distr <- na_to_null(modelstats[tick==ticker, distribution])
-  f <- function(x)
-  {
-    ddist(distribution=distr, x, lambda=lambda, skew=skew, shape=shape)
-  }
-  return(f)
-}
+M_spaceholder = t(dtfModelStats)
+tickers <- M_spaceholder[1,]
+M_spaceholder  <- data.table(M_spaceholder[2:5, ])
+names(M_spaceholder) <- tickers
 
-# Create matrix of theoretical density values for each stocks probability distribution
-support <- seq(-5, 5, by=0.01)
-Qs <- lapply(dtfModelStats$tick, create_ddist, dtfModelStats)
-Qs <- as.data.table(lapply(Qs, function(Q) Q(support)))
-setnames(Qs, dtfModelStats$tick)
-
-debugonce(kullback_leibler)
-
-tst <- kullback_leibler("A",
-                        c("EXR", "MS", "AAL", "CMG", "UAL", "FRC", "UA", "KO", "HIG", "MHK"),
-                        Qs)
-
-file_nm <- "data/association_results/kld_20200323_20210219"
 res <- matrix(NA_real_, nrow=dtfModelStats[, .N], ncol=dtfModelStats[, .N],
               dimnames=list(dtfModelStats$tick, dtfModelStats$tick))
 write.table(res, file=file_nm, sep="\t", col.names=NA)
 
-tst <- calculate_similarity(Qs, kullback_leibler, ref_file=file_nm,
-                            overwrite=FALSE, ncores=1L, epsilon=1e-4)
+tst <- calculate_similarity(M_spaceholder, kullback_leibler, ref_file=file_nm,
+                            overwrite=T, ncores=3L, df_model_distr=dtfModelStats)
 
 
 # Dynamic Time Warping ---------------------------------------------------------
 
 # Data Spec
-dtf <- fread("data/std_scale_20200323_20210219.csv")
-
+dtf <- fread("data/std_scale_2019_2020.csv")
+dtf1920 <- Filter(function(x) sum(is.na(x)) == 0, dtf)
+tickers <- setdiff(names(dtf1920), "Date")
 dtf1920 <- dtf[, tickers, with=FALSE]
 
-file_nm <- "data/association_results/dtw_20200323_20210219"
+file_nm <- "data/association_results/dtw_2019_2020"
 
 res <- matrix(NA_real_, nrow=length(tickers), ncol=length(tickers),
               dimnames=list(tickers, tickers))
 write.table(res, file=file_nm, sep="\t", col.names=NA)
 
-tst <- calculate_similarity(dtf1920, dynamic_time_warp, ref_file=file_nm, overwrite=TRUE, ncores=4L)
+tst <- calculate_similarity(dtf1920, dynamic_time_warp, ref_file=file_nm, overwrite=TRUE, ncores=3L)
 
 
 # DTW Matrix
@@ -121,14 +98,20 @@ plot_sim_matrix("data/association_results/dtw_20200323_20210219", type="dtw", ti
 
 
 # Plot DTW distance vs Correlation ---------------------------------------------
+rm(list=ls())
+dtfSNP <- fread("data/SandP_companies.csv")
+bpalette <- c('#c62828','#f44336','#9c27b0','#673ab7','#3f51b5','#2196f3','#29b6f6','#006064','#009688','#4caf50','#8bc34a','#BEC7C7')
+names(bpalette) <- dtfSNP[, c(unique(sector), "ADefault")]
 
-read_and_melt <- function(file, column_name=NULL)
+read_and_melt <- function(file, column_name=NULL, unique_pairs=TRUE)
 {
   X <- fread(file)
   ticks <- X$V1
   stopifnot(identical(ticks, names(X)[-1]))
   XX <- as.matrix(X[, -c("V1")])
-  XX[lower.tri(XX, diag=TRUE)] <- NA_real_
+  if (unique_pairs) {
+    XX[lower.tri(XX, diag=TRUE)] <- NA_real_
+  }
   out <- data.table(XX)
   out[, TICK1 := ticks]
   out <- melt(out, id.vars="TICK1", variable.factor=FALSE)
@@ -139,28 +122,70 @@ read_and_melt <- function(file, column_name=NULL)
   return(out)
 }
 
-RHO_all <- read_and_melt("data/association_results/corr_20190201_20210219", "RHO_all")
-RHO_pre <- read_and_melt("data/association_results/corr_20190201_20200214", "RHO_pre")
-RHO_post <- read_and_melt("data/association_results/corr_20200323_20210219", "RHO_post")
-RHO <- merge.data.table(RHO_post, RHO_pre, by=c("TICK1", "TICK2"), all=TRUE)
-RHO <- merge.data.table(RHO, RHO_all, by=c("TICK1", "TICK2"), all=TRUE)
+files_ <- list.files("data/association_results/", pattern="dtw|corr|kld")
+files_ <- files_[!files_ %in% c("kld_2007", "kld_2015", "kld_2019")]
 
-DTW_all <- read_and_melt("data/association_results/dtw_20190201_20210219", "DTW_all")
-DTW_pre <- read_and_melt("data/association_results/dtw_20190201_20200214", "DTW_pre")
-DTW_post <- read_and_melt("data/association_results/dtw_20200323_20210219", "DTW_post")
-DTW <- merge.data.table(DTW_post, DTW_pre, by=c("TICK1", "TICK2"), all=TRUE)
-DTW <- merge.data.table(DTW, DTW_all, by=c("TICK1", "TICK2"), all=TRUE)
+lst_dtf <- lapply(files_, function(x) read_and_melt(sprintf("data/association_results/%s", x)))
+names(lst_dtf) <- files_
+lapply(files_, function(x) lst_dtf[[x]][, vtype := x])
+DT <- rbindlist(lst_dtf)
+DT <- DT[!is.na(value)]
+DT <- merge(DT, dtfSNP[, .SD, .SDcols=c("ticker", "sector", "subindustry")],
+                       by.x="TICK1", by.y="ticker", all.x=TRUE)
+DT <- merge(DT, dtfSNP[, .SD, .SDcols=c("ticker", "sector", "subindustry")],
+                       by.x="TICK2", by.y="ticker", all.x=TRUE, suffixes = c("_t1", "_t2"))
 
-DT <- merge(DTW, RHO, by=c("TICK1", "TICK2"), all=TRUE)
-DT[, DTW_diff := DTW_post - DTW_pre]
-DT[, RHO_diff := RHO_post - RHO_pre]
-DT2 <- copy(DT[complete.cases(DT)])
+mtype = "kld" # "corr", "kld", "dtw"
+for (industry in dtfSNP[, unique(sector)]) {
+  set.seed(522193)
+  dtDTWYoy <- copy(DT[complete.cases(DT)])[sample.int(.N, .N * .3)]
+  dtDTWYoy <- dtDTWYoy[grepl(mtype, vtype)]
+  dtDTWYoy[, sect_colr := ifelse(sector_t1==sector_t2 & sector_t1==industry, industry, "ADefault")]
+  dtDTWYoy <- dtDTWYoy[!is.na(sect_colr)][order(sect_colr)]
+  dtDTWYoy[vtype %in% c("kld_2008", "kld_2016"),
+           p1_pairs := paste(TICK1, TICK2, sep="-")]
+  dtDTWYoy[vtype %in% c("kld_2016", "kld_2020"),
+           p2_pairs := paste(TICK1, TICK2, sep="-")]
+  
+  
+  p <- ggplot(dtDTWYoy, aes(x=factor(vtype), y=value)) +
+    geom_line(data=dtDTWYoy[sect_colr != industry], aes(group=factor(p1_pairs)), color=bpalette['ADefault'], alpha=0.1) +
+    geom_line(data=dtDTWYoy[sect_colr != industry], aes(group=factor(p2_pairs)), color=bpalette['ADefault'], alpha=0.1) +
+    geom_line(data=dtDTWYoy[sect_colr == industry], aes(group=factor(p1_pairs)), color=bpalette[industry], alpha=0.5) +
+    geom_line(data=dtDTWYoy[sect_colr == industry], aes(group=factor(p2_pairs)), color=bpalette[industry], alpha=0.5) +
+    geom_point(data=dtDTWYoy[sect_colr != industry], alpha=0.1, color=bpalette['ADefault']) +
+    geom_point(data=dtDTWYoy[sect_colr == industry], alpha=0.5, color=bpalette[industry]) +
+    labs(y="Metric Value", x=NULL, title=industry)
+  print(p)
+  ggsave(sprintf("article/images/%s_%s.png", mtype, industry))
+}
 
-ggplot(DT2, aes(x=DTW_all, y=RHO_all)) +
-  geom_point(alpha=0.1)
+                   
+#fill=ifelse(sect_colr==industry, bpalette[industry], bpalette["Default"])), alpha=0.1)
+files_ <- list.files("data/association_results/", pattern="dtw|corr|kld")
+files_ <- files_[!files_ %in% c("kld_2007", "kld_2015", "kld_2019")]
 
-DT2[, plot(DTW_pre, RHO_pre, cex=0.25, main="Pre-Covid", xlim=c(-10, 800), ylim=c(-1,1))]
-DT2[, plot(DTW_post, RHO_post, cex=0.25, main="Post-Covid", xlim=c(-10, 800), ylim=c(-1,1))]
+lst_dtf <- lapply(files_, function(x) read_and_melt(sprintf("data/association_results/%s", x), unique_pairs = FALSE))
+lst_dtf
+names(lst_dtf) <- files_
+lapply(files_, function(x) lst_dtf[[x]][, vtype := x])
+DT <- rbindlist(lst_dtf)
+
+DT <- merge(DT, dtfSNP[, .SD, .SDcols=c("ticker", "sector", "subindustry")],
+            by.x="TICK1", by.y="ticker", all.x=TRUE)
+DT <- merge(DT, dtfSNP[, .SD, .SDcols=c("ticker", "sector", "subindustry")],
+            by.x="TICK2", by.y="ticker", all.x=TRUE, suffixes = c("_t1", "_t2"))
+DT[, same_sector := ifelse(sector_t1 == sector_t2, sector_t1, 'ADefault')]
+
+DTscatter <- dcast(DT[grepl("2016", vtype)], TICK1 + TICK2 + sector_t1 + same_sector ~ vtype, value.var = "value")
+DTscatter <- DTscatter[order(same_sector)]
+p <- ggplot(DTscatter, aes(x=corr_2015_2016, y=dtw_2015_2016)) +
+  geom_point(size=0.5, alpha=0.2, color=bpalette[match(DTscatter$same_sector, names(bpalette))]) +
+  facet_wrap(vars(sector_t1), nrow=3, ncol=4) +
+  geom_vline(xintercept = 0, lty=3) + 
+  labs(x="Corr", y="DTW", title="Corr-vs-DTW")
+
+print(p)
 
 # Similar shape but negatively correlated
 tmp <- DT2[DTW_pre < 50 & RHO_pre < -0.25][order(TICK1, TICK2)]

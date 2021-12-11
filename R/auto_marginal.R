@@ -305,9 +305,13 @@ produce_rGARCHfit_from_spec <- function(tick, specs, start_date, end_date)
 specs_to_resid_matrix <- function(path, write_to_file=TRUE)
 {
   # grab dates from the path
-  m <- gregexpr("[0-9]{8}", path)
-  dts <- unlist(regmatches(path, m))
-  dts2 <- sapply(dts, function(x) as.character(as.IDate(x, format="%Y%m%d")))
+  # m <- gregexpr("[0-9]{8}", path)
+  # dts <- unlist(regmatches(path, m))
+  # dts2 <- sapply(dts, function(x) as.character(as.IDate(x, format="%Y%m%d")))
+  m <- gregexpr("[0-9]{4}", path)
+  yr <- as.integer(unlist(regmatches(path, m)))
+  dts2 <- c(sprintf("%d-01-01", yr), sprintf("%d-12-31", yr))
+  
   
   spec_list <- read_json(path)
   good_vs_bad <- good_vs_bad_symbols(path)
@@ -377,18 +381,15 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
   
   if (write_to_file) {
     base_path <- "~/Git/k-similar-neighbor/data/"
+    create_name <- function(x) sprintf("%s%s_%d.csv", base_path, x, yr)
     
-    file_name <- paste0("uni_marg_", dts[1], "_", dts[2], ".csv")
-    fwrite(outU, file=paste0(base_path, file_name))
+    fwrite(outU, file=create_name("uni_marg"))
     
-    file_name <- paste0("std_resids_", dts[1], "_", dts[2], ".csv")
-    fwrite(outZ, file=paste0(base_path, file_name))
+    fwrite(outZ, file=create_name("std_resids"))
     
-    file_name <- paste0("model_summary_", dts[1], "_", dts[2], ".csv")
-    fwrite(outP, file=paste0(base_path, file_name))
+    fwrite(outP, file=create_name("model_summary"))
     
-    file_name <- paste0("model_coef_", dts[1], "_", dts[2], ".csv")
-    fwrite(outM, file=paste0(base_path, file_name))
+    fwrite(outM, file=create_name("model_coef"))
   }
   return(list(uni_marg=outU, std_resids=outZ, model_summary=outP, model_coef=outM))
 }

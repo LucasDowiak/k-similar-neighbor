@@ -41,20 +41,50 @@ dynamic_time_warp <- function(nm, columns, M)
 }
 
 
-kullback_leibler <- function(nm, columns, M, epsilon=0.00001)
+kullback_leibler <- function(nm, columns, M, df_model_distr)
 {
-  p <- M[[nm]]
-  # Censor very small values; trying to get all non-negative results for the KL dist
-  p[p < epsilon] <- epsilon
+
+  p <- create_ddist(nm, DT=df_model_distr)
+  Qs <- lapply(columns, create_ddist, DT=df_model_distr)
+  names(Qs) <- columns
   
-  # KL divergence
-  KL <- function(q) {
-    q[q < epsilon] <- epsilon
-    return(sum(p * ( log(p) - log(q) ) ))
+  # KL function to numerically integrate
+  KL <- function(x, ddist)
+  {
+    p(x) * ( log(p(x)) - log(ddist(x)) )
   }
-  out <- apply(as.matrix(M[, columns, with=FALSE]), 2, FUN=KL)
-  out <- matrix(out, ncol=length(out), dim=list(nm, columns))
-  return(out)
+  
+  out <- matrix(NA_real_, ncol=length(Qs), dimnames = list(nm, columns))
+  for (tick in columns) {
+    kldist <- try(stats::integrate(KL, lower=-Inf, upper=Inf, ddist=Qs[[tick]]))
+    if (inherits(kldist, "try-error")) {
+      out[nm, tick] <- NA_real_
+    } else {
+      out[nm, tick] <- kldist$value
+    }
+  }
+  out
+}
+
+# Distribution factory
+create_ddist <- function(ticker, DT)
+{
+  na_to_null <- function(x)
+  {
+    if (is.na(x) || length(x) == 0)
+      return(NULL)
+    else
+      return(x)
+  }
+  shape <- na_to_null(DT[tick==ticker, shape])
+  skew <- na_to_null(DT[tick==ticker, skew])
+  lambda <- na_to_null(DT[tick==ticker, lambda])
+  distr <- na_to_null(DT[tick==ticker, distribution])
+  f <- function(x) 
+  {
+    ddist(distribution=distr, x, lambda=lambda, skew=skew, shape=shape)
+  }
+  return(f)
 }
 
 
@@ -75,7 +105,7 @@ check_ref_file <- function(file_, M)
   if (is(file_, "character")) {
     
     if (file.exists(file_)) {
-      # Read in NxN similarity/distanct/correlation matrix
+      # Read in NxN similarity/distance/correlation matrix
       OMG <- as.matrix(read.table(file_, header=TRUE, row.names = 1))
       cnms <- colnames(OMG)
       # row names must match column names
@@ -264,7 +294,4 @@ cluster_similarity <- function(X, type=c("cor", "dtw"), visualize=FALSE, ...)
   }
   return(tree)
 }
-
-
-
 

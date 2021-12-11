@@ -1,13 +1,60 @@
+setwd("~/Git/k-similar-neighbor")
 library(jsonlite)
 library(data.table)
 library(rugarch)
-setwd("~/Git/k-similar-neighbor")
 source("R/auto_marginal.R")
 
 
 
 # ------------------------------------------------------------------------
-# code snippet to run through all S&P 500 stock tickers
+# code snippet to run through all S&P 500 stock tickers for a given year
+
+run_arima_garch_by_year <- function(year, rerun=TRUE)
+{
+  tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
+  spec_path <- sprintf("data/marginal_specifications_%d.json", year)
+  
+  if (rerun) {
+    spec_list <- interpret_spec_list(spec_path)
+    tmp <- good_vs_bad_symbols(spec_path)
+    tickers <- c(tmp$fail_ticks, tmp$not_run_ticks)
+  } else {
+    spec_list <- vector("list", length(tickers))
+    names(spec_list) <- tickers
+  }
+  
+  for (tick in tickers) {
+    print(sprintf("TICK %s at %s", tick, Sys.time()))
+    dtfU <- try(data.table(parse_json(tick)))
+    if (any(nrow(dtfU) == 0, length(dtfU) == 0, is(dtfU, "NULL"))) {
+      next
+    } else {
+      u <- dtfU[year(Date) == year, diff(log(close))]
+      out <- try(auto_fit(u))
+      if (inherits(out, "try-error"))
+        out <- as.character(out)
+      spec_list[[tick]] <- out
+      write_json(spec_list, path=spec_path)
+    }
+  }
+}
+
+years <- c(2019, 2020)
+
+for (yr in years) {
+  run_arima_garch_by_year(yr, rerun = FALSE)
+}
+
+lst_files <- list.files('data', pattern = "marginal_specifications_[0-9]{4}.json",
+                        full.names = TRUE)
+gvb <- lapply(lst_files, good_vs_bad_symbols)
+o <- lapply(gvb, `[[`, 'fail_ticks')
+names(o) <- lst_files
+
+all_fails <- Reduce(union, o)
+univ_intersect <- Reduce(intersect, lapply(gvb, `[[`, 'pass_ticks'))
+gvb_sums <- t(sapply(gvb, function(x) c(pass_ticks=length(x$pass_ticks), fail_ticks=length(x$fail_ticks), not_run=length(x$not_run_ticks))))
+
 
 SPEC_PATH <- "data/marginal_specifications_20200323_20210219.json"
 st_date <- "2020-03-23"
@@ -18,25 +65,6 @@ tickers <- c(tmp$fail_ticks, tmp$not_run_ticks)
 # Pull the tickers from the json files
 tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
 
-
-
-# Auto_fit each ticker, saving after each tick
-SPECS <- vector("list", length(tickers))
-names(SPECS) <- tickers
-for (tick in tickers) {
-  print(sprintf("TICK %s at %s", tick, Sys.time()))
-  dtfU <- try(data.table(parse_json(tick)))
-  if (any(nrow(dtfU) == 0, length(dtfU) == 0, is(dtfU, "NULL"))) {
-    next
-  } else {
-    u <- dtfU[Date >= st_date & Date <= ed_date, diff(log(close))]
-    out <- try(auto_fit(u))
-    if (inherits(out, "try-error"))
-      out <- as.character(out)
-    SPECS[[tick]] <- out
-    write_json(SPECS, path=SPEC_PATH)
-  }
-}
 
 # Create single data.frame with stock tick values as columns
 lst_dtfs <- lapply(tickers, parse_json)
