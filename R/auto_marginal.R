@@ -102,10 +102,10 @@ parse_json <- function(tick, values="close")
 #
 # auto_fit(u)
 #
-auto_fit <- function(x)
+auto_fit <- function(x, max_arch=2, max_garch=2)
 {
   "ar ma sar sma period i si"
-  aa <- forecast::auto.arima(x, max.p=7, allowmean=TRUE, allowdrift=FALSE)
+  aa <- forecast::auto.arima(x, max.p=10, allowmean=TRUE, allowdrift=FALSE)
   spec <- aa$arma
   arma <- spec[1:2]
   if (spec[3] > 0)
@@ -113,8 +113,8 @@ auto_fit <- function(x)
   if (spec[4] > 0)
     arma[2] <- 7 * arma[4]
   
-  arch <- 1:2
-  garch <- 1:2
+  arch <- 1:max_arch
+  garch <- 1:max_garch
   garchmodels <- c("sGARCH", "gjrGARCH", "csGARCH")
   distributions <- c("norm", "std", "sstd")
   outerpaste <- function(a, b) as.vector(outer(a, b, paste, sep="_"))
@@ -187,6 +187,8 @@ auto_fit <- function(x)
 # For a tick that has already been run through the auto_fit function but
 # failed to find a fit that passes all the marginal tests,
 # try setting the the AR component to 7
+
+# does this even work (me: 2022-05-01)
 produce_rGARCHfit_s <- function(tick, start_date, end_date)
 {
   
@@ -304,24 +306,23 @@ produce_rGARCHfit_from_spec <- function(tick, specs, start_date, end_date)
 # stocks standardized residuals
 specs_to_resid_matrix <- function(path, write_to_file=TRUE)
 {
-  # grab dates from the path
-  # m <- gregexpr("[0-9]{8}", path)
-  # dts <- unlist(regmatches(path, m))
-  # dts2 <- sapply(dts, function(x) as.character(as.IDate(x, format="%Y%m%d")))
+  # fetch patterns matching for four consecutive integers between 0 and 9
   m <- gregexpr("[0-9]{4}", path)
-  yr <- as.integer(unlist(regmatches(path, m)))
-  dts2 <- c(sprintf("%d-01-01", yr), sprintf("%d-12-31", yr))
+  yrs <- as.integer(unlist(regmatches(path, m)))
+  dts2 <- c(sprintf("%s-01-01", min(yrs)),
+            sprintf("%s-12-31", max(yrs)))
+  yrs <- paste(yrs, collapse="_")
   
-  
+  # read in specifications - run diagnostics - fit model to data - summarize models
   spec_list <- read_json(path)
   good_vs_bad <- good_vs_bad_symbols(path)
   warning(sprintf("The following ticks failed to pass the full marginal tests: [%s] \n\n",
                   paste0(good_vs_bad[['fail_ticks']], collapse=", ")))
   warning(sprintf("Removed the following tickers that failed to run model fitting: [%s] \n\n",
                   paste0(good_vs_bad[['not_run_ticks']], collapse=", ")))
-  for (rm_tick in good_vs_bad[['not_run_ticks']])
+  for (rm_tick in good_vs_bad[['not_run_ticks']]) {
     spec_list[[rm_tick]] <- NULL
-  
+  }  
   tickers <- names(spec_list)
   resid_list_U <- resid_list_Z <- model_struct <- model_params <- vector("list", length(spec_list))
   names(resid_list_U) <- tickers
@@ -381,7 +382,7 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
   
   if (write_to_file) {
     base_path <- "~/Git/k-similar-neighbor/data/"
-    create_name <- function(x) sprintf("%s%s_%d.csv", base_path, x, yr)
+    create_name <- function(x) sprintf("%s%s_%s.csv", base_path, x, yrs)
     
     fwrite(outU, file=create_name("uni_marg"))
     

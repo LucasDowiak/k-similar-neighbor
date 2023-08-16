@@ -9,15 +9,21 @@ source("R/auto_marginal.R")
 # ------------------------------------------------------------------------
 # code snippet to run through all S&P 500 stock tickers for a given year
 
-run_arima_garch_by_year <- function(year, rerun=TRUE)
+run_arima_garch_by_years <- function(years, rerun=TRUE)
 {
+  if (length(years) > 1) {
+    year_range <- paste0(years, collapse="_")
+  } else {
+    year_range <- as.character(years)
+  }
   tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
-  spec_path <- sprintf("data/marginal_specifications_%d.json", year)
+  spec_path <- sprintf("data/marginal_specifications_%s.json", year_range)
   
   if (rerun) {
     spec_list <- interpret_spec_list(spec_path)
     tmp <- good_vs_bad_symbols(spec_path)
     tickers <- c(tmp$fail_ticks, tmp$not_run_ticks)
+    
   } else {
     spec_list <- vector("list", length(tickers))
     names(spec_list) <- tickers
@@ -29,7 +35,7 @@ run_arima_garch_by_year <- function(year, rerun=TRUE)
     if (any(nrow(dtfU) == 0, length(dtfU) == 0, is(dtfU, "NULL"))) {
       next
     } else {
-      u <- dtfU[year(Date) == year, diff(log(close))]
+      u <- dtfU[year(Date) %in% years, diff(log(close))]
       out <- try(auto_fit(u))
       if (inherits(out, "try-error"))
         out <- as.character(out)
@@ -39,7 +45,9 @@ run_arima_garch_by_year <- function(year, rerun=TRUE)
   }
 }
 
-years <- c(2019, 2020)
+years <- c(2007, 2008)
+
+run_arima_garch_by_years(c(2007, 2008), rerun=FALSE)
 
 for (yr in years) {
   run_arima_garch_by_year(yr, rerun = FALSE)
@@ -75,7 +83,8 @@ dtf <- dcast(dtf, Date ~ tick, value.var="close")
 dtf <- dtf[, .SD, .SDcols=c(dtfMinDate$tick, "Date")]
 fwrite(dtf, file="data/SandP_tick_history.csv")
 # Missing map
-# Amelia::missmap(dtf)
+Amelia::missmap(dtf, ylab="Feb 2021 - Nov 1999",
+                xlab="Tick")
 
 
 tst <- specs_to_resid_matrix(SPEC_PATH)
@@ -114,7 +123,7 @@ for (tick in names(xx[xx==1])) {
 }
 
 
-produce_rGARCHfit_from_spec("ABC", SPECIFICATIONS, )
+produce_rGARCHfit_from_spec("ABC", SPECIFICATIONS)
 
 out_spec <- run_seasonal_modifications(badticks, SPECS)
 
