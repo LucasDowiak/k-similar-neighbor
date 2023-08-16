@@ -21,7 +21,7 @@ hit_api <- function(tickers, outputsize=c("compact", "full"), saveJSON=FALSE)
   
   save_file <- function(json, tick)
   {
-    dir_ <- "/Users/lucasdowiak/Git/k-similar-neighbor/data/"
+    dir_ <- "/Users/lucasdowiak/Git/k-similar-neighbor/data/raw_json/"
     file_ <- paste0(tick, ".json")
     write(minify(json), file=paste0(dir_, file_))
   }
