@@ -66,6 +66,7 @@ kullback_leibler <- function(nm, columns, M, df_model_distr)
   out
 }
 
+
 # Distribution factory
 create_ddist <- function(ticker, DT)
 {

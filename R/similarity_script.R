@@ -97,7 +97,7 @@ plot_sim_matrix("data/association_results/dtw_20190201_20200214", type="dtw", ti
 plot_sim_matrix("data/association_results/dtw_20200323_20210219", type="dtw", tits="DTW: 2020-03-23 to 2021-02-19")
 
 
-# Plot DTW distance vs Correlation ---------------------------------------------
+# Plot Evolution of Metric over Periods ---------------------------------------------
 rm(list=ls())
 dtfSNP <- fread("data/SandP_companies.csv")
 bpalette <- c('#c62828','#f44336','#9c27b0','#673ab7','#3f51b5','#2196f3','#29b6f6','#006064','#009688','#4caf50','#8bc34a','#BEC7C7')
@@ -122,7 +122,8 @@ read_and_melt <- function(file, column_name=NULL, unique_pairs=TRUE)
   return(out)
 }
 
-files_ <- list.files("data/association_results/", pattern="dtw|corr|kld")
+patt <- "dtw_[0-9]{4}_[0-9]{4}|corr_[0-9]{4}_[0-9]{4}|kld_[0-9]{4}_[0-9]{4}"
+files_ <- list.files("data/association_results/", pattern=patt)
 files_ <- files_[!files_ %in% c("kld_2007", "kld_2015", "kld_2019")]
 
 lst_dtf <- lapply(files_, function(x) read_and_melt(sprintf("data/association_results/%s", x)))
@@ -160,8 +161,9 @@ for (industry in dtfSNP[, unique(sector)]) {
   ggsave(sprintf("article/images/%s_%s.png", mtype, industry))
 }
 
-                   
-#fill=ifelse(sect_colr==industry, bpalette[industry], bpalette["Default"])), alpha=0.1)
+
+
+# Plot DTW distance vs Correlation ---------------------------------------------
 files_ <- list.files("data/association_results/", pattern="dtw|corr|kld")
 files_ <- files_[!files_ %in% c("kld_2007", "kld_2015", "kld_2019")]
 
@@ -225,21 +227,22 @@ calculate_group_stats <- function(grps, DT)
   
   p <- ggplot(DT, aes(x=Date, y=value, group=ticker)) +
     geom_line(aes(color=DT$color, alpha=DT$alpha)) +
-    scale_color_manual(values=c("gray"="gray", "red"="red")) +
+    scale_color_manual(values=c("gray"="Group", "red"="Group Avg")) +
     scale_alpha_identity() + 
     facet_wrap(~ grps)
   print(p)
   
   
+  
 }
 
-dtf <- fread("data/std_scale_20190201_20210219.csv")
+dtf <- fread("data/std_scale_2015_2016.csv")
 dtf <- Filter(function(x) all(!is.na(x)), dtf)
-X <- read.table("data/association_results/corr_20190201_20210219", header=T, row.names=1)
+X <- read.table("data/association_results/dtw_2015_2016", header=T, row.names=1)
 ii <- which(names(X) == "ENPH")
 X <- X[-ii, -ii]
 
-tree <- cluster_similarity(X, type="cor", visualize = FALSE)
+tree <- cluster_similarity(X, type="dtw", visualize = TRUE)
 
 groups <- cutree(tree, k=9)
 table(groups)
