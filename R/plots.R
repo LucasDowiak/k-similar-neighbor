@@ -21,7 +21,7 @@ read_SandP_data <- function(ticks=NULL)
 #
 #   assoc_file - file path for stored similarity matrix
 #
-#   type - type of similarity matrix, which effects certaing plot parameters
+#   type - type of similarity matrix, which effects certain plot parameters
 #
 #   tits- optional title for the plot
 #
@@ -67,3 +67,43 @@ plot_sim_matrix <- function(assoc_file, type=c("cor", "dtw"), tits="")
     labs(x="", y="", title=tits)
   print(p)
 }
+
+
+
+# Plot an example of the DTW algorithm at work
+#
+#   x, y (numeric) - time series to plot
+#
+#   standardize (boolean) - should the series be standardized by dividing values by setting x[1] = 1
+#
+#   ... - additional parameters passed to the DTW algorithm
+#
+plot_dtw_ts <- function(x, y, standardize=TRUE, ...)
+{
+  if (standardize) {
+    x <- x / x[1]; y <- y / y[1]
+  }
+  pdtw <- dtw(x, y, keep.internals=TRUE, ...)
+  
+  yrange <- range(x, y)
+  padding <- diff(yrange) * 0.05
+  plot(x, type="l", ylim=c(yrange[1] - padding, yrange[2] + padding),
+       main="DTW Index Alignment")
+  lines(y, col="red")
+  grid()
+  segments(pdtw$index1, pdtw$query[pdtw$index1],
+           pdtw$index2, pdtw$reference[pdtw$index2],
+           col="gray80")
+}
+tmp <- dtfSP[Date >= "2019-01-01" & Date <= "2019-06-30", .(Date, A, GE)]
+tmp[, A := A / A[1]]
+tmp[, GE := GE / GE[1]]
+pdtw <- dtw(tmp$A, tmp$GE, keep.internals = TRUE,
+            window.type = "sakoechiba", window.size=15)
+
+plot(tmp$GE, type="l", ylim=c(0.9, 1.5))
+lines(tmp$A, col="red")
+segments(pdtw$index1, pdtw$query[pdtw$index1],
+         pdtw$index2, pdtw$reference[pdtw$index2],
+         col="gray80")
+
