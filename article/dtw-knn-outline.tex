@@ -39,7 +39,7 @@
 Measuring the association of two assets is a fundamental concept in finance and economics. Portfolio managers have to think about it when they open or close a position \cite{Markowitz1952PortfolioSelection,sharpe1963simplified}. Regulators and large Bank Holding Companies (BHC) have to consider it when designing stress tests. The most common method of measuring association is the Pearson correlation coefficient:
 
 \begin{equation} \label{eq:pearsons_rho}
-\rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x}) \sum_{t=1}^{T} (y_{t} - \bar{y})}}
+\rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x})^{2} \sum_{t=1}^{T} (y_{t} - \bar{y})^{2}}}
 \end{equation}
 
 There's certainly nothing wrong about this statistic as the measure of association. I use it all the time. And even though the economic literature is clear-eyed about it's shortcomings (asymmetry, fat-tails) when trying to capture true return correlations between different financial time series, it's still the first measure researches estimate. When looking at the covariance expression on the numerator of equation (\ref{eq:pearsons_rho}), the correlation's assessment of association is based on the co-movements of the two variables for each time unit. This tight pairing is completely logical but it can also be restrictive. For instance, if I were to sample T draws from the following multivariate normal distribution:
@@ -74,7 +74,7 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
     \item Pearson Correlation
     \item $L_{p}$ norms
     \item Dynamic Time Warping
-    \item Time Warp Edit distance
+    \item Parameter value clustering (or by other metrics e.g. persistance)
     \item Autocorrelation
     \item Kullback-Leibler
 \end{itemize}
@@ -82,18 +82,57 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \section{Relevant Literature}
 
+\cite{ElsingAgon2012} view the analysis of time series data from a data mining perspective. The authors provide a detailed survey of time series representations, various distance metrics for measuring association, and proper ways to index time series data for efficient querying and information retrieval. The distance measure are classified into four categories: shape, edit, feature, and structure-based.
+
+\cite{FruhwirthKaufmann2004} cluster time series into K groups based on the fitted parameters of AR(p) and dynamic regression models.
+
+\cite{Mueller2007} provides an excellent summary of the principles of DTW and discuss several extensions with respect to the local and global parameters of the technique.
+
+\cite{FrancesWiemann2020} apply dynamic time warping to quarterly real GDP of the 50 US states during the 2007 recession. The authors employ a novel distance metric and utlilize a K-Means algorithm proposed by \cite{PETITJEAN2011678} and adapted for time series to group the US states into seven distinct business cycle clusters.
+
+\cite{WangXieHanSun2012} apply DTW to measure the pair-wise similarity between 35 foreign currencies. The authors then utilize a minimum spanning trees (MST) -- a novel graph algorithm -- to document the structural changes in the dependencies of the FX market over three separate years.
+
+\cite{KotsifakosAthitsosPapapetrou_2011} are also motivitated from a data mining perspective and the ability to return relevant results from query to a large number of time series. The authors compare the an example-base query using DTW with a model-based approach using Hidden Markov Models (HMM).
 
 \section{Data}
 
-Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. If we focus on the most recent two years, we can use the market upheaval surrounding Covid-19 as a natural experiment. Some industries have bounced back strongly (Technology) while other's have struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered. Three different time periods will be considered. The financial crisis of 2007-2008, the moderate period between 2014 and 2016, and the dramatic shut down economy of 2019-2020.
+Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. Three different time periods will be considered. The financial crisis of 2007-2008, the moderate economic period between 2015 and 2016, and the dramatic shut-down economy of 2019-2020. With a focus on the these three time periods, the market upheaval surrounding the financial crisis and Covid-19 serve as a natural experiment with the moderate-but-steady growth of 2015-2016 acting as a control. This is especially true of the Covid-19 timeframe. Some industries bounced back strongly (Technology) while others struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
 
-I've used the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} to collect the stock ticker symbol for each company and the extra industry and sector information. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary. Analyzing the entire S\&P adds a level computational complexity to this project, but I think the extra scale helps give the article some heft considering the task at hand isn't very complicated.
+The companies comprising the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} as of February 2021 are included in this essay's analysis. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary of the price history for the individual companies in the index.
 
 \section{Distance Measures}
 
-\subsection{ARMA-GARCH Benchmark}
+\subsection{ARMA-GARCH Benchmark} \label{sec:ARMAGARCH-benchmark}
 
-To benchmark the shape based measures, we will design a procedure to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standardized residuals for each stock.
+To benchmark the competing measures, a procedure is designed to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standardized residuals for each stock. For model validation, I will follow the same process as in section 4.3 of \cite{DowiakTV-COP}. Each model is checked to see if it is well specified and that the model residuals are abiding by the independent and identical distribution assumptions.
+
+Define the return as $X_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)$, where $S_{t}$ is the spot price at time $t$. The conditional mean for the log-returns can be formulated by the following ARMA process:
+
+\begin{equation} \label{eqn:marginalModel}
+    x_{t} = \mu_{t} + \epsilon_{t}
+\end{equation}
+
+\begin{equation}
+    \mu_{t} = \mu(\phi, \theta, x_{\{s:\, s < t\}}, \varepsilon_{\{s:\, s < t\}}) = \phi_{0} + \sum_{i=1}^{p} \phi_{i} x_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j} + \varepsilon_{t}
+\end{equation}
+
+where $\varepsilon_{s}$ is an innovation term that satisfies $E[\varepsilon_{s}] = 0$ and $E[\varepsilon^{2}_{s}] = \sigma^{2}_{s}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH specifications.
+
+\begin{equation}
+    \sigma^{2}_{t} = \emph{C}(\varepsilon^{2}_{t-1}, \, \sigma^{2}_{t-1}) + \sum_{j=1}^{m} \alpha_{j} \emph{A}(\varepsilon^{2}_{t - j}) + \sum_{i=1}^{k} \beta_{i} \emph{B}(\sigma^{2}_{t - i})
+\end{equation}
+
+The conditional mean and variance are used to center and scale the innovation terms.
+
+\begin{equation}
+    z_{t}(\phi, \theta, \alpha, \beta) = \frac{x_{t} - \mu(x_{t-1}, \phi, \theta)}{\sigma(x_{t-1}, \alpha, \beta)}
+\end{equation}
+
+By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta = [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution $g$, and any necessary shape parameters $\lambda$ of the distribution:
+
+\begin{equation}
+    f(x_{t} | \mu_{t}, \sigma^{2}_{t}, \lambda, \Delta) = \frac{1}{\sigma_{t}} g(z_{t} | \lambda, \Delta)
+\end{equation}
 
 The challenge for automating this process is two-fold. First, the size of the full model space is quite large. To list out all the dimensions that must be considered:
 
@@ -119,90 +158,7 @@ The challenge for automating this process is two-fold. First, the size of the fu
 
 \end{itemize}
 
-A full grid-search over these dimensions is time-consuming and impractical. To reduce the number of specifications in the model set, the fitting procedure takes a divide and conquer approach. The specification for the ARMA process is found first, independently of the GARCH process. Once the AR(p) and MA(q) orders have been found, this specification is set and remains the same as different volatility models are estimated. Note that the parameter estimates are not held constant, just the specification. For each new GARCH fit, the ARMA parameters are all re-estimated. A more detail set of instructions on the modeling strategy can be found in section \ref{sec:ModelEstimationStrategy} of the appendix.
-
-The second challenge 
-
-
-
-
-For model validation, I will follow the same process as in section 4.3 of \cite{DowiakTV-COP}, checking that each model is well specified and the model residuals are tested to see if they are independently and identically distributed
-
-
-
-
-
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
-    \caption{}
-    \label{fig:Ng1}
-
-    \bigbreak
-
-    \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
-    \caption{}
-    \label{fig:Ng2}
-\end{figure}
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{dtw_20190201_20200214.png}
-    \caption{}
-    \label{fig:Ng3}
-
-    \bigbreak
-
-    \includegraphics[width=1\linewidth]{dtw_20200323_20210219.png}
-    \caption{}
-    \label{fig:Ng4}
-\end{figure}
-
-
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=\textwidth]{SandP_missing_map_pptx.png}
-    \caption{Missing map of the S\&P data set. The red horizontal bar demarks the minimum amount of history needed to be included in the study. X of the 505 tickers have enough history}
-    \label{fig:SandP_missing_map}
-\end{figure}
-
-
-\section{Appendix}
-
-\subsection{Model Estimation Strategy} \label{sec:ModelEstimationStrategy}
-
-This section summarizes the modeling strategy for the historical spot series in the S\&P 500. Define the return as $X_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)$, where $S_{t}$ is the spot price at time $t$. The conditional mean for the log-returns can be formulated by the following ARMA process:
-
-\begin{equation} \label{eqn:marginalModel}
-    X_{t} = \mu_{t} + \epsilon_{t}
-\end{equation}
-
-\begin{equation}
-    \mu_{t} = \mu(\phi, \theta, X_{\{s:\, s < t\}}, \varepsilon_{\{s:\, s < t\}}) = \phi_{0} + \sum_{i=1}^{p} \phi_{i} X_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j} + \varepsilon_{t}
-\end{equation}
-
-where $\varepsilon_{s}$ is an innovation term that satisfies $E[\varepsilon_{s}] = 0$ and $E[\varepsilon^{2}_{s}] = \sigma^{2}_{s}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH flavors.
-
-\begin{equation}
-    \sigma^{2}_{t} = \emph{C}(\varepsilon^{2}_{t-1}, \, \sigma^{2}_{t-1}) + \sum_{j=1}^{m} \alpha_{j} \emph{A}(\varepsilon^{2}_{t - j}) + \sum_{i=1}^{k} \beta_{i} \emph{B}(\sigma^{2}_{t - i})
-\end{equation}
-
-The conditional mean and variance are used to center and scale the innovation terms.
-
-\begin{equation}
-    z_{t}(\phi, \theta, \alpha, \beta) = \frac{X_{t} - \mu(X_{t-1}, \phi, \theta)}{\sigma(X_{t-1}, \alpha, \beta)}
-\end{equation}
-
-By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta = [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution $g$, and any necessary shape parameters $\lambda$ of the distribution:
-
-\begin{equation}
-    f(X_{t} | \mu_{t}, \sigma^{2}_{t}, \lambda, \Delta) = \frac{1}{\sigma_{t}} g(z_{t} | \lambda, \Delta)
-\end{equation}
-
-With the stage set, the sequence of steps used to automate the model estimation process for the S\&P log-returns can be summarized as a three-step process:
+A full grid-search over these dimensions is time-consuming and impractical. To reduce the number of specifications in the model set, the fitting procedure takes the following divide-and-conquer approach.
 
 \begin{enumerate}
     \item \textbf{Estimate the conditional mean independently of the variance model.} Leveraging the work done by Hyndman and Khandakar \cite{HyndmanKhandakar2008AutoArima}, a step-wise strategy is used to search through the ARIMA model space for the best fit, which is evaluated via the Akaike information criterion (AIC). This is accomplished by using the Forecast package \cite{RForecast} running in the R statistical language \cite{RBase}. The following decisions are made: 
@@ -237,27 +193,106 @@ With the stage set, the sequence of steps used to automate the model estimation 
 
 \end{enumerate}
 
+The specification for the ARMA process is found first independently of the GARCH process. Once the AR(p) and MA(q) orders have been found, this specification is set and remains the same as different volatility models are estimated. Note that the parameter estimates are not held constant, just the specification. For each new GARCH fit, the ARMA parameters are all re-estimated.
+
 
 \subsection{Dynamic Time Warping} \label{sec:DTW}
 
-Dynamic time warping (DTW) is an alternative method for comparing the association between two discrete time series. It differs from Pearson's correlation measure in that the time indices between the two series at moments of comparison are not constrained to equal each other -- like in Equation (\ref{eq:pearsons_rho}). For the following definitions, this article borrows heavily from \cite{Mueller2007}. Suppose there are two time series: $X_{t}$ for $t \in [1:T]$ and $Y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the indices of one series to the other: $p_{l} = (t_{l}, \, w(t_{l})) \in [1:T] \times [1:S]$ for $l \in [1:L]$. All warping paths are subject to the following two conditions:
+Dynamic time warping (DTW) is an alternative method for comparing the association between two discrete time series. It differs from Pearson's correlation measure in that the time indices between the two series at moments of comparison are not constrained to equal each other -- like in Equation (\ref{eq:pearsons_rho}). Time is allowed to stretch and compress before a local cost\footnote{This is the languaged used in \cite{Mueller2007} but other authors use "association", "dissimilarity", or "distance" functions.} $c$ function is applied to the pairs of values from the two time series. This article will adhere to the classic definition of dynamic time warping. For notation this article this article borrows heavily from \cite{Mueller2007}.
 
-\begin{itemize}
-    \item Boundary Condition: w(t=1) = 1 and w(t=T) = S
-    \item Step-Size Condition: $\rho_{l} - \rho_{l - 1} \in \{ (1, 0), (0, 1), (1, 1) \} $
-\end{itemize}
-
-The boundary condition ensures that the first and last indices of the two series are mapped to each other while the step-size condition ensures a non-decreasing monotonicity in the indices of \emph{both} series. With these conditions, DTW is designed to compare the global shape of the two series rather than the co-movements of the values that share the same time index. The aim of the DTW algorithm is to find the optimal warping path $\boldsymbol{p}^{*}$ that minimizes the sum of local cost function, c.
-
+Suppose there are two time series: $x_{t}$ for $t \in [1:T]$ and $y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the time index of one series to the other: $p_{l} = (t_{l}, \, s_{l}) \in [1:T] \times [1:S]$ for $l \in [1:L]$. For each point in the warping path $p_{l}$ there is a cost (or distance) function measuring the level of association between the values of the series, indexed by the warping path.
 
 \begin{equation}
-    \boldsymbol{p}^{*} = \argmin_{w} \sum^{L}_{l} c(X_{t_{l}},\, Y_{w(t_{l})})
+    c: x_{t_{l}} \times y_{s_{l}} \rightarrow \mathbb{R}_{\ge 0}
 \end{equation}
-    
+
+The behaviour of the warping paths do follow some conditions, which are listed below:
+
+\begin{itemize}
+    \item \emph{Boundary Condition}: $p_{1} = (1, 1)$ and $p_{L} = (T, S)$ 
+    \item \emph{Step-Size Condition}: $p_{l} - p_{l - 1} \in \{ (1, 0), (0, 1), (1, 1) \} $
+\end{itemize}
+
+The boundary condition requires that the first and last indices of the two series are mapped to each other. The step-size condition governs the evolution of the warping path. It ensures a non-decreasing monotonicity in the indices of \emph{both} series such that $t_{i} \le t_{j}$ and $s_{i} \le s_{j}$ if $i \le j$. A $T \times S$ cost matrix can be created that stores the associated cost between all values in the two series:
+
+\begin{equation}
+    \mathbf{C}(\boldsymbol{X}, \boldsymbol{Y}) = \left[ 
+        \begin{array}{cccc}
+            c(x_{T}, y_{1}) & c(x_{T}, y_{2}) & \cdots & c(x_{T}, y_{S}) \\ 
+            \vdots          & \vdots          & \vdots & \vdots          \\
+            c(x_{2}, y_{1}) & c(x_{2}, y_{2}) & \cdots & c(x_{2}, y_{S}) \\ 
+            c(x_{1}, y_{1}) & c(x_{1}, y_{2}) & \cdots & c(x_{1}, y_{S})
+    \end{array}\right]
+\end{equation}
+
+A warping path's total cost is the sum of the local costs it incurs as it travels from the start of the series (bottom left of $\boldsymbol{C}$) to their end (top right of $\boldsymbol{C}$):
+
+\begin{equation}
+    \mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) = \sum^{L}_{l=1} c(x_{t_{l}},\, y_{s_{l}})
+\end{equation}
+
+There are many permissable\footnote{Permissable as governed by the boundary and step conditions} warping paths between two series. In fact the number of permissable paths has exponential growth in the values of $T$ and $S$. The aim during optimization is to find the warping path that minimizes the total cost. If the set of all warping paths are denoted $\mathbb{P}(\boldsymbol{X}, \boldsymbol{Y})$ then the value of the optimal warping path has the property
+
+\begin{equation}
+    \mathbb{c}_{\boldsymbol{p}^{*}}(\boldsymbol{X}, \boldsymbol{Y}) \le \mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) \,\, \textrm{for all} \,\, \boldsymbol{p} \in \mathbb{P}(\boldsymbol{X}, \boldsymbol{Y})
+\end{equation}
+
+and the value of the DTW measure between $\boldsymbol{X}$ and $\boldsymbol{Y}$ is set to $\mathbb{c}_{\boldsymbol{p^{*}}}(\boldsymbol{X}, \boldsymbol{Y})$. The naive approach to solving this optimization problem is to estimate the total cost of all warping paths and select the one that minimizes this value. The challenge though is efficient computation. If the number of permissable warping paths grows exponentially in the length the series then the compuational time needed to check every warping path becomes problematic. The solution to this problem is to leverage \emph{dynamic programming} to reduce the computational time needed to find the optimal solution. Instead of dealing with exponential growth of permissable warping paths the DTW algorithm can find the optimal warping path in $\mathcal{O}(TS)$ calculations. To do so an \emph{accumulated cost matrix} $\boldsymbol{A}$ needs to be defined. The accumulated cost matrix has the same dimension as the cost matrix. Defining $A_{t,s}$ as the value of $\boldsymbol{A}$ the $t^{th}$ row and the $s^{th}$ column of the accumulated cost matrix, the matrix has the following three identities:
+
+\begin{equation}
+    A_{t,1} = \sum^{t}_{k=1} c(x_{k}, y_{1}) \,\, \textrm{for} \,\, t \in [1:T]
+\end{equation}
+
+\begin{equation}
+    A_{1,s} = \sum^{s}_{k=1} c(x_{1}, y_{k}) \,\, \textrm{for} \,\, s \in [1:S]
+\end{equation}
+
+\begin{equation}
+    A_{t, s} = c(x_{t}, y_{s}) + \min\left(A_{t-1, s-1}, \, A_{t-1, s}, \, A_{t, s-1}\right)
+\end{equation}
+
+With this definition of the accumulative cost matrix the optimal warping path can be found by the following recursive procedure:
+
+\begin{enumerate}
+    \item Set $p_{L} = (T, S)$
+    \item Given $p_{l} = (t, s)$ select $p_{l - 1} = \begin{cases} (1, s-1) & \textrm{if } t=1 \\ (t-1,1) & \textrm{if } s=1 \\ 
+                                            \argmin \left[ A_{t-1, s-1},\, A_{t, s-1},\, A_{t-1, s} \right] & \textrm{otherwise} \end{cases}$
+\end{enumerate}
+
+To put these concepts into practice they will be demonstrated on two stock prices from the first half of 2019, Agilent Technologies (A) and General Electric (GE). Instead of the raw price value the series will be standardized by setting the price on January 2, 2019 equal to one. Figure \ref{fig:dtw_plot_stock_price_index_matching} summarizes the price movement of these two stocks.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{dtw_plot_stock_price_index_matching.jpeg}
+    \caption{This figures shows a normalized view of the Apple and GE stock price for the first half of 2019. The normalization divides the stock price by it's value on the first market day of the year: January 2nd, 2019. The total length is 124 days ending on June 28th. The dashed gray lines tie the index pairs of warping path to the normalized stock price at that index. The dotted light gray line segments match the stock prices as indicated by the optimal warping path.}
+    \label{fig:dtw_plot_stock_price_index_matching}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{dtw_plot_cost_and_accum_cost.jpeg}
+    \caption{The left image is the cost matrix for the first ten values of the Aligent and GE stock prices after standardization. The local cost function is the euclidean distance. The right image is the accumulative cost matrix for the same sequence of prices. The optimal warping path is highlighted in pink. The gray shading tracks the range of values in each matrix. Darker shades of gray represent smaller values while lighter shades of gray represents larger values. Note that the scale of the shading is not uniform across images.}
+    \label{fig:dtw_plot_cost_and_accum_cost}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{dtw_plot_warping_between_agilent_and_ge.jpeg}
+    \caption{This figure displays the warping path between Apple and GE stock prices in the first half of 2019. The two peripheral images show their respective stock price while the central image traces the warping path as it connects the indicies of the two series.}
+    \label{fig:dtw_plot_warping_between_agilent_and_ge}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{dtw_plot_cost_matrix_topography.jpeg}
+    \caption{This figure displays the optimal alignment between Aligent and GE stock return series. The topology lines are based on the cost matrix. From this view the warping path (in blue) is a "valley of least cost" traversing the local cost landscape.}
+    \label{fig:dtw_plot_cost_matrix_topography}
+\end{figure}
+
 
 \subsection{Kullback-Leibler Divergence} \label{sec:KL-Divergence}
 
-The model estimation strategy this article takes is ultimately a maximum likelihood one. As discussed in Section \ref{sec:ModelEstimationStrategy}, every ARIMA-GARCH model is estimated by searching for the parameter vector $\Delta$ that maximizes the log likelihood for a given distribution $g$ with parameter vector $\lambda$
+The model estimation strategy this article takes is ultimately a maximum likelihood one. As discussed in Section \ref{sec:ARMAGARCH-benchmark}, every ARIMA-GARCH model is estimated by searching for the parameter vector $\Delta$ that maximizes the log likelihood for a given distribution $g$ with parameter vector $\lambda$
 
 \begin{equation}
     \hat{\Delta},\, \hat{\lambda} = \argmax_{\Delta,\, \lambda} L(\Delta, \lambda | X)
@@ -281,7 +316,134 @@ where $p$ and $q$ are the density functions of $P$ and $Q$, respectively (e.g: $
     SKL(P, Q) = \frac{1}{2} \left( D_{KL}(P || Q) + D_{KL}(Q || P) \right)
 \end{equation}
 
-Unlike DTW, there is a strong connection in this article between the correlation measure and the symmetric KL divergence. The distributions used here are derived during the estimation of the ARIMA-GARCH model and due to that, the SKL measure is subject to the same dangers of model misspecification as the correlation analysis. 
+Unlike DTW, there is a strong connection in this article between the correlation measure and the symmetric KL divergence. The distributions used here are derived during the estimation of the ARIMA-GARCH model and due to that, the SKL measure is subject to the same dangers of model misspecification as the correlation analysis.
+
+
+\section{Simulation Results}
+In order to gauge the relationship between the DGP process of two time series and their resulting DTW value we turn to simulation. For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
+
+\begin{equation}
+    X_{t} = \omega + \epsilon_{t} \qquad \epsilon_{t} \thicksim N(0, \sigma^{2})
+\end{equation}
+
+This stationary process represents a simplified ARIMA-GARCH model, replacing the conditional mean and variance unconditional equivalents. After fixing parameter values ($\omega_{A}$, $\sigma_{A}$, $\omega_{B}$, $\sigma_{B}$) we can sample from the normal distribution to produce stationary time series of arbitrary length. By sampling a series each from specifications A and B, then calculating the dynamic time-warping distance between the two, we can trace the effect of the parameters on the value of the DTW metric. By repeating this process N times we can build up a distribution of these values. A similar apprach can be used to capture the null distribution of the dynamic time-warping metric for two unit root processes that obey the following specification.
+
+\begin{equation} \label{eq:random_walk}
+    X_{t} = \omega + X_{t-1} + \epsilon_{t} \qquad \epsilon_{t} \thicksim N(0, \sigma^{2})
+\end{equation}
+
+From equation (\ref{eq:random_walk}) at any time $t$ we know both the expectation and the variance of both random walk processes:
+
+\begin{equation}
+    X_{i,t} \thicksim N(t\omega_{i}, \, t\sigma_{i}^{2})
+\end{equation}
+
+\begin{equation}
+    Var(X_t) = \sum_{j=1}^t \sigma^2=t \sigma^2
+\end{equation}
+
+\begin{equation}
+    SD(X_t) = \sigma \sqrt{t}
+\end{equation}
+
+
+\begin{table}
+    \begin{center}
+      \begin{tabular}{| r r r | r r r r r r r |}
+        \hline
+        $\omega_{A} - \omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \hline
+        0  & 1  & 1  & 0.72  & 0.82  & 0.85  & 0.85  & 0.89  & 0.97  & 0.06 \\
+        \hline
+        0  & 1  & 2  & 0.86  & 1.04  & 1.08  & 1.09  & 1.13  & 1.25  & 0.09 \\
+        0  & 1  & 4  & 1.19  & 1.44  & 1.52  & 1.52  & 1.59  & 1.83  & 0.15 \\
+        0  & 1  & 8  & 1.72  & 2.07  & 2.18  & 2.19  & 2.29  & 2.70  & 0.22 \\
+        0  & 1  & 16 & 2.55  & 2.99  & 3.16  & 3.17  & 3.32  & 4.05  & 0.33 \\
+        \hline
+        0  & 2  & 2  & 0.99  & 1.16  & 1.22  & 1.21  & 1.26  & 1.42  & 0.10 \\
+        0  & 4  & 4  & 1.39  & 1.64  & 1.71  & 1.71  & 1.77  & 2.02  & 0.13 \\
+        0  & 8  & 8  & 2.06  & 2.32  & 2.42  & 2.42  & 2.51  & 2.93  & 0.18 \\
+        0  & 16 & 16 & 2.95  & 3.31  & 3.44  & 3.44  & 3.56  & 4.14  & 0.25 \\
+        \hline
+        2  & 1  & 1  &  1.23 &  1.41 &  1.48 &  1.48 &  1.53 &  1.80 & 0.12 \\
+        4  & 1  & 1  &  2.32 &  3.32 &  3.58 &  3.58 &  3.86 &  4.76 & 0.54 \\
+        8  & 1  & 1  &  9.47 & 11.06 & 11.41 & 11.39 & 11.75 & 12.86 & 0.69 \\
+        16 & 1  & 1  & 25.16 & 27.06 & 27.41 & 27.38 & 27.74 & 28.68 & 0.68 \\
+        \hline
+      \end{tabular}
+    \caption{Stationary Time Series: Variance}
+    \end{center}
+\end{table}
+
+\begin{table}
+    \begin{center}
+      \begin{tabular}{| r r r | r r r r r r r |}
+        \hline
+        $\omega_{A}$ $/$ $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \hline
+        1  & 1  & 1  & 0.85   & 1.12   & 1.48   &  1.97  &  2.36  &  8.62  & 1.24  \\
+        \hline
+        1  & 1  & 2  & 1.00   & 1.42   & 2.02   &  2.75  &  3.48  & 12.82  & 2.05  \\
+        1  & 1  & 4  & 1.31   & 1.97   & 2.79   &  4.01  &  4.62  & 19.91  & 2.64  \\
+        1  & 1  & 8  & 1.68   & 3.08   & 4.55   &  6.49  &  8.08  & 40.11  & 5.00  \\
+        1  & 1  & 16 & 2.88   & 5.19   & 7.64   & 11.02  & 13.26  & 68.12  & 8.07  \\
+        \hline
+        1  & 2  & 2  & 1.23   & 1.63   &  2.38  &  3.23  &  3.76  &  22.63 &  2.13  \\
+        1  & 4  & 4  & 1.73   & 2.43   &  3.66  &  5.62  &  7.60  &  36.24 &  5.17  \\
+        1  & 8  & 8  & 2.60   & 4.06   &  6.49  &  9.38  & 11.70  &  48.24 &  7.64  \\
+        1  & 16 & 16 & 3.93   & 6.57   & 10.87  & 17.00  & 20.03  & 108.67 & 13.46  \\
+        \hline
+        2  & 1  & 1  &  15.18 &  27.33 &  32.43 &  32.74 &  37.32 &  59.31 &  9.99  \\
+        4  & 1  & 1  & 115.79 & 136.75 & 143.33 & 143.48 & 150.31 & 181.75 & 13.56  \\
+        8  & 1  & 1  & 355.60 & 382.08 & 389.51 & 389.48 & 396.75 & 422.52 & 14.67  \\
+        16 & 1  & 1  & 854.08 & 883.86 & 891.20 & 891.33 & 899.22 & 927.54 & 15.36  \\
+        \hline
+      \end{tabular}
+    \caption{Unit-Root Time Series: Variance}
+    \end{center}
+    \begin{tablenotes}
+        \item{NOTE: small variance puts a lid on the IQR}
+        \item{\footnotesize The variance of a rw process is a function if time sqrt(t).}
+        \item{\footnotesize ME regressions are modeled using equation}
+    \end{tablenotes}
+\end{table}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
+    \caption{}
+    \label{fig:Ng1}
+
+    \bigbreak
+
+    \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
+    \caption{}
+    \label{fig:Ng2}
+\end{figure}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{dtw_20190201_20200214.png}
+    \caption{}
+    \label{fig:Ng3}
+
+    \bigbreak
+
+    \includegraphics[width=1\linewidth]{dtw_20200323_20210219.png}
+    \caption{}
+    \label{fig:Ng4}
+\end{figure}
+
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{SandP_missing_map_pptx.png}
+    \caption{Missing map of the S\&P data set. The red horizontal bars demark the timeframes under consideration. Of the 505 tickers in the dataset, there are 423 with a full series stock values from 2007 onward, 480 from 2015 onward, and 494 from 2019 onward.}
+    \label{fig:SandP_missing_map}
+\end{figure}
+
 
 \printbibliography
 
