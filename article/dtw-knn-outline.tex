@@ -98,6 +98,14 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. Three different time periods will be considered. The financial crisis of 2007-2008, the moderate economic period between 2015 and 2016, and the dramatic shut-down economy of 2019-2020. With a focus on the these three time periods, the market upheaval surrounding the financial crisis and Covid-19 serve as a natural experiment with the moderate-but-steady growth of 2015-2016 acting as a control. This is especially true of the Covid-19 timeframe. Some industries bounced back strongly (Technology) while others struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{SandP_missing_map_pptx.png}
+    \caption{Missing map of the S\&P data set. The red horizontal bars demark the timeframes under consideration. Of the 505 tickers in the dataset, there are 423 with a full series stock values from 2007 onward, 480 from 2015 onward, and 494 from 2019 onward.}
+    \label{fig:SandP_missing_map}
+\end{figure}
+
+
 The companies comprising the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} as of February 2021 are included in this essay's analysis. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary of the price history for the individual companies in the index.
 
 \section{Distance Measures}
@@ -200,7 +208,9 @@ The specification for the ARMA process is found first independently of the GARCH
 
 Dynamic time warping (DTW) is an alternative method for comparing the association between two discrete time series. It differs from Pearson's correlation measure in that the time indices between the two series at moments of comparison are not constrained to equal each other -- like in Equation (\ref{eq:pearsons_rho}). Time is allowed to stretch and compress before a local cost\footnote{This is the languaged used in \cite{Mueller2007} but other authors use "association", "dissimilarity", or "distance" functions.} $c$ function is applied to the pairs of values from the two time series. This article will adhere to the classic definition of dynamic time warping. For notation this article this article borrows heavily from \cite{Mueller2007}.
 
-Suppose there are two time series: $x_{t}$ for $t \in [1:T]$ and $y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the time index of one series to the other: $p_{l} = (t_{l}, \, s_{l}) \in [1:T] \times [1:S]$ for $l \in [1:L]$. For each point in the warping path $p_{l}$ there is a cost (or distance) function measuring the level of association between the values of the series, indexed by the warping path.
+\subsubsection{Algorithm}
+
+Suppose there are two time series: $x_{t}$ for $t \in [1:T]$ and $y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the time index of one series to the other: $p_{l} = (t_{l}, \, s_{l}) \in [1:T] \times [1:S]$ for $l \in [1:L]$. For each point in the warping path $p_{l}$ there is a cost function quantifying the distance between the values of the series.
 
 \begin{equation}
     c: x_{t_{l}} \times y_{s_{l}} \rightarrow \mathbb{R}_{\ge 0}
@@ -237,7 +247,7 @@ There are many permissable\footnote{Permissable as governed by the boundary and 
     \mathbb{c}_{\boldsymbol{p}^{*}}(\boldsymbol{X}, \boldsymbol{Y}) \le \mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) \,\, \textrm{for all} \,\, \boldsymbol{p} \in \mathbb{P}(\boldsymbol{X}, \boldsymbol{Y})
 \end{equation}
 
-and the value of the DTW measure between $\boldsymbol{X}$ and $\boldsymbol{Y}$ is set to $\mathbb{c}_{\boldsymbol{p^{*}}}(\boldsymbol{X}, \boldsymbol{Y})$. The naive approach to solving this optimization problem is to estimate the total cost of all warping paths and select the one that minimizes this value. The challenge though is efficient computation. If the number of permissable warping paths grows exponentially in the length the series then the compuational time needed to check every warping path becomes problematic. The solution to this problem is to leverage \emph{dynamic programming} to reduce the computational time needed to find the optimal solution. Instead of dealing with exponential growth of permissable warping paths the DTW algorithm can find the optimal warping path in $\mathcal{O}(TS)$ calculations. To do so an \emph{accumulated cost matrix} $\boldsymbol{A}$ needs to be defined. The accumulated cost matrix has the same dimension as the cost matrix. Defining $A_{t,s}$ as the value of $\boldsymbol{A}$ the $t^{th}$ row and the $s^{th}$ column of the accumulated cost matrix, the matrix has the following three identities:
+and the value of the DTW measure between $\boldsymbol{X}$ and $\boldsymbol{Y}$ is set to $\mathbb{c}_{\boldsymbol{p^{*}}}(\boldsymbol{X}, \boldsymbol{Y})$. An interested party could solve this optimization problem by estimating the total cost of all warping paths and select the one that minimizes this value. The challenge though is efficient computation. Since the number of warping paths grows exponentially the compuational time needed to check every warping path becomes problematic for large series. The proposed solution is to leverage \emph{dynamic programming} to reduce the computational time needed to find the optimal solution. Instead of dealing with exponential growth of permissable warping paths the DTW algorithm can find the optimal warping path in $\mathcal{O}(TS)$ calculations. To do so an \emph{accumulated cost matrix} $\boldsymbol{A}$ needs to be defined. The accumulated cost matrix has the same dimension as the cost matrix. Defining $A_{t,s}$ as the value of $\boldsymbol{A}$ at the $t^{th}$ row and the $s^{th}$ column of the accumulated cost matrix, the matrix has the following three identities:
 
 \begin{equation}
     A_{t,1} = \sum^{t}_{k=1} c(x_{k}, y_{1}) \,\, \textrm{for} \,\, t \in [1:T]
@@ -259,27 +269,29 @@ With this definition of the accumulative cost matrix the optimal warping path ca
                                             \argmin \left[ A_{t-1, s-1},\, A_{t, s-1},\, A_{t-1, s} \right] & \textrm{otherwise} \end{cases}$
 \end{enumerate}
 
-To put these concepts into practice they will be demonstrated on two stock prices from the first half of 2019, Agilent Technologies (A) and General Electric (GE). Instead of the raw price value the series will be standardized by setting the price on January 2, 2019 equal to one. Figure \ref{fig:dtw_plot_stock_price_index_matching} summarizes the price movement of these two stocks.
+\subsubsection{Example}
+
+To put these concepts into practice the dynamic time warping algorithm will be demonstrated on the stock prices for Agilent Technologies (A) and General Electric (GE) from the first half of 2019. Instead of the original price level the series will be standardized by setting the price on January 2, 2019 equal to one. Figure \ref{fig:dtw_plot_stock_price_index_matching} summarizes the price movement of these two stocks and shows which price values are matched together by their optimal warping path. Figure \ref{fig:dtw_plot_warping_between_agilent_and_ge} displays the full optimal warping paths and discusses the influence of boundary and step-size conditions on it's shape. Figure \ref{fig:dtw_plot_cost_and_accum_cost} displays the cost and accumulated cost matrices for the first ten days of the two series. The optimal warping path is annotated in both.
 
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{dtw_plot_stock_price_index_matching.jpeg}
-    \caption{This figures shows a normalized view of the Apple and GE stock price for the first half of 2019. The normalization divides the stock price by it's value on the first market day of the year: January 2nd, 2019. The total length is 124 days ending on June 28th. The dashed gray lines tie the index pairs of warping path to the normalized stock price at that index. The dotted light gray line segments match the stock prices as indicated by the optimal warping path.}
+    \caption{This figures shows a normalized view of the Aligent and GE stock price for the first half of 2019. The normalization divides the stock price by it's value on the first market day of the year, January 2nd, 2019. Dynamic time warping is applied on the standardized series. The total length is 124 days ending on June 28th. The dashed gray lines connect elements of the index pair in the optimized warping path. The DTW finds the warping path that has the least total cost.}
     \label{fig:dtw_plot_stock_price_index_matching}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\textwidth]{dtw_plot_cost_and_accum_cost.jpeg}
-    \caption{The left image is the cost matrix for the first ten values of the Aligent and GE stock prices after standardization. The local cost function is the euclidean distance. The right image is the accumulative cost matrix for the same sequence of prices. The optimal warping path is highlighted in pink. The gray shading tracks the range of values in each matrix. Darker shades of gray represent smaller values while lighter shades of gray represents larger values. Note that the scale of the shading is not uniform across images.}
-    \label{fig:dtw_plot_cost_and_accum_cost}
+    \includegraphics[width=\textwidth]{dtw_plot_warping_between_agilent_and_ge.jpeg}
+    \caption{This figure displays the full warping path between Aligent and GE stock prices in the first half of 2019. The two peripheral images show their respective standardized stock prices while the central image traces the warping path as it connects the indicies of the two series. The influence of the step-condition is seen immediately in the marginal increments of the path. They are non-decreasing. This allows time to "stretch" but not be put into reverse. At the end of the warping path (top right part of the image) the boundary condition becomes binding--seen by the vertical line at the tail end--as the last index in GE's series is reached before the last index of Aligent's.}
+    \label{fig:dtw_plot_warping_between_agilent_and_ge}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\textwidth]{dtw_plot_warping_between_agilent_and_ge.jpeg}
-    \caption{This figure displays the warping path between Apple and GE stock prices in the first half of 2019. The two peripheral images show their respective stock price while the central image traces the warping path as it connects the indicies of the two series.}
-    \label{fig:dtw_plot_warping_between_agilent_and_ge}
+    \includegraphics[width=\textwidth]{dtw_plot_cost_and_accum_cost.jpeg}
+    \caption{The left image is the cost matrix for the first ten values of the Aligent and GE stock prices after standardization. The local cost function is the euclidean distance. The right image is the accumulative cost matrix for the same sequence of prices. The optimal warping path is annotated with white outlines. The gray shading tracks the range of values in each matrix. Darker shades of gray represent smaller values while lighter shades of gray represents larger values. Note that the scale of shading is not uniform across images.}
+    \label{fig:dtw_plot_cost_and_accum_cost}
 \end{figure}
 
 \begin{figure}
@@ -288,6 +300,9 @@ To put these concepts into practice they will be demonstrated on two stock price
     \caption{This figure displays the optimal alignment between Aligent and GE stock return series. The topology lines are based on the cost matrix. From this view the warping path (in blue) is a "valley of least cost" traversing the local cost landscape.}
     \label{fig:dtw_plot_cost_matrix_topography}
 \end{figure}
+
+
+\pagebreak
 
 
 \subsection{Kullback-Leibler Divergence} \label{sec:KL-Divergence}
@@ -323,127 +338,147 @@ Unlike DTW, there is a strong connection in this article between the correlation
 In order to gauge the relationship between the DGP process of two time series and their resulting DTW value we turn to simulation. For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
 
 \begin{equation}
-    X_{t} = \omega + \epsilon_{t} \qquad \epsilon_{t} \thicksim N(0, \sigma^{2})
+    X_{t} = \omega + \epsilon_{t} \qquad \epsilon_{t} \thicksim \mathcal{N}(0, \sigma^{2})
 \end{equation}
 
-This stationary process represents a simplified ARIMA-GARCH model, replacing the conditional mean and variance unconditional equivalents. After fixing parameter values ($\omega_{A}$, $\sigma_{A}$, $\omega_{B}$, $\sigma_{B}$) we can sample from the normal distribution to produce stationary time series of arbitrary length. By sampling a series each from specifications A and B, then calculating the dynamic time-warping distance between the two, we can trace the effect of the parameters on the value of the DTW metric. By repeating this process N times we can build up a distribution of these values. A similar apprach can be used to capture the null distribution of the dynamic time-warping metric for two unit root processes that obey the following specification.
+This stationary process represents a simplified ARIMA-GARCH model, replacing the conditional mean and variance their unconditional equivalents. After fixing parameter values ($\omega_{A}$, $\sigma_{A}$, $\omega_{B}$, $\sigma_{B}$) we can sample from the normal distribution to produce stationary time series of arbitrary length. By sampling a series each from specifications A and B, then calculating the dynamic time-warping distance between the two, we can trace the effect of the parameters on the value of the DTW metric. By repeating this process N times we can build up a distribution of these values. A similar apprach can be used to capture the null distribution of the dynamic time-warping metric for two unit root processes that obey the following specification.
 
 \begin{equation} \label{eq:random_walk}
-    X_{t} = \omega + X_{t-1} + \epsilon_{t} \qquad \epsilon_{t} \thicksim N(0, \sigma^{2})
+    X_{t} = \omega + X_{t-1} + \epsilon_{t} \qquad \epsilon_{t} \thicksim \mathcal{N}(0, \sigma^{2})
 \end{equation}
 
 From equation (\ref{eq:random_walk}) at any time $t$ we know both the expectation and the variance of both random walk processes:
 
 \begin{equation}
-    X_{i,t} \thicksim N(t\omega_{i}, \, t\sigma_{i}^{2})
-\end{equation}
-
-\begin{equation}
-    Var(X_t) = \sum_{j=1}^t \sigma^2=t \sigma^2
-\end{equation}
-
-\begin{equation}
-    SD(X_t) = \sigma \sqrt{t}
+    X_{i,t} \thicksim \mathcal{N}(t\omega_{i}, \, t\sigma_{i}^{2})
 \end{equation}
 
 
-\begin{table}
+\begin{table}[!htb]
     \begin{center}
-      \begin{tabular}{| r r r | r r r r r r r |}
+      \begin{tabular}{| r r r r | r r r r r r r |}
         \hline
-        $\omega_{A} - \omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
         \hline
-        0  & 1  & 1  & 0.72  & 0.82  & 0.85  & 0.85  & 0.89  & 0.97  & 0.06 \\
+        0  & 0 & 1  & 1  & 0.72  & 0.82  & 0.85  & 0.85  & 0.89  & 0.97  & 0.06 \\
         \hline
-        0  & 1  & 2  & 0.86  & 1.04  & 1.08  & 1.09  & 1.13  & 1.25  & 0.09 \\
-        0  & 1  & 4  & 1.19  & 1.44  & 1.52  & 1.52  & 1.59  & 1.83  & 0.15 \\
-        0  & 1  & 8  & 1.72  & 2.07  & 2.18  & 2.19  & 2.29  & 2.70  & 0.22 \\
-        0  & 1  & 16 & 2.55  & 2.99  & 3.16  & 3.17  & 3.32  & 4.05  & 0.33 \\
+        0  & 0 & 1  & 2  & 0.86  & 1.04  & 1.08  & 1.09  & 1.13  & 1.25  & 0.09 \\
+        0  & 0 & 1  & 4  & 1.19  & 1.44  & 1.52  & 1.52  & 1.59  & 1.83  & 0.15 \\
+        0  & 0 & 1  & 8  & 1.72  & 2.07  & 2.18  & 2.19  & 2.29  & 2.70  & 0.22 \\
+        0  & 0 & 1  & 16 & 2.55  & 2.99  & 3.16  & 3.17  & 3.32  & 4.05  & 0.33 \\
         \hline
-        0  & 2  & 2  & 0.99  & 1.16  & 1.22  & 1.21  & 1.26  & 1.42  & 0.10 \\
-        0  & 4  & 4  & 1.39  & 1.64  & 1.71  & 1.71  & 1.77  & 2.02  & 0.13 \\
-        0  & 8  & 8  & 2.06  & 2.32  & 2.42  & 2.42  & 2.51  & 2.93  & 0.18 \\
-        0  & 16 & 16 & 2.95  & 3.31  & 3.44  & 3.44  & 3.56  & 4.14  & 0.25 \\
+        0  & 0 & 2  & 2  & 0.99  & 1.16  & 1.22  & 1.21  & 1.26  & 1.42  & 0.10 \\
+        0  & 0 & 4  & 4  & 1.39  & 1.64  & 1.71  & 1.71  & 1.77  & 2.02  & 0.13 \\
+        0  & 0 & 8  & 8  & 2.06  & 2.32  & 2.42  & 2.42  & 2.51  & 2.93  & 0.18 \\
+        0  & 0 & 16 & 16 & 2.95  & 3.31  & 3.44  & 3.44  & 3.56  & 4.14  & 0.25 \\
         \hline
-        2  & 1  & 1  &  1.23 &  1.41 &  1.48 &  1.48 &  1.53 &  1.80 & 0.12 \\
-        4  & 1  & 1  &  2.32 &  3.32 &  3.58 &  3.58 &  3.86 &  4.76 & 0.54 \\
-        8  & 1  & 1  &  9.47 & 11.06 & 11.41 & 11.39 & 11.75 & 12.86 & 0.69 \\
-        16 & 1  & 1  & 25.16 & 27.06 & 27.41 & 27.38 & 27.74 & 28.68 & 0.68 \\
+        2  & 0 & 1  & 1  &  1.23 &  1.41 &  1.48 &  1.48 &  1.53 &  1.80 & 0.12 \\
+        4  & 0 & 1  & 1  &  2.32 &  3.32 &  3.58 &  3.58 &  3.86 &  4.76 & 0.54 \\
+        8  & 0 & 1  & 1  &  9.47 & 11.06 & 11.41 & 11.39 & 11.75 & 12.86 & 0.69 \\
+        16 & 0 & 1  & 1  & 25.16 & 27.06 & 27.41 & 27.38 & 27.74 & 28.68 & 0.68 \\
         \hline
       \end{tabular}
-    \caption{Stationary Time Series: Variance}
-    \end{center}
-\end{table}
-
-\begin{table}
-    \begin{center}
-      \begin{tabular}{| r r r | r r r r r r r |}
-        \hline
-        $\omega_{A}$ $/$ $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
-        \hline
-        1  & 1  & 1  & 0.85   & 1.12   & 1.48   &  1.97  &  2.36  &  8.62  & 1.24  \\
-        \hline
-        1  & 1  & 2  & 1.00   & 1.42   & 2.02   &  2.75  &  3.48  & 12.82  & 2.05  \\
-        1  & 1  & 4  & 1.31   & 1.97   & 2.79   &  4.01  &  4.62  & 19.91  & 2.64  \\
-        1  & 1  & 8  & 1.68   & 3.08   & 4.55   &  6.49  &  8.08  & 40.11  & 5.00  \\
-        1  & 1  & 16 & 2.88   & 5.19   & 7.64   & 11.02  & 13.26  & 68.12  & 8.07  \\
-        \hline
-        1  & 2  & 2  & 1.23   & 1.63   &  2.38  &  3.23  &  3.76  &  22.63 &  2.13  \\
-        1  & 4  & 4  & 1.73   & 2.43   &  3.66  &  5.62  &  7.60  &  36.24 &  5.17  \\
-        1  & 8  & 8  & 2.60   & 4.06   &  6.49  &  9.38  & 11.70  &  48.24 &  7.64  \\
-        1  & 16 & 16 & 3.93   & 6.57   & 10.87  & 17.00  & 20.03  & 108.67 & 13.46  \\
-        \hline
-        2  & 1  & 1  &  15.18 &  27.33 &  32.43 &  32.74 &  37.32 &  59.31 &  9.99  \\
-        4  & 1  & 1  & 115.79 & 136.75 & 143.33 & 143.48 & 150.31 & 181.75 & 13.56  \\
-        8  & 1  & 1  & 355.60 & 382.08 & 389.51 & 389.48 & 396.75 & 422.52 & 14.67  \\
-        16 & 1  & 1  & 854.08 & 883.86 & 891.20 & 891.33 & 899.22 & 927.54 & 15.36  \\
-        \hline
-      \end{tabular}
-    \caption{Unit-Root Time Series: Variance}
+    \caption{Stationary White Noise}
     \end{center}
     \begin{tablenotes}
-        \item{NOTE: small variance puts a lid on the IQR}
-        \item{\footnotesize The variance of a rw process is a function if time sqrt(t).}
-        \item{\footnotesize ME regressions are modeled using equation}
+        \item{\footnotesize N = 500; T = 100}
+        \item {\footnotesize \textbf{Note}: The DTW value is divided by the series length (T).}
+        \item {\footnotesize \textbf{Note}: The distributions of the DTW samples are really symmetric. The median and mean remain close in value over all configurations.}
+        \item{\footnotesize \textbf{Note}: For the stationary series the deterministic component (distance between the mean values) plays an influencial role in the location of the center of the DTW distribution.}
+    \end{tablenotes}
+\end{table}
+
+\begin{table}[!htb]
+    \begin{center}
+      \begin{tabular}{| r r r r | r r r r r r r |}
+        \hline
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \hline
+        0 & 0 & 1  & 1  & 0.84 &  2.36 &  4.42 &  7.17 &  9.31 &  46.87 &  6.94  \\
+        \hline
+        0 & 0 & 1  & 2  & 1.39 &  3.57 &  7.05 & 10.09 & 13.84 &  50.89 & 10.27  \\
+        0 & 0 & 1  & 4  & 1.70 &  4.87 &  9.01 & 12.88 & 17.17 &  74.00 & 12.29  \\
+        0 & 0 & 1  & 8  & 2.88 &  6.81 & 12.30 & 16.34 & 22.30 &  83.36 & 15.48  \\
+        0 & 0 & 1  & 16 & 3.97 & 10.93 & 18.41 & 23.23 & 32.04 & 101.38 & 21.11  \\
+        \hline
+        0 & 0 & 2  & 2  & 1.43 &  3.44 &  6.48 & 10.41 & 13.85 &  69.20 & 10.41  \\
+        0 & 0 & 4  & 4  & 1.73 &  4.83 &  8.98 & 14.41 & 19.41 &  91.95 & 14.58  \\
+        0 & 0 & 8  & 8  & 2.75 &  7.38 & 15.66 & 23.12 & 31.83 & 152.90 & 24.45  \\
+        0 & 0 & 16 & 16 & 4.26 & 10.05 & 19.77 & 31.23 & 40.61 & 251.30 & 30.56  \\
+        \hline
+      \end{tabular}
+    \caption{Random Walk without Drift}
+    \end{center}
+    \begin{tablenotes}
+        \item{\footnotesize N = 500; T = 100}
+        \item {\footnotesize \textbf{Note}: The DTW value is divided by the series length (T).}
+        \item{\footnotesize \textbf{Note}: }
+    \end{tablenotes}
+\end{table}
+
+\begin{table}[!htb]
+    \begin{center}
+      \begin{tabular}{| r r r r | r r r r r r r |}
+        \hline
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \hline
+        1  & 1 & 1  & 1  & 0.85   & 1.12   & 1.48   &  1.97  &  2.36  &  8.62  & 1.24  \\
+        \hline
+        1  & 1 & 1  & 2  & 1.00   & 1.42   & 2.02   &  2.75  &  3.48  & 12.82  & 2.05  \\
+        1  & 1 & 1  & 4  & 1.31   & 1.97   & 2.79   &  4.01  &  4.62  & 19.91  & 2.64  \\
+        1  & 1 & 1  & 8  & 1.68   & 3.08   & 4.55   &  6.49  &  8.08  & 40.11  & 5.00  \\
+        1  & 1 & 1  & 16 & 2.88   & 5.19   & 7.64   & 11.02  & 13.26  & 68.12  & 8.07  \\
+        \hline
+        1  & 1 & 2  & 2  & 1.23   & 1.63   &  2.38  &  3.23  &  3.76  &  22.63 &  2.13  \\
+        1  & 1 & 4  & 4  & 1.73   & 2.43   &  3.66  &  5.62  &  7.60  &  36.24 &  5.17  \\
+        1  & 1 & 8  & 8  & 2.60   & 4.06   &  6.49  &  9.38  & 11.70  &  48.24 &  7.64  \\
+        1  & 1 & 16 & 16 & 3.93   & 6.57   & 10.87  & 17.00  & 20.03  & 108.67 & 13.46  \\
+        \hline
+        2  & 1 & 1  & 1  &  15.18 &  27.33 &  32.43 &  32.74 &  37.32 &  59.31 &  9.99  \\
+        4  & 1 & 1  & 1  & 115.79 & 136.75 & 143.33 & 143.48 & 150.31 & 181.75 & 13.56  \\
+        8  & 1 & 1  & 1  & 355.60 & 382.08 & 389.51 & 389.48 & 396.75 & 422.52 & 14.67  \\
+        16 & 1 & 1  & 1  & 854.08 & 883.86 & 891.20 & 891.33 & 899.22 & 927.54 & 15.36  \\
+        \hline
+      \end{tabular}
+    \caption{Random Walk with Drift}
+    \end{center}
+    \begin{tablenotes}
+        \item{\footnotesize N = 500; T = 100}
+        \item {\footnotesize \textbf{Note}: The DTW value is divided by the series length (T).}
+        \item {\footnotesize \textbf{Note}: The distributions are skewed towards larger values of the DTW metric (mean is greater than the median).}
+        \item{\footnotesize \textbf{Note}: Compare the last row of each section where variance or the distance between intercepts is set to 16. For the white noise process the strongest factor contributing to the mean DTW value is the difference between the mean values. In comparison, the response to an increase in the variance of either series is muted.}
     \end{tablenotes}
 \end{table}
 
 
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
-    \caption{}
-    \label{fig:Ng1}
+\pagebreak
 
-    \bigbreak
-
-    \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
-    \caption{}
-    \label{fig:Ng2}
-\end{figure}
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{dtw_20190201_20200214.png}
-    \caption{}
-    \label{fig:Ng3}
-
-    \bigbreak
-
-    \includegraphics[width=1\linewidth]{dtw_20200323_20210219.png}
-    \caption{}
-    \label{fig:Ng4}
-\end{figure}
-
-
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=\textwidth]{SandP_missing_map_pptx.png}
-    \caption{Missing map of the S\&P data set. The red horizontal bars demark the timeframes under consideration. Of the 505 tickers in the dataset, there are 423 with a full series stock values from 2007 onward, 480 from 2015 onward, and 494 from 2019 onward.}
-    \label{fig:SandP_missing_map}
-\end{figure}
-
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
+%     \caption{}
+%     \label{fig:Ng1}
+% 
+%     \bigbreak
+% 
+%     \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
+%     \caption{}
+%     \label{fig:Ng2}
+% \end{figure}
+% 
+% 
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=1\linewidth]{dtw_20190201_20200214.png}
+%     \caption{}
+%     \label{fig:Ng3}
+% 
+%     \bigbreak
+% 
+%     \includegraphics[width=1\linewidth]{dtw_20200323_20210219.png}
+%     \caption{}
+%     \label{fig:Ng4}
+% \end{figure}
 
 \printbibliography
 
