@@ -3,6 +3,23 @@ library(data.table)
 library(rugarch)
 source("R/normality_tests.R")
 
+# source("R/auto_marginal.R")
+# -------------------------------------------------
+# dtfTmp <- parse_stock_data("A")
+# tfTmp[, x := c(NA_real_, diff(log(close)))]
+# x <- dtfTmp[Date >= "2019-01-01" & Date <= "2019-12-31", x]
+# aa <- forecast::auto.arima(x, max.p=10, allowmean=TRUE, allowdrift=FALSE)
+# afit <- auto_fit(x)
+# spec_mod <- ugarchspec(
+#   variance.model = list(model="gjrGARCH", garchOrder=c(2,2)),
+#   mean.model = list(armaOrder=aa$arma[1:2], include.mean=TRUE),
+#   distribution.model = "std"
+# )
+
+# fit_ <- try(ugarchfit(spec=spec_mod, data=x))
+
+
+
 # Model specification lists can be given either as:
 # i) a file path to the specification list stored as a json object
 # ii) an R list object
@@ -56,7 +73,7 @@ good_vs_bad_symbols <- function(spec.path)
 # dtfU <- data.table(parse_json("GOOG"))
 # u <- dtfU[Date >= st_date & Date <= ed_date, diff(log(close))]
 #
-parse_json <- function(tick, values="close")
+parse_stock_data <- function(tick, values="close")
 {
   values <- unique(values)
   value_opts <- c("open", "high", "low", "close", "volume")
@@ -91,7 +108,7 @@ parse_json <- function(tick, values="close")
   attr(dtf, "ticker") <- lst[[1]]$`2. Symbol`
   attr(dtf, "last_refreshed") <- lst[[1]]$`3. Last Refreshed`
   attr(dtf, "date_range") <- range(dtf$Date)
-  dtf[order(dtf$Date), ]
+  return(data.table(dtf[order(dtf$Date), ]))
 }
 
 
@@ -124,7 +141,10 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
                           length(garchmodels), length(distributions)),
                 ncol=3,
                 dimnames=list(rnames, c("bic", "likelihood", "pass_marginal")))
-  
+  lowest_bic_model <- NULL
+  llh_bic <- Inf
+  lowest_pass_model <- NULL
+  llh_pass <- Inf
   for (a in arch) {
     for (g in garch) {
       for (mod in garchmodels) {
@@ -138,49 +158,61 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
           )
           
           fit_ <- try(ugarchfit(spec=spec_mod, data=x))
-          
-          if (inherits(fit_, "try-error")) {
+
+          # If the fitting process failed
+          if (inherits(fit_, "try-error") || fit_@fit$convergence != 0) {
             lik[nn,] <- c(NA_real_, NA_real_, FALSE)
-            
+
+          # If the fitting process succeeded
           } else {
-            marg_check <- try(verify_marginal_test(
-              marginal_tests(fit_, print=FALSE, plot=FALSE), 0.05))
+            marg_tests <- marginal_tests(fit_, print=FALSE, plot=FALSE)
+            marg_check <- try(verify_marginal_test(marg_tests, 0.05))
             l <- try(infocriteria(fit_)['Bayes', 1])
             LLH <- try(fit_@fit$LLH)
             
-            if (inherits(l, "try-error") || inherits(marg_check, "try-error"))
+            if (inherits(l, "try-error") || inherits(marg_check, "try-error")) {
               lik[nn,] <- c(NA_real_, NA_real_, FALSE)
-            else
+            } else {
               lik[nn,] <- c(l, LLH, marg_check)
+              # Check if we have a new lower bic model
+              if (l < llh_bic) {
+                lowest_bic_model <- fit_
+                llh_bic <- l
+              }
+              # Check if we have a new lower bic model that also passes marginal checks
+              if (l < llh_pass & marg_check) {
+                lowest_pass_model <- fit_
+                llh_pass <- l
+              }
+            }
           }
         }
       }
     }
   }
-
   # Default choice that minimizes BIC across specifications
   choice <- unlist(strsplit(names(which.min(lik[, "bic"])), "_"))
-  
+
   # Prefer to consider only specifications that pass
   pass <- any(lik[, "pass_marginal"] == 1)
-  
   if (pass) {
-    
     num_pass_specs <- sum(lik[, "pass_marginal"])
+    model <- lowest_pass_model
     
     if (num_pass_specs == 1) {
-      
       choice <- unlist(strsplit(names(which(lik[, "pass_marginal"] == 1)), "_"))
       
     } else if (num_pass_specs > 1) {
-      
       lik2 <- lik[which(lik[, "pass_marginal"] > 0), ]
       choice <- unlist(strsplit(names(which.min(lik2[, "bic"])), "_"))
       
     }
+  } else {
+    model <- lowest_bic_model
   }
   return(list(ar=arma[1], ma=arma[2], arch=choice[4], garch=choice[3],
-              garchmod=choice[2], distr=choice[1], pass=pass, lik=lik))
+              garchmod=choice[2], distr=choice[1], pass=pass, lik=lik,
+              model=model))
 }
 
 
@@ -188,41 +220,8 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
 # failed to find a fit that passes all the marginal tests,
 # try setting the the AR component to 7
 
-# does this even work (me: 2022-05-01)
-produce_rGARCHfit_s <- function(tick, start_date, end_date)
-{
-  
-  file_ <- paste0(toupper(tick), ".json")
-  
-  if (file.exists(paste0("data/raw_json/", file_))) {
-    pj <- parse_json(tick)
-    dtfU <- data.table(pj)
-    x <- dtfU[Date >= start_date & Date <= end_date, diff(log(close))]
-  } else {
-    stop(sprintf("JSON file doesn't exist for ticker [%s] in directory data/", tick))
-  }
-  
-  if (!exists("SPECIFICATIONS"))
-    SPECIFICATIONS <<- read_json(SPEC_PATH)
-  
-  spec <- SPECIFICATIONS[[toupper(tick)]]
-  if (is(spec, "NULL")) {
-    stop("Tick does not exist in SPECIFICATIONS.")
-  }
-  
-  spec_mod <- ugarchspec(
-    variance.model = list(model = unlist(spec$garchmod),
-                          garchOrder = c(as.integer(unlist(spec$arch)), as.integer(unlist(spec$garch)))),
-    mean.model = list(armaOrder = c(7, unlist(spec$ma)), include.mean = TRUE),
-    distribution.model = unlist(spec$distr)
-  )
-  fit_norm <- ugarchfit(spec=spec_mod, data=x)
-  return(fit_norm)
-}
-
-
 # batch process produce_rGarchfit_s over all failed marginal models
-# Not a actually working
+# >>> Not a actually working
 run_seasonal_modification <- function(badticks, specification, st_date, ed_date)
 {
   bool <- c()
@@ -263,15 +262,15 @@ produce_rGARCHfit_from_spec <- function(tick, specs, start_date, end_date)
   # Subset dates
   # calculate log returns
   if (file.exists(paste0("data/raw_json/", file_))) {
-    pj <- parse_json(tick)
+    pj <- parse_stock_data(tick)
     dtfU <- data.table(pj)
     # No data for this tick
     if (nrow(dtfU) == 0) {
       print(sprintf("No data for ticker [%s] data/raw_json/", tick))
       return(list(fit=NULL, dates=NULL))
     }
-    dtfU <- dtfU[Date >= start_date & Date <= end_date]
-    x <- dtfU[, diff(log(close))]
+    dtfU <- dtfU[, x := c(NA_real_, diff(log(close)))][Date >= start_date & Date <= end_date]
+    x <- dtfU[, x]
     if (nrow(dtfU) == 0) {
       print(sprintf("No data for ticker [%s] from %s to %s", tick, start_date, end_date))
       return(list(fit=NULL, dates=NULL))
@@ -298,72 +297,72 @@ produce_rGARCHfit_from_spec <- function(tick, specs, start_date, end_date)
     distribution.model = unlist(spec$distr)
   )
   fit_ <- try(ugarchfit(spec=spec_mod, data=x))
-  return(list(fit=fit_, dates=dtfU[2:.N, Date]))
+  return(list(fit=fit_, dates=dtfU[, Date]))
 }
 
 
-# define function that takes a spec_path and creates a matrix of each
-# stocks standardized residuals
-specs_to_resid_matrix <- function(path, write_to_file=TRUE)
+# Function that performs univariate ARIMA-GARCH modeling and dynamic time warping for a efine function that takes a spec_path and creates a matrix of each
+#  Formally 'specs_to_resid_matrix'
+#
+#   spec_path - file path to specifications
+arima_garch_optimization <- function(start_date,
+                                     end_date,
+                                     tickers,
+                                     label="default",
+                                     write_output=FALSE,
+                                     save_models=FALSE,
+                                     ...)
 {
-  # fetch patterns matching for four consecutive integers between 0 and 9
-  m <- gregexpr("[0-9]{4}", path)
-  yrs <- as.integer(unlist(regmatches(path, m)))
-  dts2 <- c(sprintf("%s-01-01", min(yrs)),
-            sprintf("%s-12-31", max(yrs)))
-  yrs <- paste(yrs, collapse="_")
-  
-  # read in specifications - run diagnostics - fit model to data - summarize models
-  spec_list <- read_json(path)
-  good_vs_bad <- good_vs_bad_symbols(path)
-  warning(sprintf("The following ticks failed to pass the full marginal tests: [%s] \n\n",
-                  paste0(good_vs_bad[['fail_ticks']], collapse=", ")))
-  warning(sprintf("Removed the following tickers that failed to run model fitting: [%s] \n\n",
-                  paste0(good_vs_bad[['not_run_ticks']], collapse=", ")))
-  for (rm_tick in good_vs_bad[['not_run_ticks']]) {
-    spec_list[[rm_tick]] <- NULL
-  }  
-  tickers <- names(spec_list)
-  resid_list_U <- resid_list_Z <- model_struct <- model_params <- vector("list", length(spec_list))
+  resid_list_U <- resid_list_Z <- resid_list_I <- model_struct <- model_params <- vector("list", length(tickers))
   names(resid_list_U) <- tickers
   names(resid_list_Z) <- tickers
+  names(resid_list_I) <- tickers
   names(model_params) <- tickers
   names(model_struct) <- tickers
   
   for (tick in tickers) {
     ii <- which(tick == tickers)
     print(sprintf("Tick: %s - %d out of %d", tick, ii, length(tickers)))
-    obj <- produce_rGARCHfit_from_spec(tick, spec_list, dts2[1], dts2[2])
-    
+    dtfU <- parse_stock_data(tick)
+    dtfU <- dtfU[, logR := c(NA_real_, diff(log(close)))][Date >= start_date & Date <= end_date]
+    obj <- auto_fit(dtfU$logR, ...)
+
     # If successfully fit from the specification
-    if (inherits(obj$fit, "uGARCHfit")) {
-      
+    if (inherits(obj$model, "uGARCHfit")) {
+
       nms <- c("Date", tick)
       
       # Standardized residuals
-      tmpZ <- data.table(Date=obj[['dates']], residuals(obj$fit, standardize=TRUE))
+      tmpZ <- data.table(Date=dtfU$Date, residuals(obj$model, standardize=TRUE))
       setnames(tmpZ, names(tmpZ), nms)
       
       # Uniform marginals by way of the probability integral transform
-      tmpU <- data.table(Date=obj[['dates']], PIT(obj$fit))
+      tmpU <- data.table(Date=dtfU$Date, PIT(obj$model))
       setnames(tmpU, names(tmpU), nms)
       
+      # Standardize time series - Divide all prices by the price on the first day of the series
+      tmpI <- data.table(Date=dtfU$Date, dtfU$close / dtfU$close[1])
+      setnames(tmpI, names(tmpI), nms)
+      
       # Model Summary
-      tmpP <- as.data.table(c(as.list(obj$fit@model$modelinc), obj$fit@model$modeldesc))
+      tmpP <- as.data.table(c(as.list(obj$model@model$modelinc), obj$model@model$modeldesc))
       tmpP[, tick := tick]
       
       # ARIMA-GARCH Coefficients
-      tmpM <- as.data.table(t(coef(obj$fit)))
+      tmpM <- as.data.table(t(coef(obj$model)))
       tmpM[, tick := tick]
       
     } else {
       # No ARIMA-GARCH was fitted
       
-      tmpU <- data.table(Date=obj[['dates']], NA_real_)
+      tmpU <- data.table(Date=dtfU$Date, NA_real_)
       setnames(tmpU, "V1", tick)
       
-      tmpZ <- data.table(Date=obj[['dates']], NA_real_)
+      tmpZ <- data.table(Date=dtfU$Date, NA_real_)
       setnames(tmpZ, "V1", tick)
+      
+      tmpI <- data.table(Date=dtfU$Date, NA_real_)
+      setnames(tmpI, "V1", tick)
       
       tmpP <- null_model_spec()[['modelsum']]
       
@@ -372,27 +371,36 @@ specs_to_resid_matrix <- function(path, write_to_file=TRUE)
     }
     resid_list_U[[tick]] <- tmpU
     resid_list_Z[[tick]] <- tmpZ
+    resid_list_I[[tick]] <- tmpI
     model_struct[[tick]] <- tmpP
     model_params[[tick]] <- tmpM
+    
+    if (save_models) {
+      model_file <- sprintf("~/Git/k-similar-neighbor/data/model_objects/%s_%s.rds", label, tick)
+      saveRDS(obj, file=model_file)
+    }
   }
   outZ <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_Z)
   outU <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_U)
+  outI <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_I)
   outP <- rbindlist(model_struct, use.names=TRUE, fill=TRUE)
   outM <- rbindlist(model_params, use.names=TRUE, fill=TRUE)
   
-  if (write_to_file) {
-    base_path <- "~/Git/k-similar-neighbor/data/"
-    create_name <- function(x) sprintf("%s%s_%s.csv", base_path, x, yrs)
+  if (write_output) {
+    base_path <- "~/Git/k-similar-neighbor/data/label_analysis/"
+    create_name <- function(x) sprintf("%s%s_%s.csv", base_path, label, x)
     
     fwrite(outU, file=create_name("uni_marg"))
     
     fwrite(outZ, file=create_name("std_resids"))
     
+    fwrite(outI, file=create_name("std_price"))
+    
     fwrite(outP, file=create_name("model_summary"))
     
     fwrite(outM, file=create_name("model_coef"))
   }
-  return(list(uni_marg=outU, std_resids=outZ, model_summary=outP, model_coef=outM))
+  return(list(uni_marg=outU, std_resids=outZ, std_price=outI, model_summary=outP, model_coef=outM))
 }
 
 
