@@ -8,7 +8,7 @@ library(dtw)
 #
 #   columns - subset of columns in M to calculate the sim to against the reference
 #
-#   M - data.table of pre-processed stock price series as columnar series
+#   M - data.table of pre-processed stock price series as columnar data
 #
 #   ... 
 euclidean_dist <- function(nm, columns, M)
@@ -67,7 +67,12 @@ kullback_leibler <- function(nm, columns, M, df_model_distr)
 }
 
 
-# Distribution factory
+# Density Distribution Factory:
+#
+#   ticker - specific ticker to set as reference
+#
+#   DT - data.table of model summaries
+#
 create_ddist <- function(ticker, DT)
 {
   na_to_null <- function(x)
