@@ -23,14 +23,15 @@
 
 \usepackage[
   backend=biber,
-  url=true,
+  url=false,
   doi=true,
   style=authoryear,
-  citestyle=numeric
+  citestyle=apa,
+  sorting=nty
 ]{biblatex}
 
 \addbibresource{dtw_references.bib}
-\bibliography{dtw_references}
+%\bibliography{dtw_references}
 
 \begin{document}
 
@@ -82,18 +83,23 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \section{Relevant Literature}
 
-\cite{ElsingAgon2012} view the analysis of time series data from a data mining perspective. The authors provide a detailed survey of time series representations, various distance metrics for measuring association, and proper ways to index time series data for efficient querying and information retrieval. The distance measure are classified into four categories: shape, edit, feature, and structure-based.
+\parencite{ElsingAgon2012} view the analysis of time series data from a data mining perspective. The authors provide a detailed survey of time series representations, various distance metrics for measuring association, and proper ways to index time series data for efficient querying and information retrieval. The distance measure are classified into four categories: shape, edit, feature, and structure-based.
 
-\cite{FruhwirthKaufmann2004} cluster time series into K groups based on the fitted parameters of AR(p) and dynamic regression models.
+\parencite{FruhwirthKaufmann2004} cluster time series into K groups based on the fitted parameters of AR(p) and dynamic regression models.
 
-\cite{Mueller2007} provides an excellent summary of the principles of DTW and discuss several extensions with respect to the local and global parameters of the technique.
+\parencite{Mueller2007} provides an excellent summary of the principles of DTW and discuss several extensions with respect to the local and global parameters of the technique.
 
-\cite{FrancesWiemann2020} apply dynamic time warping to quarterly real GDP of the 50 US states during the 2007 recession. The authors employ a novel distance metric and utlilize a K-Means algorithm proposed by \cite{PETITJEAN2011678} and adapted for time series to group the US states into seven distinct business cycle clusters.
+\parencite{FrancesWiemann2020} apply dynamic time warping to quarterly real GDP of the 50 US states during the 2007 recession. The authors employ a novel distance metric and utlilize a K-Means algorithm proposed by \cite{PETITJEAN2011678} and adapted for time series to group the US states into seven distinct business cycle clusters.
 
-\cite{WangXieHanSun2012} apply DTW to measure the pair-wise similarity between 35 foreign currencies. The authors then utilize a minimum spanning trees (MST) -- a novel graph algorithm -- to document the structural changes in the dependencies of the FX market over three separate years.
+\parencite{WangXieHanSun2012} apply DTW to measure the pair-wise similarity between 35 foreign currencies. The authors then utilize a minimum spanning trees (MST) -- a novel graph algorithm -- to document the structural changes in the dependencies of the FX market over three separate years.
 
-\cite{KotsifakosAthitsosPapapetrou_2011} are also motivitated from a data mining perspective and the ability to return relevant results from query to a large number of time series. The authors compare the an example-base query using DTW with a model-based approach using Hidden Markov Models (HMM).
+\parencite{KotsifakosAthitsosPapapetrou_2011} are also motivitated from a data mining perspective and the ability to return relevant results from query to a large number of time series. The authors compare the an example-base query using DTW with a model-based approach using Hidden Markov Models (HMM).
 
+\parencite{KeoghRatanamahatana_2005} Provide a theory for the most efficient lower bound on the dtw value. The authors adapt Piecewise Aggregate Approximation (PAA) for comparing series in a time-warping context.
+
+\parencite{JEONG20112231} Instead of providing a universal bound or step condition the authors come up with a temporal weighting function and apply it to the cost matrix before calculating the accumulated cost matrix. For temporal weights the authors use a generalized logistic function that uses two parameters to center and scale the output of the function. The scale parameter is optimized on a validation set while the Performance is evaluated on a test set. 
+
+\parencite{DuyTakeuchi2023statistical} Rare paper dealing directly with statistical inference of the DTW measure.
 \section{Data}
 
 Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. Three different time periods will be considered. The financial crisis of 2007-2008, the moderate economic period between 2015 and 2016, and the dramatic shut-down economy of 2019-2020. With a focus on the these three time periods, the market upheaval surrounding the financial crisis and Covid-19 serve as a natural experiment with the moderate-but-steady growth of 2015-2016 acting as a control. This is especially true of the Covid-19 timeframe. Some industries bounced back strongly (Technology) while others struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
@@ -208,7 +214,7 @@ The specification for the ARMA process is found first independently of the GARCH
 
 Dynamic time warping (DTW) is an alternative method for comparing the association between two discrete time series. It differs from Pearson's correlation measure in that the time indices between the two series at moments of comparison are not constrained to equal each other -- like in Equation (\ref{eq:pearsons_rho}). Time is allowed to stretch and compress before a local cost\footnote{This is the languaged used in \cite{Mueller2007} but other authors use "association", "dissimilarity", or "distance" functions.} $c$ function is applied to the pairs of values from the two time series. This article will adhere to the classic definition of dynamic time warping. For notation this article this article borrows heavily from \cite{Mueller2007}.
 
-\subsubsection{Algorithm}
+\subsubsection{Algorithm} \label{sec:DTW_Algorithm}
 
 Suppose there are two time series: $x_{t}$ for $t \in [1:T]$ and $y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the time index of one series to the other: $p_{l} = (t_{l}, \, s_{l}) \in [1:T] \times [1:S]$ for $l \in [1:L]$. For each point in the warping path $p_{l}$ there is a cost function quantifying the distance between the values of the series.
 
@@ -269,6 +275,26 @@ With this definition of the accumulative cost matrix the optimal warping path ca
                                             \argmin \left[ A_{t-1, s-1},\, A_{t, s-1},\, A_{t-1, s} \right] & \textrm{otherwise} \end{cases}$
 \end{enumerate}
 
+\subsubsection{Common Extensions}
+
+The definition of the DTW in section \ref{sec:DTW_Algorithm} is an unconstrained one without restrictions beyond the boundary and step-size conditions. There are numerous modifications of the original DTW diverse set of industries and domains but applications to financial or economics are relatively sparse. Unit root behavior is a common challenge in the finance and macro-economic fields.
+
+\begin{itemize}
+    \item Temporal weight approaches
+        \begin{itemize}
+            \item \parencite{JEONG20112231}
+            \item This article if we choose a weighting function suitable for 
+        \end{itemize}
+    \item Step-Size Constraints
+        \begin{itemize}
+            \item Sakoe and Chiba (1978)
+        \end{itemize}
+    \item Global Bounds
+        \begin{itemize}
+            \item Sakoe-Chiba Band, Itakura Parallelogram
+        \end{itemize}
+\end{itemize}
+
 \subsubsection{Example}
 
 To put these concepts into practice the dynamic time warping algorithm will be demonstrated on the stock prices for Agilent Technologies (A) and General Electric (GE) from the first half of 2019. Instead of the original price level the series will be standardized by setting the price on January 2, 2019 equal to one. Figure \ref{fig:dtw_plot_stock_price_index_matching} summarizes the price movement of these two stocks and shows which price values are matched together by their optimal warping path. Figure \ref{fig:dtw_plot_warping_between_agilent_and_ge} displays the full optimal warping paths and discusses the influence of boundary and step-size conditions on it's shape. Figure \ref{fig:dtw_plot_cost_and_accum_cost} displays the cost and accumulated cost matrices for the first ten days of the two series. The optimal warping path is annotated in both.
@@ -276,21 +302,21 @@ To put these concepts into practice the dynamic time warping algorithm will be d
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{dtw_plot_stock_price_index_matching.jpeg}
-    \caption{This figures shows a normalized view of the Aligent and GE stock price for the first half of 2019. The normalization divides the stock price by it's value on the first market day of the year, January 2nd, 2019. Dynamic time warping is applied on the standardized series. The total length is 124 days ending on June 28th. The dashed gray lines connect elements of the index pair in the optimized warping path. The DTW finds the warping path that has the least total cost.}
+    \caption{This figures shows a normalized view of the Agilent and GE stock price for the first half of 2019. The normalization divides the stock price by it's value on the first market day of the year, January 2nd, 2019. Dynamic time warping is applied on the standardized series. The total length is 124 days ending on June 28th. The dashed gray lines connect elements of the index pair in the optimized warping path. The DTW finds the warping path that has the least total cost.}
     \label{fig:dtw_plot_stock_price_index_matching}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{dtw_plot_warping_between_agilent_and_ge.jpeg}
-    \caption{This figure displays the full warping path between Aligent and GE stock prices in the first half of 2019. The two peripheral images show their respective standardized stock prices while the central image traces the warping path as it connects the indicies of the two series. The influence of the step-condition is seen immediately in the marginal increments of the path. They are non-decreasing. This allows time to "stretch" but not be put into reverse. At the end of the warping path (top right part of the image) the boundary condition becomes binding--seen by the vertical line at the tail end--as the last index in GE's series is reached before the last index of Aligent's.}
+    \caption{This figure displays the full warping path between Agilent and GE stock prices in the first half of 2019. The two peripheral images show their respective standardized stock prices while the central image traces the warping path as it connects the indicies of the two series. The influence of the step-condition is seen immediately in the marginal increments of the path. They are non-decreasing. This allows time to "stretch" but not be put into reverse. At the end of the warping path (top right part of the image) the boundary condition becomes binding--seen by the vertical line at the tail end--as the last index in GE's series is reached before the last index of Agilent's.}
     \label{fig:dtw_plot_warping_between_agilent_and_ge}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{dtw_plot_cost_and_accum_cost.jpeg}
-    \caption{The left image is the cost matrix for the first ten values of the Aligent and GE stock prices after standardization. The local cost function is the euclidean distance. The right image is the accumulative cost matrix for the same sequence of prices. The optimal warping path is annotated with white outlines. The gray shading tracks the range of values in each matrix. Darker shades of gray represent smaller values while lighter shades of gray represents larger values. Note that the scale of shading is not uniform across images.}
+    \caption{The left image is the cost matrix for the first ten values of the Agilent and GE stock prices after standardization. The local cost function is the euclidean distance. The right image is the accumulative cost matrix for the same sequence of prices. The optimal warping path is annotated with white outlines. The gray shading tracks the range of values in each matrix. Darker shades of gray represent smaller values while lighter shades of gray represents larger values. Note that the scale of shading is not uniform across images.}
     \label{fig:dtw_plot_cost_and_accum_cost}
 \end{figure}
 
@@ -353,6 +379,19 @@ From equation (\ref{eq:random_walk}) at any time $t$ we know both the expectatio
     X_{i,t} \thicksim \mathcal{N}(t\omega_{i}, \, t\sigma_{i}^{2})
 \end{equation}
 
+A random walk temporal weighting function could have the following form:
+
+\begin{equation}
+    \omega_{t, s} = \lvert t - s \rvert \sqrt{ \sigma_{A,\, t} \sigma_{B,\, s} }
+\end{equation}
+
+\begin{equation}
+    \omega_{t, s} = \rho \lvert t - s \rvert \sigma_{A,\, t} \sigma_{B,\, s}
+\end{equation}
+
+\begin{equation}
+    \sigma^{2}_{t, s} = \sum_{k=1}^{t - s} k \left( \sigma^{2}_{A,\, t - s + k} + \sigma^{2}_{B,\, t - s + k} \right)
+\end{equation}
 
 \begin{table}[!htb]
     \begin{center}
@@ -453,20 +492,19 @@ From equation (\ref{eq:random_walk}) at any time $t$ we know both the expectatio
 
 \pagebreak
 
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
-%     \caption{}
-%     \label{fig:Ng1}
-% 
-%     \bigbreak
-% 
-%     \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
-%     \caption{}
-%     \label{fig:Ng2}
-% \end{figure}
-% 
-% 
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
+    \caption{}
+    \label{fig:Ng1}
+
+    \bigbreak
+
+    \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
+    \caption{}
+    \label{fig:Ng2}
+\end{figure}
+
 % \begin{figure}
 %     \centering
 %     \includegraphics[width=1\linewidth]{dtw_20190201_20200214.png}
@@ -481,5 +519,4 @@ From equation (\ref{eq:random_walk}) at any time $t$ we know both the expectatio
 % \end{figure}
 
 \printbibliography
-
 \end{document}
