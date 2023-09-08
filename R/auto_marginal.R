@@ -311,8 +311,17 @@ arima_garch_optimization <- function(start_date,
                                      label="default",
                                      write_output=FALSE,
                                      save_models=FALSE,
+                                     rerun=FALSE,
                                      ...)
 {
+  model_dir <- sprintf("~/Git/k-similar-neighbor/data/model_objects/%s/", label)
+  if (rerun) {
+    if (!dir.exists(model_dir))
+      stop(sprintf("The directory does not exists: %s", model_dir))
+    pat <- sprintf("(%s_)([A-Z]+)(\\.rds)", label)
+    existing_ticks <- gsub(pat, "\\2", list.files(model_dir, pattern=label))
+    tickers <- setdiff(tickers, existing_ticks)
+  }
   resid_list_U <- resid_list_Z <- resid_list_I <- model_struct <- model_params <- vector("list", length(tickers))
   names(resid_list_U) <- tickers
   names(resid_list_Z) <- tickers
@@ -376,7 +385,10 @@ arima_garch_optimization <- function(start_date,
     model_params[[tick]] <- tmpM
     
     if (save_models) {
-      model_file <- sprintf("~/Git/k-similar-neighbor/data/model_objects/%s_%s.rds", label, tick)
+      if (!dir.exists(model_dir)) {
+        dir.create(model_dir)
+      }
+      model_file <- paste(c(model_dir, sprintf("%s_%s.rds", label, tick)), collapse = "/")
       saveRDS(obj, file=model_file)
     }
   }
@@ -389,15 +401,29 @@ arima_garch_optimization <- function(start_date,
   if (write_output) {
     base_path <- "~/Git/k-similar-neighbor/data/label_analysis/"
     create_name <- function(x) sprintf("%s%s_%s.csv", base_path, label, x)
+    import_and_bind <- function(new_dt, s, how=c("col", "row"))
+    {
+      how <- match.arg(how)
+      old_dt <- fread(create_name(s))
+      if (how == "col") {
+        o <- merge(old_dt, new_dt, on="Date", all=TRUE)
+      } else {
+        o <- rbindlist(list(old_dt, new_dt), use.names=TRUE, fill=TRUE)
+      }
+      return(o)
+    }
     
+    if (rerun) {
+      outU <- import_and_bind(outU, "uni_marg", "col")
+      outZ <- import_and_bind(outZ, "std_resids", "col")
+      outI <- import_and_bind(outI, "std_price", "col")
+      outP <- import_and_bind(outP, "model_summary", "row")
+      outM <- import_and_bind(outM, "model_coef", "row")
+    }
     fwrite(outU, file=create_name("uni_marg"))
-    
     fwrite(outZ, file=create_name("std_resids"))
-    
     fwrite(outI, file=create_name("std_price"))
-    
     fwrite(outP, file=create_name("model_summary"))
-    
     fwrite(outM, file=create_name("model_coef"))
   }
   return(list(uni_marg=outU, std_resids=outZ, std_price=outI, model_summary=outP, model_coef=outM))
