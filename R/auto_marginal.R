@@ -430,6 +430,79 @@ arima_garch_optimization <- function(start_date,
 }
 
 
+# Re-run label analysis. Use existing model objects for the label to re-calculate
+# standard residuals, standard prices, and model summaries
+run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
+{
+  
+  base_dir <- "~/Git/k-similar-neighbor/data/"
+  
+  dtfSP <- fread(paste0(base_dir, "SandP_tick_history.csv"))
+  dtfU <- dtfSP[Date >= start_date & Date <= end_date]
+  mobjs <- list.files(paste0(base_dir, sprintf("model_objects/%s/", label)))
+  pat <- sprintf("(%s_)([A-Z]+)(\\.rds)", label)
+  
+  resid_list_U <- resid_list_Z <- resid_list_I <- model_struct <- model_params <- vector("list", length(mobjs))
+
+  for (i in seq_along(mobjs)) {
+    tick <- gsub(pat, "\\2", mobjs[i])
+    print(sprintf("Start ticker [%d / %d]: %s", i, length(mobjs), tick))
+    obj <- readRDS(paste0(base_dir, sprintf("model_objects/%s/%s", label, mobjs[i])))
+    
+    if (inherits(obj$model, "uGARCHfit")) {
+      nms <- c("Date", tick)
+      
+      # Standardized residuals
+      tmpZ <- data.table(Date=dtfU$Date, residuals(obj$model, standardize=TRUE))
+      setnames(tmpZ, names(tmpZ), nms)
+      
+      # Uniform marginals by way of the probability integral transform
+      tmpU <- data.table(Date=dtfU$Date, PIT(obj$model))
+      setnames(tmpU, names(tmpU), nms)
+      
+      # Standardize time series - Divide all prices by the price on the first day of the series
+      tmpI <- data.table(Date=dtfU$Date, dtfU[[tick]] / dtfU[[tick]][1])
+      setnames(tmpI, names(tmpI), nms)
+      
+      # Model Summary
+      tmpP <- as.data.table(c(as.list(obj$model@model$modelinc), obj$model@model$modeldesc))
+      tmpP[, tick := tick]
+      
+      # ARIMA-GARCH Coefficients
+      tmpM <- as.data.table(t(coef(obj$model)))
+      tmpM[, tick := tick]
+    } else {
+      warning("File %s is not a uGARCHfit object", mobjs[i])
+      tmpZ <- tmpU <- tmpI <- tmpP <- tmpM <- data.table()
+    }
+    resid_list_U[[tick]] <- tmpU
+    resid_list_Z[[tick]] <- tmpZ
+    resid_list_I[[tick]] <- tmpI
+    model_struct[[tick]] <- tmpP
+    model_params[[tick]] <- tmpM
+  }
+  outZ <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_Z)
+  outU <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_U)
+  outI <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_I)
+  outP <- rbindlist(model_struct, use.names=TRUE, fill=TRUE)
+  outM <- rbindlist(model_params, use.names=TRUE, fill=TRUE)
+  
+  if (write_output) {
+    base_path <- "~/Git/k-similar-neighbor/data/label_analysis/"
+    create_name <- function(x) sprintf("%s%s_%s.csv", base_path, label, x)
+
+    fwrite(outU, file=create_name("uni_marg"))
+    fwrite(outZ, file=create_name("std_resids"))
+    fwrite(outI, file=create_name("std_price"))
+    fwrite(outP, file=create_name("model_summary"))
+    fwrite(outM, file=create_name("model_coef"))
+  }
+  
+  return(list(outZ=outZ, outU=outU, outI=outI, outP=outP, outM=outM))
+}
+
+tst <- run_label_analysis(label="DA_2015_2016", start_date="2015-01-01", end_date="2016-12-31", write=FALSE)
+
 # Define NULL model spec summary and NULL model coefficients
 null_model_spec <- function()
 {
