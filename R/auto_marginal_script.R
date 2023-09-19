@@ -4,6 +4,13 @@ library(data.table)
 library(rugarch)
 source("R/auto_marginal.R")
 
+setwd("~/Git/k-similar-neighbor/data/model_objects/DA_2015_2016/")
+files_ <- list.files()
+for (f_ in files_) {
+  tick <- gsub("(DA_2019_2020_)([A-Z]+)(\\.rds)", "\\2", f_)
+  obj <- readRDS(f_)
+  saveRDS(obj, file=sprintf("DA_2015_2016_%s.rds", tick))
+}
 
 
 # ------------------------------------------------------------------------
@@ -25,15 +32,15 @@ aa <- arima_garch_optimization(start_date="2019-01-01", end_date="2019-12-31",
                          rerun=FALSE)
 
 # Run model optimization in batches ---------------------------------------------
-dtfSP <- fread("data/SandP_tick_history.csv")
-st_date <- "2019-01-01"
-ed_date <- "2020-12-31"
+dtfSP <- fread("~/Git/k-similar-neighbor/data/SandP_tick_history.csv")
+st_date <- "2015-01-01"
+ed_date <- "2016-12-31"
 
 tick_bool <- dtfSP[Date >= st_date & Date <= ed_date, sapply(.SD, function(x) !any(is.na(x)))]
-ticks_2019_2020 <- setdiff(names(tick_bool[tick_bool]), "Date")
+ticks_2015_2016 <- setdiff(names(tick_bool[tick_bool]), "Date")
 aa <- arima_garch_optimization(start_date=st_date, end_date=ed_date,
-                               label="DA_2019_2020",
-                               tickers=ticks_2019_2020,
+                               label="DA_2015_2016",
+                               tickers=ticks_2015_2016,
                                write_output=TRUE,
                                save_models=TRUE)
 

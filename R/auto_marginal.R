@@ -475,11 +475,11 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
       warning("File %s is not a uGARCHfit object", mobjs[i])
       tmpZ <- tmpU <- tmpI <- tmpP <- tmpM <- data.table()
     }
-    resid_list_U[[tick]] <- tmpU
-    resid_list_Z[[tick]] <- tmpZ
-    resid_list_I[[tick]] <- tmpI
-    model_struct[[tick]] <- tmpP
-    model_params[[tick]] <- tmpM
+    resid_list_U[[i]] <- tmpU
+    resid_list_Z[[i]] <- tmpZ
+    resid_list_I[[i]] <- tmpI
+    model_struct[[i]] <- tmpP
+    model_params[[i]] <- tmpM
   }
   outZ <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_Z)
   outU <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_U)
@@ -501,7 +501,7 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
   return(list(outZ=outZ, outU=outU, outI=outI, outP=outP, outM=outM))
 }
 
-tst <- run_label_analysis(label="DA_2015_2016", start_date="2015-01-01", end_date="2016-12-31", write=FALSE)
+# tst <- run_label_analysis(label="DA_2015_2016", start_date="2015-01-01", end_date="2016-12-31", write=TRUE)
 
 # Define NULL model spec summary and NULL model coefficients
 null_model_spec <- function()

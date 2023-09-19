@@ -25,22 +25,28 @@ read_SandP_data <- function(ticks=NULL)
 #
 #   tits- optional title for the plot
 #
-plot_sim_matrix <- function(assoc_file, type=c("cor", "dtw"), tits="")
+plot_sim_matrix <- function(assoc_file, tickers=NULL, tits="")
 {
   require(ggplot2)
-  type <- match.arg(type)
-  if (type == "cor") {
-    midpoint <- 0
-    limit <- c(-1, 1)
-  } else if (type == "dtw") {
-    midpoint <- 100
-    limit <- c(0, 400)
+  if (is.matrix(assoc_file)) {
+    X <- assoc_file
+  } else if (is.character(assoc_file)) {
+    X <- read.table(assoc_file, header=TRUE, row.names=1)
+  } else {
+    stop("assoc_file must be a matrix or a file path to an association file")
   }
-  X <- read.table(assoc_file, header=TRUE, row.names=1)
+  x <- c(X[upper.tri(X)])
+  midpoint <- median(x)
+  limit <- c(min(x), quantile(x, 0.75) + (IQR(x) * 1.5))
+
   dtfStock <- read_SandP_data(names(X))
-  dtfStock[, idx := 1:.N]
   
-  X <- X[dtfStock$ticker, dtfStock$ticker]
+  if (is.null(tickers)) {
+    X <- X[dtfStock$ticker, dtfStock$ticker]
+  } else {
+    X <- X[tickers, tickers]
+  }
+  dtfStock[, idx := 1:.N]
   X$ticks <- names(X)
   X$ticks <- factor(X$ticks, levels=X$ticks)
   
@@ -70,40 +76,35 @@ plot_sim_matrix <- function(assoc_file, type=c("cor", "dtw"), tits="")
 
 
 
-# Plot an example of the DTW algorithm at work
+# Plot S&P time series by group
 #
-#   x, y (numeric) - time series to plot
+#   D - distance matrix
+# 
+#   DT - data.table with price data
 #
-#   standardize (boolean) - should the series be standardized by dividing values by setting x[1] = 1
+#   k - number of clusters
 #
-#   ... - additional parameters passed to the DTW algorithm
-#
-plot_dtw_ts <- function(x, y, standardize=TRUE, ...)
+
+WW <- W_SCB
+hc <- agnes(as.dist(WW), method="ward")
+cluster_and_plot_series <- function(D, DT, k=3, return_melted=FALSE, ...)
 {
-  if (standardize) {
-    x <- x / x[1]; y <- y / y[1]
-  }
-  pdtw <- dtw(x, y, keep.internals=TRUE, ...)
+  require(ggplot2)
+  hc <- agnes(as.dist(D), ...)
+  dtfsp <- read_SandP_data()[, .(ticker, security, sector, subindustry)]
+  setnames(dtfsp, "ticker", "tick")
   
-  yrange <- range(x, y)
-  padding <- diff(yrange) * 0.05
-  plot(x, type="l", ylim=c(yrange[1] - padding, yrange[2] + padding),
-       main="DTW Index Alignment")
-  lines(y, col="red")
-  grid()
-  segments(pdtw$index1, pdtw$query[pdtw$index1],
-           pdtw$index2, pdtw$reference[pdtw$index2],
-           col="gray80")
+  dtfSubGrp <- merge(dtfsp,
+                     data.table(group=cutree(tree=hc, k=k), tick=colnames(D)))
+  M <- melt(DT, id.vars="Date", variable.name="tick", value.name="std.price")
+  M <- merge(dtfSubGrp, M)
+  
+  p <- ggplot() +
+    geom_line(data=M, aes(x = Date, y=std.price, group=tick, color=sector), alpha=0.75) +
+    facet_wrap(~group, scales = "free")
+  plot(p)
+  if (return_melted)
+    return(M)
 }
-tmp <- dtfSP[Date >= "2019-01-01" & Date <= "2019-06-30", .(Date, A, GE)]
-tmp[, A := A / A[1]]
-tmp[, GE := GE / GE[1]]
-pdtw <- dtw(tmp$A, tmp$GE, keep.internals = TRUE,
-            window.type = "sakoechiba", window.size=15)
-
-plot(tmp$GE, type="l", ylim=c(0.9, 1.5))
-lines(tmp$A, col="red")
-segments(pdtw$index1, pdtw$query[pdtw$index1],
-         pdtw$index2, pdtw$reference[pdtw$index2],
-         col="gray80")
-
+cluster_and_plot_series(W_SCB, dtfStdPrc1920, k=12, method="ward")
+cbind(colnames(W_0), hc$order.lab)
