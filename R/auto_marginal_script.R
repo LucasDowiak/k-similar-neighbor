@@ -45,7 +45,8 @@ aa <- arima_garch_optimization(start_date=st_date, end_date=ed_date,
                                save_models=TRUE)
 
 # QA on the model selection process --------------------------------------------
-
+# DEPRECATED - Uses old system where the model specification, and not a ugarch obj,
+#              is serialized in json
 lst_files <- list.files('data', pattern = "marginal_specifications_[0-9]{4}.json",
                         full.names = TRUE)
 gvb <- lapply(lst_files, good_vs_bad_symbols)
@@ -81,43 +82,4 @@ fwrite(dtf, file="data/SandP_tick_history.csv")
 # Missing map
 Amelia::missmap(dtfSP, ylab="Feb 2021 - Nov 1999",
                 xlab="Tick")
-
-
-tst <- specs_to_resid_matrix(SPEC_PATH)
-
-# For the ticks that failed to produce a proper fit, check if forcing the ar component to 7 does the trick
-# ------------------------------------------------------------------------
-SPEC_PATH <- "data/marginal_specifications_20190201_20200214.json"
-SPECIFICATIONS <- read_json(SPEC_PATH)
-st_date <- "2019-02-01"
-ed_date <- "2020-02-14"
-
-ticks <- good_vs_bad_symbols(SPEC_PATH)
-tickers <- ticks$bad_ticks
-# Auto_fit each ticker, saving after each tick
-SPECS <- vector("list", length(tickers))
-names(SPECS) <- tickers
-for (tick in tickers) {
-  print(sprintf("TICK %s at %s", tick, Sys.time()))
-  dtfU <- try(data.table(parse_json(tick)))
-  if (any(nrow(dtfU) == 0, length(dtfU) == 0, is(dtfU, "NULL"))) {
-    next
-  } else {
-    u <- dtfU[Date >= st_date & Date <= ed_date, diff(log(close))]
-    out <- try(auto_fit(u))
-    if (inherits(out, "try-error"))
-      out <- as.character(out)
-    SPECS[[tick]] <- out
-    #write_json(SPECS, path=SPEC_PATH)
-  }
-}
-
-xx <- sapply(SPECS, length)
-for (tick in names(xx[xx==1])) {
-  dtfU <- data.table(parse_json(tick))
-  print(dtfU[, range(Date)])
-}
-
-
-
 

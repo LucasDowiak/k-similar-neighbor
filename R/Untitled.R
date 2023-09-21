@@ -43,21 +43,12 @@ log_fun <- function(x, g, c0, wm=1)
   wm / (1 + exp(-g * (x - c0)))
 }
 
-# alpha <- 0.01
-# beta <- (1 / (1 - alpha))
-# time_discount <- function(x, beta)
-# {
-#   1 - beta**(x)
-# }
 
 w <- 0.1
 beta <- 0.99
 l <- 2
 D <- outer(p, q, function(i, j) abs(i - j))
-# W <- outer(1:length(p), 1:length(q), function(i, j) 1 - beta**(abs(i - j)))
 W <- outer(1:length(p), 1:length(q), function(i, j) log_fun(abs(i - j), g=0.03, c0=N/4))
-# diag(W) <- (1 - beta)
-# W <- sweep(W, 2, colSums(W), `/`)
 C <- (D * W)**(l)
 
 summary(c(C))
@@ -65,19 +56,6 @@ image(D**2, y=1:505, col=grDevices::terrain.colors(100), x=1:505,
       main=sprintf("Beta: %s", beta))
 contour(D**2, x = 1:505, y = 1:505, add = TRUE)
 
-
-variance_weights <- function(v, u, beta=0.95) {
-  nv <- length(v); nu <- length(u)
-  W <- matrix(NA_real_, nrow=nv, ncol=nu)
-  for (i in seq_len(nv)) {
-    for (j in seq_len(nu)) {
-      pow <- abs(i - j)
-      
-      W[i, j] <- sum(v[i:j], u[i:j]) # These individual costs need to be discounted by time
-    }
-  }
-  return(W)
-}
 
 unc_dtw <- dtw(p, q, keep.internals=TRUE, window.type="none")
 scb_dtw <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(w * N))
@@ -115,6 +93,9 @@ Rho1920 <- read.table("data/association_results/archive/corr_2019_2020", sep="\t
                       header=TRUE, row.names = 1)
 Rho1920 <- read.table("data/association_results/archive/corr_2019_2020", header=TRUE, row.names=1)
 Rho1920 <- as.matrix(Rho1920)
+
+
+
 ticks <- setdiff(names(dtfStdPrc1920), "Date")
 w <- 0.1
 N <- dtfStdPrc1920[,.N]
@@ -156,6 +137,8 @@ write.table(W_0, file="data/association_results/DA_2019_2020_dtw_unconstrained",
 write.table(W_SCB, file="data/association_results/DA_2019_2020_dtw_sakoechiba", sep="\t")
 write.table(W_WTD, file="data/association_results/DA_2019_2020_dtw_logweights", sep="\t")
 
+
+# Use DTW distance to cluster stock series & test group statistics
 library(dbscan)
 
 WW <- W_SCB
@@ -165,17 +148,6 @@ d <- c(W_SCB[upper.tri(WW)])
 knnd <- kNNdist(as.dist(WW), k=5)
 plot(sort(knnd)[1:493], type="l")
 
-
-
-# db <- dbscan(as.dist(WW), eps=20, minPts=5)
-WW <- W_SCB
-hc <-agnes(as.dist(WW), method="ward")
-sub_grp <- cutree(hc, k=12)
-
-dtfC <- data.table(tick=colnames(WW), group=sub_grp)
-dtfC <- merge(dtfSandP, dtfC, by.x = "ticker", by.y = "tick")
-setnames(dtfC, "ticker", "tick")
-
 cross_distance_set <- function(D, xlabels, ylabels=NULL)
 {
   D <- copy(D)
@@ -183,64 +155,143 @@ cross_distance_set <- function(D, xlabels, ylabels=NULL)
   
   if (is.null(ylabels))
     ylabels <- xlabels
-  
+
   b1 <- outer(rownames(D) %in% xlabels, colnames(D) %in% ylabels, `&`)
   return(c(D[b1]))
 }
 
 
-classes <- sort(unique(sub_grp))
-
-NA_matrix <- matrix(NA_real_, ncol=length(classes), nrow=length(classes), dimnames = list(classes, classes))
-m_rho <- NA_matrix
-m_rho_tt <- NA_matrix
-m_dtw <- NA_matrix
-m_dtw_tt <- NA_matrix
-
-for (g in classes) {
-
-  tt1 <- dtfC[group==g, tick]
-  gg_vals <- cross_distance_set(WW, tt1)
-  m_dtw[g, g] <- mean(gg_vals, na.rm=TRUE)
+perform_dtw_cluster_analysis <- function(DTW, RHO, Price, k, plot_clusters=FALSE, method="ward")
+{
+  hc <-agnes(as.dist(DTW), method=method)
+  sub_grp <- cutree(hc, k=k)
   
-  rho_gg_vals <- cross_distance_set(Rho1920, tt1)
-  m_rho[g, g] <- mean(rho_gg_vals, na.rm=TRUE)
+  dtfsp <- read_SandP_data()
+  setnames(dtfsp, "ticker", "tick")
+  dtfC <- merge(dtfsp, data.table(tick=colnames(DTW), group=sub_grp))
   
-  for (r in setdiff(classes, g)) {
-    tt2 <- dtfC[group==r, tick]
+  classes <- sort(unique(sub_grp))
+  NA_matrix <- matrix(NA_real_, ncol=length(classes), nrow=length(classes),
+                      dimnames = list(classes, classes))
+  m_rho <- NA_matrix
+  m_rho_tt <- NA_matrix
+  m_dtw <- NA_matrix
+  m_dtw_tt <- NA_matrix
+  
+  for (g in classes) {
     
-    gr_vals <- cross_distance_set(WW, tt1, tt2)
-    m_dtw[g, r] <- mean(gr_vals, na.rm=TRUE)
+    tt1 <- dtfC[group==g, tick]
+    gg_vals <- cross_distance_set(DTW, tt1)
+    m_dtw[g, g] <- mean(gg_vals, na.rm=TRUE)
     
-    rho_gr_vals <- cross_distance_set(Rho1920, tt1, tt2)
-    m_rho[g, r] <- mean(rho_gr_vals, na.rm=TRUE)
+    rho_gg_vals <- cross_distance_set(RHO, tt1)
+    m_rho[g, g] <- mean(rho_gg_vals, na.rm=TRUE)
     
-    if (length(gg_vals) > 2 & length(gr_vals) > 2) {
-      ttest <- t.test(gg_vals, gr_vals, alternative="two.sided", mu=0)
-      m_dtw_tt[g, r] <- ttest$p.value
+    for (r in setdiff(classes, g)) {
+      tt2 <- dtfC[group==r, tick]
       
-      ttest2 <- t.test(rho_gg_vals, rho_gr_vals, alternative="two.sided", mu=0)
-      m_rho_tt[g, r] <- ttest2$p.value
+      gr_vals <- cross_distance_set(DTW, tt1, tt2)
+      m_dtw[g, r] <- mean(gr_vals, na.rm=TRUE)
+      
+      rho_gr_vals <- cross_distance_set(RHO, tt1, tt2)
+      m_rho[g, r] <- mean(rho_gr_vals, na.rm=TRUE)
+      
+      if (length(gg_vals) > 2 & length(gr_vals) > 2) {
+        ttest <- t.test(gg_vals, gr_vals, alternative="two.sided", mu=0)
+        m_dtw_tt[g, r] <- ttest$p.value
+        
+        ttest2 <- t.test(rho_gg_vals, rho_gr_vals, alternative="two.sided", mu=0)
+        m_rho_tt[g, r] <- ttest2$p.value
+      }
     }
   }
+  if (plot_clusters) {
+    cluster_and_plot_series(D=DTW, DT=Price, k=k, method=method)
+  }
+  return(list(m_dtw=m_dtw, m_dtw_tt=m_dtw_tt, m_rho=m_rho, m_rho_tt=m_rho_tt,
+              dtfC=dtfC))
 }
 
-plot(cbind(c(m_dtw), c(m_rho)))
-sweep(m_dtw, 2, diag(m_dtw), `-`)
+
+dtfZ <- fread("data/label_analysis/DA_2019_2020_std_resids.csv")
+dtfP <- fread("data/label_analysis/DA_2019_2020_std_price.csv")
+R <- cor(dtfZ[, .SD, .SDcols=setdiff(names(dtfZ), "Date")])
+W_SCB <- read.table("data/association_results/DA_2019_2020_dtw_sakoechiba",
+                    header=TRUE, row.names=1)
+W_SCB <- as.matrix(W_SCB)
+tst <- perform_dtw_cluster_analysis(DTW=W_SCB, RHO=R, Price=dtfP, k=9, plot_clusters = T, method="ward")
+plot(cbind(c(tst$m_dtw), c(tst$m_rho)), xlab="dtw", ylab="rho", main="K = 9")
+
+
+round(sweep(tst$m_dtw, 2, diag(tst$m_dtw), `-`), 2)
 sweep(m_rho, 2, diag(m_rho), `-`)
 
 
-round(m_rho * as.numeric(lower.tri(m_rho, diag = TRUE) & m_rho > 0.00),
-      3)
-tt <- m_rho
-tt[upper.tri(tt) | m_rho < 0.00] <- NA_real_
-round(tt, 3)
+tt <- tst$m_dtw
+tt[upper.tri(tt) | tst$m_rho < 0.4] <- NA_real_
+round(tt, 2)
 
 sweep(m_rho, 2, diag(m_rho), `-`)
 m_rho_tt[upper.tri(m_rho_tt) & m_rho_tt > 0.05]
 
+
+
+
+# Year-on-Year cluster analysis
+# ------------------------------------------------------------------------------
+
+
+# read in original price table
+dtfSP <- fread("~/Git/k-similar-neighbor/data/SandP_tick_history.csv")
+# break apart series into N separate periods
+years <- 2010:2011
+dtf_years <- dtfSP[year(Date) %in% years, split(.SD, year(Date))]
+# Standardize prices in each period; Calculate DTW array of distances
+calculate_dtw_matrix <- function(DT, ticks=NULL)
+{
+  # Omit any stocks with NA values
+  DT <- DT[, Filter(function(x) !any(is.na(x)), .SD)]
+  if (is.null(ticks))
+    ticks <- setdiff(names(DT), "Date")
+  N <- DT[,.N]
+  P <- DT[, lapply(.SD, function(x) x/x[1]), .SDcols=ticks]
+  P$Date <- DT$Date
+  
+  W <- matrix(NA_real_,
+              nrow=length(ticks), ncol=length(ticks),
+              dimnames = list(ticks, ticks))
+  
+  tpairs <- combn(ticks, 2, simplify = FALSE)
+  for (tt in seq_along(tpairs)) {
+    if (tt %% 250 == 0)
+      print(sprintf("%d of %d started at %s", tt, length(tpairs), Sys.time()))
+    t1 <- tpairs[[tt]][1]; t2 <- tpairs[[tt]][2]
+    p <- P[[t1]]; q <- P[[t2]]
+    dtw_scb <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(0.1 * N))
+    W[t1, t2] <- W[t2, t1] <- dtw_scb$distance
+  }
+  diag(W) <- 0
+  return(W)
+}
+
+tst <- calculate_dtw_matrix(dtfSP[year(Date) == 2010])
+
+# Cluster using same set of K
+cluster_association_matrix <- function(W)
+{
+  dtfsp <- read_SandP_data()[, .(ticker, sector, subindustry, added_date)]
+  setnames(dtfsp, "ticker", "tick")
+  
+  hc <-agnes(as.dist(DTW), method=method)
+  sub_grp <- cutree(hc, k=k)
+  dtfC <- merge(dtfsp, data.table(tick=colnames(DTW), group=sub_grp))
+  
+  
+}
+
+
 # Troubleshoot model diagnostics for failed model specifications 
-# -------------------------------------------------
+# ------------------------------------------------------------------------------
 spec0708 <- read_json("data/marginal_specifications_2007_2008.json")
 gvbt <- good_vs_bad_symbols(spec0708)
 

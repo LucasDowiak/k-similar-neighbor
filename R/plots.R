@@ -3,6 +3,9 @@ library(data.table)
 setwd("~/Git/k-similar-neighbor/")
 
 
+# Missing map
+# Amelia::missmap(dtfSP, ylab="Feb 2021 - Nov 1999", xlab="Tick")
+
 # Read in the raw S&P 500 data file
 #
 #   ticks - optional subset of ticks to return
@@ -84,10 +87,7 @@ plot_sim_matrix <- function(assoc_file, tickers=NULL, tits="")
 #
 #   k - number of clusters
 #
-
-WW <- W_SCB
-hc <- agnes(as.dist(WW), method="ward")
-cluster_and_plot_series <- function(D, DT, k=3, return_melted=FALSE, ...)
+cluster_and_plot_series <- function(D, Price, k=3, return_melted=FALSE, ...)
 {
   require(ggplot2)
   hc <- agnes(as.dist(D), ...)
@@ -96,7 +96,7 @@ cluster_and_plot_series <- function(D, DT, k=3, return_melted=FALSE, ...)
   
   dtfSubGrp <- merge(dtfsp,
                      data.table(group=cutree(tree=hc, k=k), tick=colnames(D)))
-  M <- melt(DT, id.vars="Date", variable.name="tick", value.name="std.price")
+  M <- melt(Price, id.vars="Date", variable.name="tick", value.name="std.price")
   M <- merge(dtfSubGrp, M)
   
   p <- ggplot() +
@@ -106,5 +106,3 @@ cluster_and_plot_series <- function(D, DT, k=3, return_melted=FALSE, ...)
   if (return_melted)
     return(M)
 }
-cluster_and_plot_series(W_SCB, dtfStdPrc1920, k=12, method="ward")
-cbind(colnames(W_0), hc$order.lab)
