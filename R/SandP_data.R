@@ -45,6 +45,37 @@ hit_api <- function(tickers, outputsize=c("compact", "full"), saveJSON=FALSE)
   jsonText
 }
 
+
+# Use keywords to search for available data
+ticker_search <- function(keywords)
+{
+  baseuri <- "https://www.alphavantage.co/query"
+  parstring <- "function=SYMBOL_SEARCH&keywords=%s&apikey=%s"
+  uri <- paste(baseuri, 
+               sprintf(parstring, keywords, .APIKEY),
+               sep="?")
+  
+  if (length(uri) > 1) {
+    jsonText <- getURIAsynchronous(uri)
+  } else {
+    jsonText <- getForm(uri)
+  }
+  return(jsonText)
+}
+
+
+list_all_available <- function()
+{
+  baseuri <- "https://www.alphavantage.co/query"
+  parstring <- "function=LISTING_STATUS&apikey=%s"
+  uri <- paste(baseuri, 
+               sprintf(parstring, .APIKEY),
+               sep="?")
+  
+  jsonText <- getForm(uri)
+  return(read.csv(textConnection(rawToChar(aa))))
+}
+
 for (tick in dtfCos$ticker) {
   hit_api(tick, outputsize="full", saveJSON=TRUE)
   Sys.sleep(15)
