@@ -100,6 +100,17 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 \parencite{JEONG20112231} Instead of providing a universal bound or step condition the authors come up with a temporal weighting function and apply it to the cost matrix before calculating the accumulated cost matrix. For temporal weights the authors use a generalized logistic function that uses two parameters to center and scale the output of the function. The scale parameter is optimized on a validation set while the Performance is evaluated on a test set. 
 
 \parencite{DuyTakeuchi2023statistical} Rare paper dealing directly with statistical inference of the DTW measure.
+
+\parencite{WangXieHanSun2012} TBD
+
+\parencite{HowardTalisAlexeev_2020} Unpublished manuscript attempt that applies a DTW step to a classic CAPM stock return analysis. The CAPM model states that an asset's return is governed by the following relationship:
+
+\begin{equation}
+    E[r_{j}] = r_{f} + \beta_{j} (E[r_{m}] - r_{f})
+\end{equation}
+
+Instead of running the above regression using  synchronous returns the authors first "align" the sequences using the DTW algorithm and then calculate the betas $\beta_{j} = Cov(r_{t_{l}}, r_{s_{l}}) / Var(r_{m})$. The authors note that after approaching the estimation of $\beta$ in this way
+
 \section{Data}
 
 Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. Three different time periods will be considered. The financial crisis of 2007-2008, the moderate economic period between 2015 and 2016, and the dramatic shut-down economy of 2019-2020. With a focus on the these three time periods, the market upheaval surrounding the financial crisis and Covid-19 serve as a natural experiment with the moderate-but-steady growth of 2015-2016 acting as a control. This is especially true of the Covid-19 timeframe. Some industries bounced back strongly (Technology) while others struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
@@ -390,7 +401,7 @@ A random walk temporal weighting function could have the following form:
 \end{equation}
 
 \begin{equation}
-    \omega(t, s) = \sum_{k=1}^{t - s} \left( \sigma^{2}_{A,\, t - s + k} + \sigma^{2}_{B,\, t - s + k} \right)
+    \omega(t, s) = \sum_{k=1}^{|t-s|} \beta^{|t-s|} \left( \sigma^{2}_{A,\, t} + \sigma^{2}_{B,\,s} \right)
 \end{equation}
 
 \begin{table}[!htb]

@@ -145,7 +145,7 @@
   abstract = {We use the Lagrange multiplier procedure to derive efficient joint tests for residual normality, homoscedasticity and serial independence. The tests are simple to compute and asymptotically distributed as...}
 }
 
-@ARTICLE{GJR1993Garch,
+@article{GJR1993Garch,
   title = {On the Relation between the Expected Value and the Volatility of the Nominal Excess Return on Stocks},
   author = {Glosten, Lawrence R and Jagannathan, Ravi and Runkle, David E},
   year = {1993},
@@ -224,7 +224,6 @@
   abstract = {In this study, we employ a dynamic time warping method to study the topology of similarity networks among 35 major currencies in international foreign exchange (FX) markets, measured by the minimal spanning tree (MST) approach, which is expected to overcome the synchronous restriction of the Pearson correlation coefficient. In the empirical process, firstly, we subdivide the analysis period from June 2005 to May 2011 into three sub-periods: before, during, and after the US sub-prime crisis. Secondly, we choose NZD (New Zealand dollar) as the numeraire and then, analyze the topology evolution of FX markets in terms of the structure changes of MSTs during the above periods. We also present the hierarchical tree associated with the MST to study the currency clusters in each sub-period. Our results confirm that USD and EUR are the predominant world currencies. But USD gradually loses the most central position while EUR acts as a stable center in the MST passing through the crisis. Furthermore, an interesting finding is that, after the crisis, SGD (Singapore dollar) becomes a new center currency for the network.}
 }
 
-KotsifakosAthitsosPapapetrou_2011
 @inproceedings{KotsifakosAthitsosPapapetrou_2011,
 author = {Kotsifakos, Alexios and Athitsos, Vassilis and Papapetrou, Panagiotis and Hollm\'{e}n, Jaakko and Gunopulos, Dimitrios},
 title = {Model-Based Search in Large Time Series Databases},
@@ -242,7 +241,6 @@ keywords = {dynamic time warping, hidden Markov models, time series},
 location = {Heraklion, Crete, Greece},
 series = {PETRA '11}
 }
-
 
 @article{KeoghRatanamahatana_2005,
 	Abstract = {The problem of indexing time series has attracted much interest. Most algorithms used to index time series utilize the Euclidean distance or some variation thereof. However, it has been forcefully shown that the Euclidean distance is a very brittle distance measure. Dynamic time warping (DTW) is a much more robust distance measure for time series, allowing similar shapes to match even if they are out of phase in the time axis. Because of this flexibility, DTW is widely used in science, medicine, industry and finance. Unfortunately, however, DTW does not obey the triangular inequality and thus has resisted attempts at exact indexing. Instead, many researchers have introduced approximate indexing techniques or abandoned the idea of indexing and concentrated on speeding up sequential searches. In this work, we introduce a novel technique for the exact indexing of DTW. We prove that our method guarantees no false dismissals and we demonstrate its vast superiority over all competing approaches in the largest and most comprehensive set of time series indexing experiments ever undertaken.},
@@ -264,7 +262,6 @@ series = {PETRA '11}
 	Bdsk-Url-1 = {https://doi.org/10.1007/s10115-004-0154-9},
 	Bdsk-Url-2 = {http://dx.doi.org/10.1007/s10115-004-0154-9}}
 
-
 @article{JEONG20112231,
   title = {Weighted dynamic time warping for time series classification},
   journal = {Pattern Recognition},
@@ -281,7 +278,6 @@ series = {PETRA '11}
   abstract = {Dynamic time warping (DTW), which finds the minimum path by providing non-linear alignments between two time series, has been widely used as a distance measure for time series classification and clustering. However, DTW does not account for the relative importance regarding the phase difference between a reference point and a testing point. This may lead to misclassification especially in applications where the shape similarity between two sequences is a major consideration for an accurate recognition. Therefore, we propose a novel distance measure, called a weighted DTW (WDTW), which is a penalty-based DTW. Our approach penalizes points with higher phase difference between a reference point and a testing point in order to prevent minimum distance distortion caused by outliers. The rationale underlying the proposed distance measure is demonstrated with some illustrative examples. A new weight function, called the modified logistic weight function (MLWF), is also proposed to systematically assign weights as a function of the phase difference between a reference point and a testing point. By applying different weights to adjacent points, the proposed algorithm can enhance the detection of similarity between two time series. We show that some popular distance measures such as DTW and Euclidean distance are special cases of our proposed WDTW measure. We extend the proposed idea to other variants of DTW such as derivative dynamic time warping (DDTW) and propose the weighted version of DDTW. We have compared the performances of our proposed procedures with other popular approaches using public data sets available through the UCR Time Series Data Mining Archive for both time series classification and clustering problems. The experimental results indicate that the proposed approaches can achieve improved accuracy for time series classification and clustering problems.}
 }
 
-
 @misc{DuyTakeuchi2023statistical,
   title={Statistical Inference for the Dynamic Time Warping Distance, with Application to Abnormal Time-Series Detection}, 
   author={Vo Nguyen Le Duy and Ichiro Takeuchi},
@@ -289,4 +285,13 @@ series = {PETRA '11}
   eprint={2202.06593},
   archivePrefix={arXiv},
   primaryClass={stat.ML}
+}
+
+@unpublished{HowardTalisAlexeev_2020,
+  author = {Clint Howard and T\={a}lis Putni\c{n}\v{s} and Vitali Alexeev},
+  title  = {To lead or to lag? Measuring asynchronicity in
+financial time-series using dynamic time warping},
+  month  = {10},
+  year   = {2020},
+  url = {http://wp.lancs.ac.uk/finec2023/files/2023/01/FEC-2023-098-Clint-Howard.pdf}
 }
