@@ -243,23 +243,36 @@ m_rho_tt[upper.tri(m_rho_tt) & m_rho_tt > 0.05]
 
 # read in original price table
 dtfSP <- fread("~/Git/k-similar-neighbor/data/SandP_tick_history.csv")
+dtfSP[, year := as.factor(year(Date))]
 # break apart series into N separate periods
-years <- 2010:2011
-dtf_years <- dtfSP[year(Date) %in% years, split(.SD, year(Date))]
+years <- 2010:2019
+lst_years <- split(dtfSP[year %in% years], by="year")
+
+standardize_price <- function(DT, ticks=NULL)
+{
+  if (is.null(ticks))
+    ticks <- names(DT)
+  ticks <- setdiff(ticks, "Date")
+  P <- DT[, lapply(.SD, function(x) x/x[1]), .SDcols=ticks]
+  return(P)
+}
+
+
 # Standardize prices in each period; Calculate DTW array of distances
 calculate_dtw_matrix <- function(DT, ticks=NULL)
 {
+  N <- DT[,.N]
   # Omit any stocks with NA values
   DT <- DT[, Filter(function(x) !any(is.na(x)), .SD)]
+  
   if (is.null(ticks))
     ticks <- setdiff(names(DT), "Date")
-  N <- DT[,.N]
-  P <- DT[, lapply(.SD, function(x) x/x[1]), .SDcols=ticks]
-  P$Date <- DT$Date
   
+  P <- standardize_price(DT=DT, ticks=ticks)
+  P$Date <- DT$Date
   W <- matrix(NA_real_,
-              nrow=length(ticks), ncol=length(ticks),
-              dimnames = list(ticks, ticks))
+              nrow=nrow(P), ncol=ncol(P),
+              dimnames=list(ticks, ticks))
   
   tpairs <- combn(ticks, 2, simplify = FALSE)
   for (tt in seq_along(tpairs)) {
@@ -274,20 +287,38 @@ calculate_dtw_matrix <- function(DT, ticks=NULL)
   return(W)
 }
 
-tst <- calculate_dtw_matrix(dtfSP[year(Date) == 2010])
+results <- vector("list", length(years))
+names(results) <- as.character(years)
+for (y in years) {
+  results[[as.character(y)]] <- calculate_dtw_matrix(dtfSP[year(Date) == y])
+  saveRDS(results, file="~/Git/k-similar-neighbor/data/dtw_by_year.rds")
+}
 
 # Cluster using same set of K
-cluster_association_matrix <- function(W)
+cluster_association_matrix <- function(W, k, method, sub_ticks=NULL)
 {
+  if (!is.null(sub_ticks)) {
+    W <- W[sub_ticks, sub_ticks]
+  }
   dtfsp <- read_SandP_data()[, .(ticker, sector, subindustry, added_date)]
   setnames(dtfsp, "ticker", "tick")
   
-  hc <-agnes(as.dist(DTW), method=method)
+  hc <-agnes(as.dist(W), method=method)
   sub_grp <- cutree(hc, k=k)
-  dtfC <- merge(dtfsp, data.table(tick=colnames(DTW), group=sub_grp))
-  
+  dtfC <- merge(dtfsp, data.table(tick=colnames(W), group=sub_grp))
+  return(list(hc=hc, dtfC=dtfC))
   
 }
+
+tick_intersect <- Reduce(intersect, lapply(results, colnames))
+lst <- lapply(results, cluster_association_matrix, k=9, method="ward", sub_ticks=tick_intersect)
+for (y in names(lst)) {
+  lst[[y]][[2]] <- lst[[y]][[2]][, year := as.integer(y)]
+}
+
+dtf <- rbindlist(lapply(lst, `[[`, 2))
+
+
 
 
 # Troubleshoot model diagnostics for failed model specifications 
