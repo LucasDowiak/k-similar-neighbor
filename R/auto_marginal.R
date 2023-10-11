@@ -3,7 +3,6 @@ library(data.table)
 library(rugarch)
 source("R/normality_tests.R")
 
-# source("R/auto_marginal.R")
 # -------------------------------------------------
 # dtfTmp <- parse_stock_data("A")
 # tfTmp[, x := c(NA_real_, diff(log(close)))]
