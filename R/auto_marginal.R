@@ -3,44 +3,6 @@ library(data.table)
 library(rugarch)
 source("R/normality_tests.R")
 
-# -------------------------------------------------
-# dtfTmp <- parse_stock_data("A")
-# tfTmp[, x := c(NA_real_, diff(log(close)))]
-# x <- dtfTmp[Date >= "2019-01-01" & Date <= "2019-12-31", x]
-# aa <- forecast::auto.arima(x, max.p=10, allowmean=TRUE, allowdrift=FALSE)
-# afit <- auto_fit(x)
-# spec_mod <- ugarchspec(
-#   variance.model = list(model="gjrGARCH", garchOrder=c(2,2)),
-#   mean.model = list(armaOrder=aa$arma[1:2], include.mean=TRUE),
-#   distribution.model = "std"
-# )
-
-# fit_ <- try(ugarchfit(spec=spec_mod, data=x))
-
-
-
-# Model specification lists can be given either as:
-# i) a file path to the specification list stored as a json object
-# ii) an R list object
-# This function can handle both inputs and adds some sanity checks
-#
-#   spec_list - either a path to a specification file or the R list object itself
-#
-interpret_spec_list <- function(spec_list)
-{
-  if (is(spec_list, "character")) {
-    if (file.exists(spec_list)) {
-      spec_list <- read_json(spec_list)
-    } else {
-      stop(sprintf("JSON file doesn't exist for specification file located at [%s] ", spec_list))
-    }
-  }
-  if (!is(spec_list, "list")) {
-    stop("spec_list input is not a list.")
-  }
-  return(spec_list)
-}
-
 
 # Check to see which stocks had a successful auto_fit run
 check_spec <- function(lst)
@@ -69,15 +31,25 @@ good_vs_bad_symbols <- function(spec.path)
 # Given a ticker value, this function reads in the corresponding
 # json file and pulls out the values you want (e.g. "open", "close", "high")
 #
-# dtfU <- data.table(parse_json("GOOG"))
-# u <- dtfU[Date >= st_date & Date <= ed_date, diff(log(close))]
+#   Input:
+#       tick   - stock tick symbol
+#       values - integer values between 1 and 8 are accepted
+#                   1. open
+#                   2. high
+#                   3. low
+#                   4. close
+#                   5. adjusted close
+#                   6. dividend amount
+#                   7. volume
+#                   8. split coefficient
 #
-parse_stock_data <- function(tick, values="close")
+#   Output:
+#       data.table
+#
+parse_stock_data <- function(tick, values=1:8)
 {
   values <- unique(values)
-  value_opts <- c("open", "high", "low", "close", "volume")
-  stopifnot(all(values %in% value_opts))
-  idx <- which(value_opts %in% values)
+  stopifnot(all(values %in% 1:8))
   
   file_ <- paste0(tick, ".json")
   full_path <- paste0("data/raw_json/", file_)
@@ -91,23 +63,19 @@ parse_stock_data <- function(tick, values="close")
   } else {
     lst <- fromJSON(tick)
   }
-  prices <- t(vapply(lst[[2]], function(x) unlist(x[idx]),
-                     FUN.VALUE=character(length(values))))
   
-  if (length(values) == 1) {
-    dates <- colnames(prices)
-    cols <- values
-  } else {
-    cols <- vapply(strsplit(colnames(prices), " "), `[[`, 2, FUN.VALUE=character(1))
-    dates <- row.names(prices)
-  }
-  dtf <- as.data.frame(matrix(as.numeric(prices), ncol=length(cols),
+  prices <- do.call(rbind, lst[[2]])
+  dates <- row.names(prices)
+  cols <- vapply(strsplit(colnames(prices), "\\. "), `[[`, 2, FUN.VALUE=character(1))
+  dtf <- as.data.table(matrix(as.numeric(prices),
+                              ncol=length(cols),
                               dimnames=list(NULL, cols)))
-  dtf['Date'] <- as.Date(dates)
+  dtf <- dtf[, values, with=FALSE]
+  dtf[, Date := as.Date(dates)]
   attr(dtf, "ticker") <- lst[[1]]$`2. Symbol`
   attr(dtf, "last_refreshed") <- lst[[1]]$`3. Last Refreshed`
   attr(dtf, "date_range") <- range(dtf$Date)
-  return(data.table(dtf[order(dtf$Date), ]))
+  return(dtf[order(Date)])
 }
 
 
@@ -132,7 +100,7 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
   arch <- 1:max_arch
   garch <- 1:max_garch
   garchmodels <- c("sGARCH", "gjrGARCH", "csGARCH")
-  distributions <- c("norm", "std", "sstd")
+  distributions <- c("std", "sstd")
   outerpaste <- function(a, b) as.vector(outer(a, b, paste, sep="_"))
   rnames <- Reduce(outerpaste, list(garchmodels, arch, garch), init=distributions)
   lik <- matrix(NA_real_,
