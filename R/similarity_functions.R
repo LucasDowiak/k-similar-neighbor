@@ -1,6 +1,6 @@
 library(dtw)
 
-# Similarity metrics -----------------------------------------------------------
+# Similarity metrics-----------------------------------------------------------
 
 # For all similarity metrics:
 #
@@ -8,10 +8,10 @@ library(dtw)
 #
 #   columns - subset of columns in M to calculate the sim to against the reference
 #
-#   M - data.table of pre-processed stock price series as columnar data
+#   M - data.table of pre-processed stock price series. each column is a series
 #
 #   ... 
-euclidean_dist <- function(nm, columns, M)
+euclidean_dist <- function(M, tickers)
 {
   j <- M[[nm]]
   D <- sweep(M[, columns, with=FALSE], 2, j, FUN="-")
@@ -32,10 +32,10 @@ correlation <- function(nm, columns, M, method="pearson")
 dynamic_time_warp <- function(nm, columns, M) 
 {
   j <-  matrix(M[[nm]], ncol=nrow(M))
-  #f_ <- function(x) dtw::dtw(x, j, ...)$distance
-  #out <- apply(as.matrix(M[, columns, with=FALSE]), 2, FUN=f_)
-  #out <- matrix(out, ncol=length(out), dim=list(nm, columns))
-  out <- t(proxy::dist(t(as.matrix(M[, columns, with=FALSE])), j, method="DTW"))
+  f_ <- function(x) dtw::dtw(x, j, ...)$distance
+  out <- apply(as.matrix(M[, columns, with=FALSE]), 2, FUN=f_)
+  out <- matrix(out, ncol=length(out), dim=list(nm, columns))
+  # out <- t(proxy::dist(t(as.matrix(M[, columns, with=FALSE])), j, method="DTW"))
   row.names(out) <- nm
   return(out)
 }
@@ -95,6 +95,13 @@ create_ddist <- function(ticker, DT)
 
 
 # Functions to run similarity metrics ------------------------------------------
+
+# Wrapper to read in 
+read_association_table <- function(file_)
+{
+  as.matrix(read.table(file_, header = T, row.names=1))
+}
+
 
 # Reads in a stored similarity matrix located at the supplied file path (or creates
 # a new matrix) and does some validation checks
@@ -199,56 +206,41 @@ check_pairs <- function(pairs, M)
 #
 #   ... - options to pass to metric
 #
-calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite=FALSE,
-                                 ncores=1L, ...)
+calculate_similarity <- function(M, tickers, dist.method=c("Euclidean", "Correlation", "DTW"), ...)
 {
-  if (is.null(ref_file) && overwrite)
-    stop("If `overwrite` is TRUE then ref_file cannot be NULL")
+  dist.method <- match.arg(dist.method)
+  stopifnot(inherits(M, c("matrix", "data.table")))
+
+  # Force M to be a data.frame
+  if (inherits(M, "matrix")) {
+    M <- as.data.table(M)
+  }
   
-  # Force M to be a data.table
-  M <- as.data.table(M)
-  
-  # test for reference file
-  OMG <- check_ref_file(ref_file, M)
-  
-  # check that every value in `pairs` is a name in M
-  pairs <- check_pairs(pairs, M)
-  
-  # lapply over the pairs
-  grab_metric <- function(x) metric(x[[1L]], x[[2L]], M=M, ...)
-  
-  # Multi-core options
-  if (ncores == 1L) {
-    # do in sequence
-    rho <- lapply(pairs, grab_metric)
-    
-  } else  if (ncores > 1L) {
-    # do in parallel
-    require(parallel)
-    nc <- detectCores()
-    if (ncores > nc) {
-      warning(sprintf("`ncores` set to max number of threads available on this machine: %d", nc))
-      ncores <- nc
-    }
-    cl <- makeForkCluster(ncores)
-    on.exit(stopCluster(cl))
-    rho <- parLapply(cl=cl, pairs, grab_metric)
+  if (missing(tickers)) {
+    tickers <- setdiff(names(M), c("Date", "label"))
   } else {
-    stop("`ncores` needs to be an integer greater than or equal to 1")
-  }
-  
-  # fill in Matrix OMG with the results
-  for (nmi in names(rho)) {
-    for (nmj in colnames(rho[[nmi]])) {
-      OMG[nmi, nmj] <- rho[[nmi]][nmi, nmj] 
+    # check that every value in `tickers` is a name in M
+    if(!all(tickers %in% names(M))) {
+      missticks <- tickers[!tickers %in% names(M)]
+      stop(sprintf("Some tickers are no present in data.frame M\nMissing Ticks: %s",
+                   paste(missticks, collapse=", ")))
     }
   }
   
-  # Should you write changes back to `ref_file`
-  if (overwrite) {
-    write.table(OMG, file=ref_file, sep="\t", col.names=NA)
+  if (dist.method=="Correlation") {
+    D <- cor(M[, tickers, with=FALSE], ...)
+  } else {
+    D <- proxy::dist(t(as.matrix(M[, tickers, with=FALSE])),
+                     t(as.matrix(M[, tickers, with=FALSE])),
+                     method=dist.method,
+                     ...)
   }
-  return(list(rho, OMG))
+
+  # Should you write changes back to `ref_file`
+  # if (write_to_file) {
+  #   write.table(OMG, file=ref_file, sep="\t", col.names=NA)
+  # }
+  return(D)
 }
 
 

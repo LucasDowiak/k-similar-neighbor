@@ -66,7 +66,7 @@ PIT <- function(obj)
 
 # Given a model produced by rugarch, pull out the residuals, perform PIT and run
 # gauntlet of marginal tests
-marginal_tests <- function(obj, lm_lags=NA, print=FALSE, plot=FALSE, hl_cl=0.95)
+marginal_tests <- function(obj, PRINT=FALSE, PLOT=FALSE)
 {
   isuGARCHfit <- inherits(obj, "uGARCHfit")
   if (isuGARCHfit) {
@@ -84,7 +84,7 @@ marginal_tests <- function(obj, lm_lags=NA, print=FALSE, plot=FALSE, hl_cl=0.95)
   }
   
   # visual PIT transform
-  if (plot) {
+  if (PLOT) {
     on.exit(par(mfrow=c(1,1)))
     par(mfrow = c(1,2))
     support <- seq(-max(z), max(z), length=500)
@@ -145,9 +145,10 @@ marginal_tests <- function(obj, lm_lags=NA, print=FALSE, plot=FALSE, hl_cl=0.95)
 
 
 # Verify if all the distributional checks have been passed
-verify_marginal_test <- function(mt, alpha=c(0.1, 0.05, 0.01))
+verify_marginal_test <- function(mt, alpha=c("0.01", "0.05", "0.10"), ignore_nyblom=FALSE)
 {
   alpha <- match.arg(alpha)
+  alpha <- as.numeric(alpha)
   alpha.name <- sprintf("%d%%", as.integer(alpha * 100))
   
   tmpnms <- c(outer(row.names(mt$lm_tests), colnames(mt$lm_tests), FUN = function(x,y) paste(x, y)))
@@ -182,5 +183,8 @@ verify_marginal_test <- function(mt, alpha=c(0.1, 0.05, 0.01))
                    use.names=TRUE, fill=TRUE)
   out[!is.na(`P-Value`), pass_test := `P-Value` > alpha]
   out[is.na(`P-Value`), pass_test := Stat < CV]
+  if (ignore_nyblom) {
+    out[grepl("NYBLOM", Test), pass_test := NA]
+  }
   return(out)
 }
