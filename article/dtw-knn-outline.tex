@@ -341,36 +341,6 @@ To put these concepts into practice the dynamic time warping algorithm will be d
 
 \pagebreak
 
-
-\subsection{Kullback-Leibler Divergence} \label{sec:KL-Divergence}
-
-The model estimation strategy this article takes is ultimately a maximum likelihood one. As discussed in Section \ref{sec:ARMAGARCH-benchmark}, every ARIMA-GARCH model is estimated by searching for the parameter vector $\Delta$ that maximizes the log likelihood for a given distribution $g$ with parameter vector $\lambda$
-
-\begin{equation}
-    \hat{\Delta},\, \hat{\lambda} = \argmax_{\Delta,\, \lambda} L(\Delta, \lambda | X)
-\end{equation}
-
-with 
-
-\begin{equation}
-    L(\Delta, \lambda | Z) = \prod_{t=1}^{T} g(z_{t}| \lambda)
-\end{equation}
-
-The Kullback-Leibler divergence is a measure of relative entropy between two distributions and provides another avenue to measure the association between two time series. For two stock tickers (XOM vs AMD), the distributions estimated from the data are used to compare the relative entropy between the log returns of those stocks (e.g: $g_{xom}(\cdot|\hat{\lambda})$). For continuous distributions $Q$,$P$ the relative entropy between the reference distribution $Q$ and a second distribution $P$ is written:
-
-\begin{equation}
-    D_{KL}(P || Q) = \int_{-\infty}^{\infty} p(x) \log \left( \frac{p(x)}{q(x)} \right) dx
-\end{equation}
-
-where $p$ and $q$ are the density functions of $P$ and $Q$, respectively (e.g: $p = \frac{d}{dx}P(x)$). Since KL divergence is not symmetric, this article will use a symmetrized version of KL divergence
-
-\begin{equation}
-    SKL(P, Q) = \frac{1}{2} \left( D_{KL}(P || Q) + D_{KL}(Q || P) \right)
-\end{equation}
-
-Unlike DTW, there is a strong connection in this article between the correlation measure and the symmetric KL divergence. The distributions used here are derived during the estimation of the ARIMA-GARCH model and due to that, the SKL measure is subject to the same dangers of model misspecification as the correlation analysis.
-
-
 \section{Simulation Results}
 In order to gauge the relationship between the DGP process of two time series and their resulting DTW value we turn to simulation. For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
 
