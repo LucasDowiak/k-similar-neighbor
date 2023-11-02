@@ -408,6 +408,8 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
   
   base_dir <- "~/Git/k-similar-neighbor/data/"
   dtfSP <- fread(paste0(base_dir, "SandP_tick_history.csv"))
+  # Buffer the start date by one trading day so log returns can be taken for
+  # the first day
   si <- dtfSP[Date >= start_date, which(dtfSP$Date == min(Date))]
   ei <- dtfSP[Date <= end_date, which(dtfSP$Date == max(Date))]
   dtfU <- dtfSP[(si-1):ei]
@@ -433,7 +435,7 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
       tmpU <- data.table(Date=dtfU[-1]$Date, rugarch::pit(obj$model))
       setnames(tmpU, names(tmpU), nms)
       
-      # Standardize time series - Divide all prices by the price on the first day of the series
+      # Standardize time series with cumulative return transformation
       logR <- diff(log(dtfU[[tick]]))
       compretn <- cumprod(1 + logR) - 1
       tmpI <- data.table(Date=dtfU[-1]$Date, cumprod(1 + logR) - 1)

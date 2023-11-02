@@ -52,6 +52,61 @@ for (ii in 2000:2021) {
 plot_sim_matrix("data/association_results/archive/dtw_20190201_20210219", type="dtw", tits="DTW: 2019-02-01 to 2021-02-19")
 
 
+# Pairs-Trading ----------------------------------------------------------------
+# Find the N most closely associated pairs
+N <- 10L
+aa_dtw <- read_association_table("data/association_results/2000_dtw.tsv")
+aa_udj <- read_association_table("data/association_results/2000_unadjusted_cor.tsv")
+aa_adj <- read_association_table("data/association_results/2000_model_cor.tsv")
+
+dtfCumRet <- fread("data/label_analysis/2000_std_price.csv")
+# dtfStdRes <- fread("data/label_analysis/2000_std_resids.csv")
+
+
+find_pairs <- function(M, n=10L, dist.method=c("cor", "dtw"))
+{
+  # M - association matrix
+  dist.method <- match.arg(dist.method)
+  vals <- sort(M[lower.tri(M)])
+  if (dist.method == "cor") {
+    topn <- tail(unique(vals), n=n)
+  } else {
+    topn <- head(unique(vals), n=n) 
+  }
+  out <- lapply(topn, function(x) row.names(which(M == x, arr.ind=TRUE)))
+  attr(out, 'values') <- vals
+  return(out)
+}
+
+.pull_ticks_and_melt <- function(pair, DT)
+{
+  out <- copy(DT[, .SD, .SDcols=c("Date", pair)])
+  out <- melt(out, id.vars="Date")
+  out[, pair := paste(pair, collapse="-")]
+  setnames(out, "variable", "tick")
+  return(out)
+}
+
+plot_list_of_pairs <- function(pairs, DT)
+{
+  dtfplot <- rbindlist(lapply(pairs, .pull_ticks_and_melt, DT=DT))
+  p <- ggplot() +
+    geom_line(data=dtfplot, aes(x=Date, y=value, group=tick)) +
+    facet_wrap(~pair) # , scales = "free")
+  plot(p)
+}
+
+
+
+
+pairs_udj <- find_pairs(aa_udj, n=N)
+pairs_adj <- find_pairs(aa_adj, n=N)
+pairs_dtw <- find_pairs(aa_dtw, n=N, dist.method = "dtw")
+
+plot_list_of_pairs(pairs_udj, dtfCumRet)
+plot_list_of_pairs(pairs_adj, dtfCumRet)
+plot_list_of_pairs(pairs_dtw, dtfCumRet)
+
 # Plot Evolution of Metric over Periods ----------------------------------------
 # ----------
 rm(list=ls())
