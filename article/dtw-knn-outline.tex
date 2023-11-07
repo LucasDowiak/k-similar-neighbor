@@ -288,7 +288,7 @@ With this definition of the accumulative cost matrix the optimal warping path ca
 
 \subsubsection{Common Extensions}
 
-The definition of the DTW in section \ref{sec:DTW_Algorithm} is an unconstrained one without restrictions beyond the boundary and step-size conditions. There are numerous modifications of the original DTW diverse set of industries and domains but applications to financial or economics are relatively sparse. Unit root behavior is a common challenge in the finance and macro-economic fields.
+The definition of the DTW in section \ref{sec:DTW_Algorithm} is an unconstrained one without restrictions beyond the boundary and step-size conditions. Most applications of dynamic time-warping constrain the extent of time distoration in some way. From a finance and macroeconomic perspective there are reasonable arguments for a limit as well. New information in markets dissipates over time. There are numerous modifications of the original DTW diverse set of industries and domains but applications to financial or economics are relatively sparse. Unit root behavior is a common challenge in the finance and macro-economic fields.
 
 \begin{itemize}
     \item Temporal weight approaches
@@ -340,6 +340,19 @@ To put these concepts into practice the dynamic time warping algorithm will be d
 
 
 \pagebreak
+
+\section{Pair Trading}
+
+We will compare the returns to a trading strategy strategy discussed in Gatev et. al. This strategy consists of the following steps:
+1. Pair stocks together that are highly associated with each other.
+2. Take advantage of any large temporary cumulative return deviations and bet on a likely re-alignment of the cumulative returns in the near future
+3. Close out any open positions at the end of the trading window
+
+There are three different propsed methods for chosing the association measure:
+1. Use the un-treated returns. Measure closeness via correlation. Use static/unconditional distributions and a two standard deviation threshold on the cumulative return differential as a signal to open positions.
+2. Filter the returns through an ARIMA-GARCH model. Measure closeness on the fitted residuals. Use rolling mean/variance values to calculate adjusted threshold during trading period
+3. Calculate the DTW metric between the cumulative returns of the pairs. Use synchronous L1 value and the two standard deviation signal to open positions.
+
 
 \section{Simulation Results}
 In order to gauge the relationship between the DGP process of two time series and their resulting DTW value we turn to simulation. For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
@@ -473,31 +486,7 @@ A random walk temporal weighting function could have the following form:
 
 \pagebreak
 
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{corr_20190201_20200214.png}
-    \caption{}
-    \label{fig:Ng1}
-
-    \bigbreak
-
-    \includegraphics[width=1\linewidth]{corr_20200323_20210219.png}
-    \caption{}
-    \label{fig:Ng2}
-\end{figure}
-
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=1\linewidth]{dtw_20190201_20200214.png}
-%     \caption{}
-%     \label{fig:Ng3}
-% 
-%     \bigbreak
-% 
-%     \includegraphics[width=1\linewidth]{dtw_20200323_20210219.png}
-%     \caption{}
-%     \label{fig:Ng4}
-% \end{figure}
 
 \printbibliography
+
 \end{document}
