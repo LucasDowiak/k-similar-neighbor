@@ -121,7 +121,7 @@ for (tt in seq_along(tpairs)) {
   C <- (D * W)**2
   
   dtw_0 <- dtw(p, q, keep.internals=TRUE, window.type="none")
-  dtw_scb <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(w * N))
+   dtw_scb <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(w * N))
   dtw_wgt <- dtw(C, keep.internals=TRUE, window.type="none")
   
   W_0[t1, t2] <- W_0[t2, t1] <- dtw_0$distance

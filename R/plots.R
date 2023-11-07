@@ -106,3 +106,48 @@ cluster_and_plot_series <- function(D, Price, k=3, return_melted=FALSE, ...)
   if (return_melted)
     return(M)
 }
+
+
+
+# Modified plot from the dtw package
+dtwPlotTwoWay2 <- function (d, xts = NULL, yts = NULL, offset = 0, ts.type = "l", 
+                            pch = 21, match.indices = NULL, match.col = "gray70", match.lty = 3, 
+                            xlab = "Index", ylab = "Query value", ...) 
+{
+  if (is.null(xts) || is.null(yts)) {
+    xts <- d$query
+    yts <- d$reference
+  }
+  if (is.null(xts) || is.null(yts)) 
+    stop("Original timeseries are required")
+  ytso <- yts + offset
+  maxlen <- max(length(xts), length(ytso))
+  length(xts) <- maxlen
+  length(ytso) <- maxlen
+  # def.par <- par(no.readonly = TRUE)
+  if (offset != 0) {
+    par(mar = c(5, 4, 4, 4) + 0.1)
+  }
+  matplot(cbind(xts, ytso), type = ts.type, pch = pch, xlab = xlab, 
+          ylab = ylab, axes = FALSE, ...)
+  box()
+  axis(1)
+  axis(2, at = pretty(xts))
+  if (offset != 0) {
+    rightTicks <- pretty(yts)
+    axis(4, at = rightTicks + offset, labels = rightTicks)
+  }
+  if (is.null(match.indices)) {
+    ml <- length(d$index1)
+    idx <- 1:ml
+  }
+  else if (length(match.indices) == 1) {
+    idx <- seq(from = 1, to = length(d$index1), length.out = match.indices)
+  }
+  else {
+    idx <- match.indices
+  }
+  segments(d$index1[idx], xts[d$index1[idx]], d$index2[idx], 
+           ytso[d$index2[idx]], col = match.col, lty = match.lty)
+  # par(def.par)
+}
