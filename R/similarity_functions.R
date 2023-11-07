@@ -1,254 +1,52 @@
 library(dtw)
 
-# Similarity metrics -----------------------------------------------------------
-
-# For all similarity metrics:
-#
-#   nm - specific ticker to set as reference
-#
-#   columns - subset of columns in M to calculate the sim to against the reference
-#
-#   M - data.table of pre-processed stock price series as columnar data
-#
-#   ... 
-euclidean_dist <- function(nm, columns, M)
+# Wrapper to read in 
+read_association_table <- function(file_)
 {
-  j <- M[[nm]]
-  D <- sweep(M[, columns, with=FALSE], 2, j, FUN="-")
-  return(sqrt(rowSums(D**2)))
-}
-
-
-correlation <- function(nm, columns, M, method="pearson")
-{
-  j <- M[[nm]]
-  f_ <- function(x) cor(x, j, method=method)
-  out <- apply(as.matrix(M[, columns, with=FALSE]), 2, FUN=f_)
-  out <- matrix(out, ncol=length(out), dim=list(nm, columns))
-  return(out)
-}
-
-
-dynamic_time_warp <- function(nm, columns, M) 
-{
-  j <-  matrix(M[[nm]], ncol=nrow(M))
-  #f_ <- function(x) dtw::dtw(x, j, ...)$distance
-  #out <- apply(as.matrix(M[, columns, with=FALSE]), 2, FUN=f_)
-  #out <- matrix(out, ncol=length(out), dim=list(nm, columns))
-  out <- t(proxy::dist(t(as.matrix(M[, columns, with=FALSE])), j, method="DTW"))
-  row.names(out) <- nm
-  return(out)
-}
-
-
-kullback_leibler <- function(nm, columns, M, df_model_distr)
-{
-
-  p <- create_ddist(nm, DT=df_model_distr)
-  Qs <- lapply(columns, create_ddist, DT=df_model_distr)
-  names(Qs) <- columns
-  
-  # KL function to numerically integrate
-  KL <- function(x, ddist)
-  {
-    p(x) * ( log(p(x)) - log(ddist(x)) )
-  }
-  
-  out <- matrix(NA_real_, ncol=length(Qs), dimnames = list(nm, columns))
-  for (tick in columns) {
-    kldist <- try(stats::integrate(KL, lower=-Inf, upper=Inf, ddist=Qs[[tick]]))
-    if (inherits(kldist, "try-error")) {
-      out[nm, tick] <- NA_real_
-    } else {
-      out[nm, tick] <- kldist$value
-    }
-  }
-  out
-}
-
-
-# Density Distribution Factory:
-#
-#   ticker - specific ticker to set as reference
-#
-#   DT - data.table of model summaries
-#
-create_ddist <- function(ticker, DT)
-{
-  na_to_null <- function(x)
-  {
-    if (is.na(x) || length(x) == 0)
-      return(NULL)
-    else
-      return(x)
-  }
-  shape <- na_to_null(DT[tick==ticker, shape])
-  skew <- na_to_null(DT[tick==ticker, skew])
-  lambda <- na_to_null(DT[tick==ticker, lambda])
-  distr <- na_to_null(DT[tick==ticker, distribution])
-  f <- function(x) 
-  {
-    ddist(distribution=distr, x, lambda=lambda, skew=skew, shape=shape)
-  }
-  return(f)
-}
-
-
-# Functions to run similarity metrics ------------------------------------------
-
-# Reads in a stored similarity matrix located at the supplied file path (or creates
-# a new matrix) and does some validation checks
-#
-#   file_ - path to stored similarity matrices
-#
-#   M - data.table of pre-processed stock price series as columnar series
-#
-check_ref_file <- function(file_, M)
-{
-  nms <- names(M)
-  nc <- ncol(M)
-  
-  if (is(file_, "character")) {
-    
-    if (file.exists(file_)) {
-      # Read in NxN similarity/distance/correlation matrix
-      OMG <- as.matrix(read.table(file_, header=TRUE, row.names = 1))
-      cnms <- colnames(OMG)
-      # row names must match column names
-      B1 <- all(row.names(OMG) == colnames(OMG))
-      # names in OMG must be subset of M
-      B2 <- all(is.element(cnms, nms))
-      
-      if (!B1) {
-        stop(sprintf("Row and column names do not match exactly in ref_file: %s", file_))
-      }
-      if (!B2) {
-        warning(sprintf("The columns in `ref_file` are not a strict subset of the names in M: %s", file_))
-      }
-    } else {
-      stop(sprintf("User supplied ref_file does not exists: %s", file_))
-    }
-  } else {
-    OMG <- matrix(NA_real_, nrow=nc, ncol=nc, dimnames=list(nms, nms))
-  }
-  return(OMG)
-}
-
-
-# Performs some validation checks between the supplied pairs and data.frame
-#
-#   pairs - named list of lists 
-#           e.g. $AAPL
-#                [1] "AAPL"
-#                [2] "AAPL" "ABC" "ABMD"
-#
-#                $ABC
-#                [1] "ABC"
-#                [2] "AAPL" "ABC" "ABMD"
-#
-#   M - data.table of pre-processed stock price series as columnar series
-#
-check_pairs <- function(pairs, M)
-{
-  nms <- setdiff(names(M), "Date")
-  # if no pairs are provided, default to full NxN comparisons of the N columns in M
-  if (is.null(pairs)) {
-    out <- lapply(nms, function(x) list(x, nms))
-    names(out) <- nms
-  } else {
-    if (is.null(names(pairs))) {
-      stop("`pairs` needs to be a named list where the names must appear in M")
-    }
-    pnms <- c(names(pairs), unique(unlist(pairs)))
-    B1 <- all(is.element(pnms, nms))
-    if (!B1) {
-      include <- intersect(pnms, nms)
-      exclude <- setdiff(pnms, nms)
-      out <- pairs[include]
-      out <- lapply(out, function(x) {x[[2]] <- x[[2]][x[[2]] %in% include]; x})
-      warning(sprintf("The values in `pairs` are not a strict subset of the names in M.\n  Including: [%s]\n  Excluding: [%s] \n",
-                      paste(include, collapse=", "), paste(exclude, collapse=", ")))
-    } else {
-      out <- pairs
-    }
-  }
-  return(out)
+  as.matrix(read.table(file_, header = T, row.names=1))
 }
 
 
 # Calculates the similarity of a batch of stock prices
 #
-#   M - data.table of pre-processed stock price series
+#   M - matrix or data.table of pre-processed stock price series
 #   
-#   pairs - named list of lists 
-#           e.g. $AAPL
-#                [1] "AAPL"
-#                [2] "AAPL" "ABC" "ABMD"
+#   tickers - possible subset of stock tickers. defaults to all of M
 #
-#                $ABC
-#                [1] "ABC"
-#                [2] "AAPL" "ABC" "ABMD"
+#   dist.method - one of the defined similarity metrics in the proxy::dist function
 #
-#   metric - one of the defined similarity metrics
+#   ... - options to pass to the proxy::dist function
 #
-#   ref_file - optional path to stored similarity matrices
-#
-#   overwrite - should the recent calculations be written back to disk
-#
-#   ncores - how many processors should be tasked to the job
-#
-#   ... - options to pass to metric
-#
-calculate_similarity <- function(M, metric, pairs=NULL, ref_file=NULL, overwrite=FALSE,
-                                 ncores=1L, ...)
+calculate_similarity <- function(M, tickers, dist.method=c("Euclidean", "Correlation", "DTW"), ...)
 {
-  if (is.null(ref_file) && overwrite)
-    stop("If `overwrite` is TRUE then ref_file cannot be NULL")
+  dist.method <- match.arg(dist.method)
+  stopifnot(inherits(M, c("matrix", "data.table")))
+
+  # Force M to be a data.frame
+  if (inherits(M, "matrix")) {
+    M <- as.data.table(M)
+  }
   
-  # Force M to be a data.table
-  M <- as.data.table(M)
-  
-  # test for reference file
-  OMG <- check_ref_file(ref_file, M)
-  
-  # check that every value in `pairs` is a name in M
-  pairs <- check_pairs(pairs, M)
-  
-  # lapply over the pairs
-  grab_metric <- function(x) metric(x[[1L]], x[[2L]], M=M, ...)
-  
-  # Multi-core options
-  if (ncores == 1L) {
-    # do in sequence
-    rho <- lapply(pairs, grab_metric)
-    
-  } else  if (ncores > 1L) {
-    # do in parallel
-    require(parallel)
-    nc <- detectCores()
-    if (ncores > nc) {
-      warning(sprintf("`ncores` set to max number of threads available on this machine: %d", nc))
-      ncores <- nc
-    }
-    cl <- makeForkCluster(ncores)
-    on.exit(stopCluster(cl))
-    rho <- parLapply(cl=cl, pairs, grab_metric)
+  if (missing(tickers)) {
+    tickers <- setdiff(names(M), c("Date", "label"))
   } else {
-    stop("`ncores` needs to be an integer greater than or equal to 1")
-  }
-  
-  # fill in Matrix OMG with the results
-  for (nmi in names(rho)) {
-    for (nmj in colnames(rho[[nmi]])) {
-      OMG[nmi, nmj] <- rho[[nmi]][nmi, nmj] 
+    # check that every value in `tickers` is a name in M
+    if(!all(tickers %in% names(M))) {
+      missticks <- tickers[!tickers %in% names(M)]
+      stop(sprintf("Some tickers are no present in data.frame M\nMissing Ticks: %s",
+                   paste(missticks, collapse=", ")))
     }
   }
   
-  # Should you write changes back to `ref_file`
-  if (overwrite) {
-    write.table(OMG, file=ref_file, sep="\t", col.names=NA)
+  if (dist.method=="Correlation") {
+    D <- cor(M[, tickers, with=FALSE], ...)
+  } else {
+    D <- proxy::dist(t(as.matrix(M[, tickers, with=FALSE])),
+                     t(as.matrix(M[, tickers, with=FALSE])),
+                     method=dist.method,
+                     ...)
   }
-  return(list(rho, OMG))
+  return(D)
 }
 
 

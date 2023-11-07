@@ -4,13 +4,7 @@ library(data.table)
 library(rugarch)
 source("R/auto_marginal.R")
 
-setwd("~/Git/k-similar-neighbor/data/model_objects/DA_2015_2016/")
-files_ <- list.files()
-for (f_ in files_) {
-  tick <- gsub("(DA_2019_2020_)([A-Z]+)(\\.rds)", "\\2", f_)
-  obj <- readRDS(f_)
-  saveRDS(obj, file=sprintf("DA_2015_2016_%s.rds", tick))
-}
+
 
 
 # ------------------------------------------------------------------------
@@ -24,25 +18,54 @@ for (f_ in files_) {
 #           the previous run left off
 #
 debugonce(arima_garch_optimization)
-aa <- arima_garch_optimization(start_date="2019-01-01", end_date="2019-12-31",
-                         label="test",
-                         tickers=c("A", "NFLX", "GE"),
-                         write_output=TRUE,
-                         save_models=TRUE,
-                         rerun=FALSE)
+aa <- arima_garch_optimization(start_date="2020-01-01",
+                               end_date="2020-12-31",
+                               label=year_label,
+                               tickers=tickers,
+                               write_output=TRUE,
+                               save_models=TRUE,
+                               rerun=FALSE,
+                               ignore_nyblom=TRUE)
 
 # Run model optimization in batches ---------------------------------------------
-dtfSP <- fread("~/Git/k-similar-neighbor/data/SandP_tick_history.csv")
-st_date <- "2015-01-01"
-ed_date <- "2016-12-31"
+dtfSP <- fread("data/SandP_tick_history.csv")
 
-tick_bool <- dtfSP[Date >= st_date & Date <= ed_date, sapply(.SD, function(x) !any(is.na(x)))]
-ticks_2015_2016 <- setdiff(names(tick_bool[tick_bool]), "Date")
-aa <- arima_garch_optimization(start_date=st_date, end_date=ed_date,
-                               label="DA_2015_2016",
-                               tickers=ticks_2015_2016,
+year_label <- "2000"
+tickers <- names(Filter(function(x) sum(is.na(x)) == 0, dtfSP[year(Date) == as.integer(year_label)]))
+tickers <- setdiff(tickers, "Date")
+aa <- arima_garch_optimization(start_date=sprintf("%s-01-01", year_label),
+                               end_date=sprintf("%s-12-31", year_label),
+                               label=year_label,
+                               tickers=tickers,
                                write_output=TRUE,
-                               save_models=TRUE)
+                               save_models=TRUE,
+                               rerun=FALSE,
+                               ignore_nyblom=TRUE)
+
+
+files_ <- list.files(sprintf("~/Git/k-similar-neighbor/data/model_objects/%s/", year_label),
+                     full.names = T)
+ftick <- list.files(sprintf("~/Git/k-similar-neighbor/data/model_objects/%s/", year_label))
+ftick <- sapply(strsplit(ftick, "\\.|_"), `[[`, 2)
+models <- lapply(files_, readRDS); names(models) <- ftick
+results <- lapply(models, function(x) verify_marginal_test(marginal_tests(x$model), "0.05", ignore_nyblom=TRUE))
+for (ii in names(results)) {
+  results[[ii]][, tick := ii]
+}
+results <- rbindlist(results)
+failed_ticks <- results[, all(pass_test), by=tick][!as.logical(V1), tick]
+failed_ticks
+
+
+diagnostic <- vector("list")
+for (yr in as.character(2000:2022)) {
+  model_diag <- run_label_analysis(yr,
+                                   start_date=sprintf("%s-01-01", yr),
+                                   end_date=sprintf("%s-12-31", yr),
+                                   write_output = TRUE)
+  diagnostic[[yr]] <- model_diag
+}
+
 
 # QA on the model selection process --------------------------------------------
 # DEPRECATED - Uses old system where the model specification, and not a ugarch obj,
@@ -69,17 +92,3 @@ tmp <- good_vs_bad_symbols(SPECS)
 tickers <- c(tmp$fail_ticks, tmp$not_run_ticks)
 # Pull the tickers from the json files
 tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
-
-
-# Create single data.frame with stock tick values as columns
-lst_dtfs <- lapply(tickers, parse_json)
-dtf <- rbindlist(lapply(lst_dtfs, function(DT) {DT[, "tick"] <- attr(DT, "ticker"); return(DT)}))
-# Order stocks by length of history
-dtfMinDate <- dtf[, min(Date), by=tick][order(V1)]
-dtf <- dcast(dtf, Date ~ tick, value.var="close")
-dtf <- dtf[, .SD, .SDcols=c(dtfMinDate$tick, "Date")]
-fwrite(dtf, file="data/SandP_tick_history.csv")
-# Missing map
-Amelia::missmap(dtfSP, ylab="Feb 2021 - Nov 1999",
-                xlab="Tick")
-

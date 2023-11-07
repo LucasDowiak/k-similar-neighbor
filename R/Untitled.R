@@ -44,7 +44,7 @@ log_fun <- function(x, g, c0, wm=1)
 }
 
 
-w <- 0.1
+w <- 0.03
 beta <- 0.99
 l <- 2
 D <- outer(p, q, function(i, j) abs(i - j))
@@ -65,6 +65,13 @@ scb_wgt_dtw <- dtw(C, keep.internals=TRUE, window.type=sakoeChibaWindow, window.
 
 image(W, col = grDevices::terrain.colors(100), x = 1:505, 
       y = 1:505)
+
+
+idx_diff <- (scb_dtw$index1 - scb_dtw$index2)
+summary(idx_diff)
+summary(abs())
+
+
 
 par(mfrow=c(2,1))
 dtwPlotDensity(unc_dtw, main="Un-constrained DTW Algo")
@@ -257,7 +264,6 @@ standardize_price <- function(DT, ticks=NULL)
   return(P)
 }
 
-
 # Standardize prices in each period; Calculate DTW array of distances
 calculate_dtw_matrix <- function(DT, ticks=NULL)
 {
@@ -286,6 +292,10 @@ calculate_dtw_matrix <- function(DT, ticks=NULL)
   diag(W) <- 0
   return(W)
 }
+
+lst_years <- lapply(lst_years,
+                    function(x) {o <- standardize_price(x); o$Date <- x$Date; o})
+
 
 results <- vector("list", length(years))
 names(results) <- as.character(years)
@@ -319,6 +329,10 @@ for (y in names(lst)) {
 dtf <- rbindlist(lapply(lst, `[[`, 2))
 
 
+aa <- cluster_and_plot_series(D=results[["2010"]], Price=lst_years[["2010"]],
+                              k=9, return_melted = TRUE, method="ward")
+bb <- cluster_and_plot_series(D=results[["2011"]], Price=lst_years[["2011"]],
+                              k=9, return_melted = TRUE, method="ward")
 
 
 # Troubleshoot model diagnostics for failed model specifications 

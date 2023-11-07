@@ -3,44 +3,8 @@ library(data.table)
 library(rugarch)
 source("R/normality_tests.R")
 
-# -------------------------------------------------
-# dtfTmp <- parse_stock_data("A")
-# tfTmp[, x := c(NA_real_, diff(log(close)))]
-# x <- dtfTmp[Date >= "2019-01-01" & Date <= "2019-12-31", x]
-# aa <- forecast::auto.arima(x, max.p=10, allowmean=TRUE, allowdrift=FALSE)
-# afit <- auto_fit(x)
-# spec_mod <- ugarchspec(
-#   variance.model = list(model="gjrGARCH", garchOrder=c(2,2)),
-#   mean.model = list(armaOrder=aa$arma[1:2], include.mean=TRUE),
-#   distribution.model = "std"
-# )
 
-# fit_ <- try(ugarchfit(spec=spec_mod, data=x))
-
-
-
-# Model specification lists can be given either as:
-# i) a file path to the specification list stored as a json object
-# ii) an R list object
-# This function can handle both inputs and adds some sanity checks
-#
-#   spec_list - either a path to a specification file or the R list object itself
-#
-interpret_spec_list <- function(spec_list)
-{
-  if (is(spec_list, "character")) {
-    if (file.exists(spec_list)) {
-      spec_list <- read_json(spec_list)
-    } else {
-      stop(sprintf("JSON file doesn't exist for specification file located at [%s] ", spec_list))
-    }
-  }
-  if (!is(spec_list, "list")) {
-    stop("spec_list input is not a list.")
-  }
-  return(spec_list)
-}
-
+LABEL_PAT_4_TICK <- "(%s_)([A-Z]+\\.?[A-Z]*)(\\.rds)"
 
 # Check to see which stocks had a successful auto_fit run
 check_spec <- function(lst)
@@ -69,15 +33,25 @@ good_vs_bad_symbols <- function(spec.path)
 # Given a ticker value, this function reads in the corresponding
 # json file and pulls out the values you want (e.g. "open", "close", "high")
 #
-# dtfU <- data.table(parse_json("GOOG"))
-# u <- dtfU[Date >= st_date & Date <= ed_date, diff(log(close))]
+#   Input:
+#       tick   - stock tick symbol
+#       values - integer values between 1 and 8 are accepted
+#                   1. open
+#                   2. high
+#                   3. low
+#                   4. close
+#                   5. adjusted close
+#                   6. dividend amount
+#                   7. volume
+#                   8. split coefficient
 #
-parse_stock_data <- function(tick, values="close")
+#   Output:
+#       data.table
+#
+parse_stock_data <- function(tick, values=1:8)
 {
   values <- unique(values)
-  value_opts <- c("open", "high", "low", "close", "volume")
-  stopifnot(all(values %in% value_opts))
-  idx <- which(value_opts %in% values)
+  stopifnot(all(values %in% 1:8))
   
   file_ <- paste0(tick, ".json")
   full_path <- paste0("data/raw_json/", file_)
@@ -91,23 +65,19 @@ parse_stock_data <- function(tick, values="close")
   } else {
     lst <- fromJSON(tick)
   }
-  prices <- t(vapply(lst[[2]], function(x) unlist(x[idx]),
-                     FUN.VALUE=character(length(values))))
   
-  if (length(values) == 1) {
-    dates <- colnames(prices)
-    cols <- values
-  } else {
-    cols <- vapply(strsplit(colnames(prices), " "), `[[`, 2, FUN.VALUE=character(1))
-    dates <- row.names(prices)
-  }
-  dtf <- as.data.frame(matrix(as.numeric(prices), ncol=length(cols),
+  prices <- do.call(rbind, lst[[2]])
+  dates <- row.names(prices)
+  cols <- vapply(strsplit(colnames(prices), "\\. "), `[[`, 2, FUN.VALUE=character(1))
+  dtf <- as.data.table(matrix(as.numeric(prices),
+                              ncol=length(cols),
                               dimnames=list(NULL, cols)))
-  dtf['Date'] <- as.Date(dates)
+  dtf <- dtf[, values, with=FALSE]
+  dtf[, Date := as.Date(dates)]
   attr(dtf, "ticker") <- lst[[1]]$`2. Symbol`
   attr(dtf, "last_refreshed") <- lst[[1]]$`3. Last Refreshed`
   attr(dtf, "date_range") <- range(dtf$Date)
-  return(data.table(dtf[order(dtf$Date), ]))
+  return(dtf[order(Date)])
 }
 
 
@@ -118,7 +88,7 @@ parse_stock_data <- function(tick, values="close")
 #
 # auto_fit(u)
 #
-auto_fit <- function(x, max_arch=2, max_garch=2)
+auto_fit <- function(x, max_arch=2, max_garch=2, ignore_nyblom=FALSE)
 {
   "ar ma sar sma period i si"
   aa <- forecast::auto.arima(x, max.p=10, allowmean=TRUE, allowdrift=FALSE)
@@ -131,8 +101,8 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
   
   arch <- 1:max_arch
   garch <- 1:max_garch
-  garchmodels <- c("sGARCH", "gjrGARCH", "csGARCH")
-  distributions <- c("norm", "std", "sstd")
+  garchmodels <- c("sGARCH", "gjrGARCH", "csGARCH") # "apARCH")
+  distributions <- c("std", "sstd")
   outerpaste <- function(a, b) as.vector(outer(a, b, paste, sep="_"))
   rnames <- Reduce(outerpaste, list(garchmodels, arch, garch), init=distributions)
   lik <- matrix(NA_real_,
@@ -140,14 +110,15 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
                           length(garchmodels), length(distributions)),
                 ncol=3,
                 dimnames=list(rnames, c("bic", "likelihood", "pass_marginal")))
+  all_pass_test <- FALSE
   lowest_bic_model <- NULL
   llh_bic <- Inf
   lowest_pass_model <- NULL
   llh_pass <- Inf
-  for (a in arch) {
-    for (g in garch) {
-      for (mod in garchmodels) {
-        for (d in distributions) {
+  for (mod in garchmodels) {
+    for (d in distributions) {
+      for (g in garch) {
+        for (a in arch) {
           nn <- paste(d, mod, g, a, sep="_")
           print(nn)
           spec_mod <- ugarchspec(
@@ -164,29 +135,45 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
 
           # If the fitting process succeeded
           } else {
-            marg_tests <- marginal_tests(fit_, print=FALSE, plot=FALSE)
-            marg_check <- try(verify_marginal_test(marg_tests, 0.05))
+            marg_tests <- try(marginal_tests(fit_, PRINT=FALSE, PLOT=FALSE))
+            marg_check <- try(verify_marginal_test(marg_tests, alpha="0.05", ignore_nyblom=ignore_nyblom))
             l <- try(infocriteria(fit_)['Bayes', 1])
             LLH <- try(fit_@fit$LLH)
             
-            if (inherits(l, "try-error") || inherits(marg_check, "try-error")) {
+            if (inherits(l, "try-error") || inherits(marg_check, "try-error") || inherits(marg_tests, "try-error")) {
               lik[nn,] <- c(NA_real_, NA_real_, FALSE)
+              
             } else {
-              lik[nn,] <- c(l, LLH, marg_check)
+              all_pass_test <- marg_check[, all(pass_test, na.rm=TRUE)]
+              lik[nn,] <- c(l, LLH, all_pass_test)
+              
               # Check if we have a new lower bic model
               if (l < llh_bic) {
                 lowest_bic_model <- fit_
                 llh_bic <- l
               }
               # Check if we have a new lower bic model that also passes marginal checks
-              if (l < llh_pass & marg_check) {
+              if (l < llh_pass & all_pass_test) {
                 lowest_pass_model <- fit_
                 llh_pass <- l
               }
             }
           }
+          # Stop looking if we have a model specification that passes all tests
+          if (all_pass_test) {
+            break
+          }
+        }
+        if (all_pass_test) {
+          break
         }
       }
+      if (all_pass_test) {
+        break
+      }
+    }
+    if (all_pass_test) {
+      break
     }
   }
   # Default choice that minimizes BIC across specifications
@@ -195,7 +182,7 @@ auto_fit <- function(x, max_arch=2, max_garch=2)
   # Prefer to consider only specifications that pass
   pass <- any(lik[, "pass_marginal"] == 1)
   if (pass) {
-    num_pass_specs <- sum(lik[, "pass_marginal"])
+    num_pass_specs <- sum(lik[, "pass_marginal"], na.rm=TRUE)
     model <- lowest_pass_model
     
     if (num_pass_specs == 1) {
@@ -317,7 +304,7 @@ arima_garch_optimization <- function(start_date,
   if (rerun) {
     if (!dir.exists(model_dir))
       stop(sprintf("The directory does not exists: %s", model_dir))
-    pat <- sprintf("(%s_)([A-Z]+)(\\.rds)", label)
+    pat <- sprintf(LABEL_PAT_4_TICK, label)
     existing_ticks <- gsub(pat, "\\2", list.files(model_dir, pattern=label))
     tickers <- setdiff(tickers, existing_ticks)
   }
@@ -332,7 +319,8 @@ arima_garch_optimization <- function(start_date,
     ii <- which(tick == tickers)
     print(sprintf("Tick: %s - %d out of %d", tick, ii, length(tickers)))
     dtfU <- parse_stock_data(tick)
-    dtfU <- dtfU[, logR := c(NA_real_, diff(log(close)))][Date >= start_date & Date <= end_date]
+    setnames(dtfU, "adjusted close", "adjclose")
+    dtfU <- dtfU[, logR := c(NA_real_, diff(log(adjclose)))][Date >= start_date & Date <= end_date]
     obj <- auto_fit(dtfU$logR, ...)
 
     # If successfully fit from the specification
@@ -345,11 +333,11 @@ arima_garch_optimization <- function(start_date,
       setnames(tmpZ, names(tmpZ), nms)
       
       # Uniform marginals by way of the probability integral transform
-      tmpU <- data.table(Date=dtfU$Date, PIT(obj$model))
+      tmpU <- data.table(Date=dtfU$Date, rugarch::pit(obj$model))
       setnames(tmpU, names(tmpU), nms)
       
       # Standardize time series - Divide all prices by the price on the first day of the series
-      tmpI <- data.table(Date=dtfU$Date, dtfU$close / dtfU$close[1])
+      tmpI <- data.table(Date=dtfU$Date, dtfU$adjclose / dtfU$adjclose[1])
       setnames(tmpI, names(tmpI), nms)
       
       # Model Summary
@@ -400,25 +388,6 @@ arima_garch_optimization <- function(start_date,
   if (write_output) {
     base_path <- "~/Git/k-similar-neighbor/data/label_analysis/"
     create_name <- function(x) sprintf("%s%s_%s.csv", base_path, label, x)
-    import_and_bind <- function(new_dt, s, how=c("col", "row"))
-    {
-      how <- match.arg(how)
-      old_dt <- fread(create_name(s))
-      if (how == "col") {
-        o <- merge(old_dt, new_dt, on="Date", all=TRUE)
-      } else {
-        o <- rbindlist(list(old_dt, new_dt), use.names=TRUE, fill=TRUE)
-      }
-      return(o)
-    }
-    
-    if (rerun) {
-      outU <- import_and_bind(outU, "uni_marg", "col")
-      outZ <- import_and_bind(outZ, "std_resids", "col")
-      outI <- import_and_bind(outI, "std_price", "col")
-      outP <- import_and_bind(outP, "model_summary", "row")
-      outM <- import_and_bind(outM, "model_coef", "row")
-    }
     fwrite(outU, file=create_name("uni_marg"))
     fwrite(outZ, file=create_name("std_resids"))
     fwrite(outI, file=create_name("std_price"))
@@ -431,15 +400,22 @@ arima_garch_optimization <- function(start_date,
 
 # Re-run label analysis. Use existing model objects for the label to re-calculate
 # standard residuals, standard prices, and model summaries
+# 
+# tst <- run_label_analysis(label="DA_2015_2016", start_date="2015-01-01", end_date="2016-12-31", write=TRUE)
+#
 run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
 {
   
   base_dir <- "~/Git/k-similar-neighbor/data/"
-  
   dtfSP <- fread(paste0(base_dir, "SandP_tick_history.csv"))
-  dtfU <- dtfSP[Date >= start_date & Date <= end_date]
+  # Buffer the start date by one trading day so log returns can be taken for
+  # the first day
+  si <- dtfSP[Date >= start_date, which(dtfSP$Date == min(Date))]
+  ei <- dtfSP[Date <= end_date, which(dtfSP$Date == max(Date))]
+  dtfU <- dtfSP[(si-1):ei]
+  
   mobjs <- list.files(paste0(base_dir, sprintf("model_objects/%s/", label)))
-  pat <- sprintf("(%s_)([A-Z]+)(\\.rds)", label)
+  pat <- sprintf(LABEL_PAT_4_TICK, label)
   
   resid_list_U <- resid_list_Z <- resid_list_I <- model_struct <- model_params <- vector("list", length(mobjs))
 
@@ -452,15 +428,17 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
       nms <- c("Date", tick)
       
       # Standardized residuals
-      tmpZ <- data.table(Date=dtfU$Date, residuals(obj$model, standardize=TRUE))
+      tmpZ <- data.table(Date=dtfU[-1]$Date, residuals(obj$model, standardize=TRUE))
       setnames(tmpZ, names(tmpZ), nms)
       
       # Uniform marginals by way of the probability integral transform
-      tmpU <- data.table(Date=dtfU$Date, PIT(obj$model))
+      tmpU <- data.table(Date=dtfU[-1]$Date, rugarch::pit(obj$model))
       setnames(tmpU, names(tmpU), nms)
       
-      # Standardize time series - Divide all prices by the price on the first day of the series
-      tmpI <- data.table(Date=dtfU$Date, dtfU[[tick]] / dtfU[[tick]][1])
+      # Standardize time series with cumulative return transformation
+      logR <- diff(log(dtfU[[tick]]))
+      compretn <- cumprod(1 + logR) - 1
+      tmpI <- data.table(Date=dtfU[-1]$Date, cumprod(1 + logR) - 1)
       setnames(tmpI, names(tmpI), nms)
       
       # Model Summary
@@ -485,7 +463,9 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
   outI <- Reduce(function(x, y) merge(x, y, on="Date", all=TRUE), resid_list_I)
   outP <- rbindlist(model_struct, use.names=TRUE, fill=TRUE)
   outM <- rbindlist(model_params, use.names=TRUE, fill=TRUE)
-  
+  for (dtbl in list(outZ, outU, outI, outP, outM)) {
+    dtbl[, label := label]
+  }
   if (write_output) {
     base_path <- "~/Git/k-similar-neighbor/data/label_analysis/"
     create_name <- function(x) sprintf("%s%s_%s.csv", base_path, label, x)
@@ -500,7 +480,6 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
   return(list(outZ=outZ, outU=outU, outI=outI, outP=outP, outM=outM))
 }
 
-# tst <- run_label_analysis(label="DA_2015_2016", start_date="2015-01-01", end_date="2016-12-31", write=TRUE)
 
 # Define NULL model spec summary and NULL model coefficients
 null_model_spec <- function()

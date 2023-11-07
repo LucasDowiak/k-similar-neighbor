@@ -1,103 +1,59 @@
 setwd("~/Git/k-similar-neighbor")
 library(data.table)
 source("R/similarity_functions.R")
-source("R/auto_marginal.R")
 source("R/plots.R")
 
 # Standard scale the flows
 dtf <- fread("data/SandP_tick_history.csv")
-dtfTmp <- dtf[Date >= "2019-01-01" & Date <= "2020-12-31"]
-pt1 <- dtfTmp[, .(Date)]
-base_date <- pt1[, which(Date == "2020-01-02")]
-pt2 <- Filter(is.numeric, dtfTmp)
-pt2 <- pt2[, lapply(.SD, function(x) x / x[base_date])]
-dtfTmp2 <- cbind(pt1, pt2)
-fwrite(dtfTmp2, "data/std_scale_2019_2020.csv")
-
-
-
-dticks <- c('BA', 'GD', 'HWM', 'HII', 'LHX', 'LMT', 'NOC', 'RTX', 'TDY', 'TXT', 'TDG')
-
-
-# Marginal specifications to standardized residuals
-tmp <- specs_to_resid_matrix("data/marginal_specifications_20200323_20210219.json",
-                             write_to_file=FALSE)
-
+dtfR <- dtf[, lapply(.SD, function(x) c(NA_real_, diff(log(x)))), .SDcols=setdiff(names(dtf), "Date")]
+dtfR[, Date := dtf$Date]
+fwrite(dtfR, file="data/SandP_log_return_history.csv")
 
 # Pearson Correlation ---------------------------------------------------------- 
+# ---------
+# Standard Residuals after ARIMA-GARCH estimation
+for (ii in 2000:2022) {
+  yr <- as.character(ii)
+  dtfStdRes <- fread(sprintf("data/label_analysis/%s_std_resids.csv", yr))
+  rhos <- calculate_similarity(dtfStdRes, dist.method="Correlation")
+  write.table(rhos, file=sprintf("data/association_results/%s_model_cor.tsv", yr), sep="\t", col.names=NA)
+}
 
-# Data Spec
-dtf <- fread("data/std_resids_19_20.csv")
-dtf1920 <- Filter(function(x) sum(is.na(x)) == 0, dtf)
-tickers <- setdiff(names(dtf1920), "Date")
 
-file_nm <- "data/association_results/corr_2019_2020"
-res <- matrix(NA_real_, nrow=length(tickers), ncol=length(tickers),
-              dimnames=list(tickers, tickers))
-write.table(res, file=file_nm, sep="\t", col.names=NA)
+# Un-adjusted log return correlation
+dtfR <- fread("data/SandP_log_return_history.csv")
 
-tst <- calculate_similarity(dtf1920, correlation, ref_file=file_nm, overwrite=TRUE, ncores=3L)
+for (ii in 2000:2022) {
+  yr <- as.character(ii)
+  dtfRes <- copy(dtfR[year(Date) == as.integer(ii)])
+  dtfRes <- Filter(function(x) sum(is.na(x) == 0), dtfRes)
+  rhos <- calculate_similarity(dtfRes, dist.method="Correlation")
+  write.table(rhos, file=sprintf("data/association_results/%s_unadjusted_cor.tsv", yr), sep="\t", col.names=NA)
+}
+
 
 # Correlation Matrix
-plot_sim_matrix("data/association_results/corr_2007_2008", type="cor", tits="Correlation: 2007 to 2008")
-plot_sim_matrix("data/association_results/corr_2015_2016", type="cor", tits="Correlation: 2015 to 2016")
-plot_sim_matrix("data/association_results/corr_2019_2020", type="cor", tits="Correlation: 2019 to 2020")
-
-
-# Kullback-Leibler Divergence --------------------------------------------------
-
-# Data Spec
-yr <- 2016
-dtfModelCoef <- fread(sprintf("data/model_coef_%d.csv", yr))
-dtfModelSums <- fread(sprintf("data/model_summary_%d.csv", yr))
-file_nm <- sprintf("data/association_results/kld_%d", yr)
-if (!"lambda" %in% dtfModelCoef)
-  dtfModelCoef[, lambda := NA_real_]
-
-dtfModelStats <- merge(dtfModelCoef[, .SD, .SDcols=c("tick", "shape", "skew", "lambda")],
-                       dtfModelSums[, .SD, .SDcols=c("tick", "distribution")],
-                       on="tick", how="outer")
-
-Qs <- lapply(dtfModelStats$tick, create_ddist, DT=dtfModelStats)
-names(Qs) <- dtfModelStats$tick
-
-M_spaceholder = t(dtfModelStats)
-tickers <- M_spaceholder[1,]
-M_spaceholder  <- data.table(M_spaceholder[2:5, ])
-names(M_spaceholder) <- tickers
-
-res <- matrix(NA_real_, nrow=dtfModelStats[, .N], ncol=dtfModelStats[, .N],
-              dimnames=list(dtfModelStats$tick, dtfModelStats$tick))
-write.table(res, file=file_nm, sep="\t", col.names=NA)
-
-tst <- calculate_similarity(M_spaceholder, kullback_leibler, ref_file=file_nm,
-                            overwrite=T, ncores=3L, df_model_distr=dtfModelStats)
+plot_sim_matrix("data/archive/association_results/corr_2007_2008", type="cor", tits="Correlation: 2007 to 2008")
 
 
 # Dynamic Time Warping ---------------------------------------------------------
+# ------------
 
 # Data Spec
-dtf <- fread("data/std_scale_2019_2020.csv")
-dtf1920 <- Filter(function(x) sum(is.na(x)) == 0, dtf)
-tickers <- setdiff(names(dtf1920), "Date")
-dtf1920 <- dtf[, tickers, with=FALSE]
-
-file_nm <- "data/association_results/dtw_2019_2020"
-
-res <- matrix(NA_real_, nrow=length(tickers), ncol=length(tickers),
-              dimnames=list(tickers, tickers))
-write.table(res, file=file_nm, sep="\t", col.names=NA)
-
-tst <- calculate_similarity(dtf1920, dynamic_time_warp, ref_file=file_nm, overwrite=TRUE, ncores=3L)
-
+for (ii in 2000:2021) {
+  yr <- as.character(ii)
+  print(sprintf("Year: %s started at %s.", yr, Sys.time()))
+  dtfStdPrice <- fread(sprintf("data/label_analysis/%s_std_price.csv", yr))
+  lambdas <- calculate_similarity(dtfStdPrice, dist.method="DTW", window.type=sakoeChibaWindow, window.size=15)
+  write.table(lambdas, file=sprintf("data/association_results/%s_dtw.tsv", yr), sep="\t", col.names=NA)
+}
 
 # DTW Matrix
-plot_sim_matrix("data/association_results/dtw_20190201_20210219", type="dtw", tits="DTW: 2019-02-01 to 2021-02-19")
-plot_sim_matrix("data/association_results/dtw_20190201_20200214", type="dtw", tits="DTW: 2019-02-01 to 2020-02-14")
-plot_sim_matrix("data/association_results/dtw_20200323_20210219", type="dtw", tits="DTW: 2020-03-23 to 2021-02-19")
+plot_sim_matrix("data/association_results/archive/dtw_20190201_20210219", type="dtw", tits="DTW: 2019-02-01 to 2021-02-19")
 
 
-# Plot Evolution of Metric over Periods ---------------------------------------------
+# Plot Evolution of Metric over Periods ----------------------------------------
+# ----------
 rm(list=ls())
 dtfSNP <- fread("data/SandP_companies.csv")
 bpalette <- c('#c62828','#f44336','#9c27b0','#673ab7','#3f51b5','#2196f3','#29b6f6','#006064','#009688','#4caf50','#8bc34a','#BEC7C7')
@@ -164,6 +120,7 @@ for (industry in dtfSNP[, unique(sector)]) {
 
 
 # Plot DTW distance vs Correlation ---------------------------------------------
+# ---------
 files_ <- list.files("data/association_results/", pattern="dtw|corr|kld")
 files_ <- files_[!files_ %in% c("kld_2007", "kld_2015", "kld_2019")]
 
@@ -198,7 +155,7 @@ tmp <- DT2[RHO_pre < 0.1 & RHO_pre > -0.1]
 
 
 # Cluster similarity matrices --------------------------------------------------
-
+# --------
 # Given a cluster of stock ticks, run a batch of summary statistics
 #
 # grps - named vector of groupings (possible from call to cutree)
