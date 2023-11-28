@@ -1,4 +1,4 @@
-setwd("~/Git/k-similar-neighbor")
+setwd("~/Git/dtw-in-finance")
 source("R/similarity_functions.R")
 library(data.table)
 library(mvtnorm)

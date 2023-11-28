@@ -300,7 +300,7 @@ arima_garch_optimization <- function(start_date,
                                      rerun=FALSE,
                                      ...)
 {
-  model_dir <- sprintf("~/Git/k-similar-neighbor/data/model_objects/%s/", label)
+  model_dir <- sprintf("~/Git/dtw-in-finance/data/model_objects/%s/", label)
   if (rerun) {
     if (!dir.exists(model_dir))
       stop(sprintf("The directory does not exists: %s", model_dir))
@@ -386,7 +386,7 @@ arima_garch_optimization <- function(start_date,
   outM <- rbindlist(model_params, use.names=TRUE, fill=TRUE)
   
   if (write_output) {
-    base_path <- "~/Git/k-similar-neighbor/data/label_analysis/"
+    base_path <- "~/Git/dtw-in-finance/data/label_analysis/"
     create_name <- function(x) sprintf("%s%s_%s.csv", base_path, label, x)
     fwrite(outU, file=create_name("uni_marg"))
     fwrite(outZ, file=create_name("std_resids"))
@@ -406,7 +406,7 @@ arima_garch_optimization <- function(start_date,
 run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
 {
   
-  base_dir <- "~/Git/k-similar-neighbor/data/"
+  base_dir <- "~/Git/dtw-in-finance/data/"
   dtfSP <- fread(paste0(base_dir, "SandP_tick_history.csv"))
   # Buffer the start date by one trading day so log returns can be taken for
   # the first day
@@ -467,7 +467,7 @@ run_label_analysis <- function(label, start_date, end_date, write_output=TRUE)
     dtbl[, label := label]
   }
   if (write_output) {
-    base_path <- "~/Git/k-similar-neighbor/data/label_analysis/"
+    base_path <- "~/Git/dtw-in-finance/data/label_analysis/"
     create_name <- function(x) sprintf("%s%s_%s.csv", base_path, label, x)
 
     fwrite(outU, file=create_name("uni_marg"))

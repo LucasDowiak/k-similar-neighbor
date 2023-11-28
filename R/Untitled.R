@@ -1,4 +1,4 @@
-setwd("~/Git/k-similar-neighbor/")
+setwd("~/Git/dtw-in-finance/")
 library(data.table)
 source("R/auto_marginal.R")
 source("R/plots.R")
@@ -249,7 +249,7 @@ m_rho_tt[upper.tri(m_rho_tt) & m_rho_tt > 0.05]
 
 
 # read in original price table
-dtfSP <- fread("~/Git/k-similar-neighbor/data/SandP_tick_history.csv")
+dtfSP <- fread("~/Git/dtw-in-finance/data/SandP_tick_history.csv")
 dtfSP[, year := as.factor(year(Date))]
 # break apart series into N separate periods
 years <- 2010:2019
@@ -301,7 +301,7 @@ results <- vector("list", length(years))
 names(results) <- as.character(years)
 for (y in years) {
   results[[as.character(y)]] <- calculate_dtw_matrix(dtfSP[year(Date) == y])
-  saveRDS(results, file="~/Git/k-similar-neighbor/data/dtw_by_year.rds")
+  saveRDS(results, file="~/Git/dtw-in-finance/data/dtw_by_year.rds")
 }
 
 # Cluster using same set of K

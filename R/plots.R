@@ -1,6 +1,6 @@
 library(ggplot2)
 library(data.table)
-setwd("~/Git/k-similar-neighbor/")
+setwd("~/Git/dtw-in-finance/")
 
 
 # Missing map

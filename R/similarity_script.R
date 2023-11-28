@@ -1,4 +1,4 @@
-setwd("~/Git/k-similar-neighbor")
+setwd("~/Git/dtw-in-finance")
 library(data.table)
 source("R/similarity_functions.R")
 source("R/plots.R")

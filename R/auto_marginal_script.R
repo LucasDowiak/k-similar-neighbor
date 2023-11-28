@@ -1,4 +1,4 @@
-setwd("~/Git/k-similar-neighbor")
+setwd("~/Git/dtw-in-finance")
 library(jsonlite)
 library(data.table)
 library(rugarch)
@@ -43,9 +43,9 @@ aa <- arima_garch_optimization(start_date=sprintf("%s-01-01", year_label),
                                ignore_nyblom=TRUE)
 
 
-files_ <- list.files(sprintf("~/Git/k-similar-neighbor/data/model_objects/%s/", year_label),
+files_ <- list.files(sprintf("~/Git/dtw-in-finance/data/model_objects/%s/", year_label),
                      full.names = T)
-ftick <- list.files(sprintf("~/Git/k-similar-neighbor/data/model_objects/%s/", year_label))
+ftick <- list.files(sprintf("~/Git/dtw-in-finance/data/model_objects/%s/", year_label))
 ftick <- sapply(strsplit(ftick, "\\.|_"), `[[`, 2)
 models <- lapply(files_, readRDS); names(models) <- ftick
 results <- lapply(models, function(x) verify_marginal_test(marginal_tests(x$model), "0.05", ignore_nyblom=TRUE))

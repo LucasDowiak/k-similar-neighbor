@@ -1,4 +1,4 @@
-setwd("~/Git/k-similar-neighbor/")
+setwd("~/Git/dtw-in-finance/")
 source("R/alpha_adv_api_key.R")
 source("R/auto_marginal.R")
 library(rvest)
@@ -22,7 +22,7 @@ hit_api <- function(tickers, outputsize=c("compact", "full"), saveJSON=FALSE)
   
   save_file <- function(json, tick)
   {
-    dir_ <- "/Users/lucasdowiak/Git/k-similar-neighbor/data/raw_json/"
+    dir_ <- "/Users/lucasdowiak/Git/dtw-in-finance/data/raw_json/"
     file_ <- paste0(tick, ".json")
     write(minify(json), file=paste0(dir_, file_))
   }
