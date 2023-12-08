@@ -5,7 +5,7 @@ find_pairs <- function(M, k=10L, si=1, dist.method=c("cor", "dtw"), omit_ticks=N
   # M - association matrix
   dist.method <- match.arg(dist.method)
   
-  if (!is.null(subset)) {
+  if (!is.null(omit_ticks)) {
     cn <- colnames(M)
     cn <- cn[!cn %in% omit_ticks]
     M <- M[cn, cn]
@@ -146,10 +146,11 @@ back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, buy_sig
 {
   buy_signal <- match.arg(buy_signal)
   trade_year <- as.character(as.integer(label) + 1)
-  # Stat and train on 2012 data
+  
   ## Given buy-signal read in association matrix
   assoc_file <- sprintf("data/association_results/%s_%s.tsv", label, buy_signal)
   M <- read_association_table(assoc_file)
+  dtfSP <- fread("data/SandP_companies.csv")
   dtfFormCumRet <- fread(sprintf("data/label_analysis/%s_std_price.csv", label))
   dtfTradeCumRet <- fread(sprintf("data/label_analysis/%s_std_price.csv", trade_year))
   Tf <- dtfTradeCumRet[, .N]
@@ -159,11 +160,10 @@ back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, buy_sig
   dm <- if (buy_signal == "dtw") "dtw" else "cor"
   top_pairs <- find_pairs(M, k=k, si=start_index, dist.method=dm, omit_ticks=bad_ticks)
   pnames <- unlist(lapply(top_pairs, paste, collapse="-"))
+  
   # Execute strategy on following year's returns
   ## Read in standard price in 2013
-  revn <- vector("list", length=k)
-  names(revn) <- sapply(top_pairs, paste, collapse="-")
-  
+  revn <- vector("list", length=k); names(revn) <- pnames
   for (ii in seq_len(k)) {
     pn <- paste(top_pairs[[ii]], collapse="-")
     revn[[pn]] <- back_test_pair(top_pairs[[ii]], dtfFormCumRet, dtfTradeCumRet,
@@ -171,33 +171,37 @@ back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, buy_sig
   }
   
   # What annual return do we get by going long in the portfolio for the year
-  bl_long <- sapply(top_pairs, base_line_long_return, dt_trade=dtfTradeCumRet)
+  bl_long <- data.table(pair=pnames,
+                        baseline_return=sapply(top_pairs, base_line_long_return,
+                                               dt_trade=dtfTradeCumRet))
   
-  # Return metrics by pair
+  # data.table to record pair metadata
   dtfPairEval <- data.table(pair=pnames)
-  if (all(sapply(revn, length) == 0)) {
-    revenues <- data.table()
-    dtfPairEval[, V1 := NA_real_]
-    commited_return <- invested_return <- 1
-  } else {
-    revenues <- rbindlist(revn)[order(pair, close_date)]
-    rev_by_pair <- revenues[, prod(1 + pair_return), by=pair]
-    dtfPairEval <- merge(dtfPairEval, rev_by_pair, all.x=TRUE)
-    # Provide invested and committed return values
-    invested_return <- dtfPairEval[, mean(V1, na.rm=TRUE)]
-    commited_return <- dtfPairEval[, (sum(V1, na.rm=TRUE) + sum(is.na(V1))) / k]
-  }
   dtfPairEval[, trade_year := trade_year]
   dtfPairEval[, threshold := threshold]
   dtfPairEval[, start_index := start_index]
   dtfPairEval[, n_pairs := k]
   dtfPairEval[, buy_signal := buy_signal]
   
-  revenues[, trade_year := trade_year]
-  revenues[, threshold := threshold]
-  revenues[, start_index := start_index]
-  revenues[, n_pairs := k]
-  revenues[, buy_signal := buy_signal]
+  # Return metrics by pair
+  if (all(sapply(revn, length) == 0)) {
+    revenues <- data.table()
+    dtfPairEval[, pair_return := NA_real_]
+    commited_return <- invested_return <- 1
+  } else {
+    revenues <- rbindlist(revn)[order(pair, close_date)]
+    rev_by_pair <- revenues[, .(pair_return=prod(1 + pair_return)), by=pair]
+    dtfPairEval <- merge(dtfPairEval, rev_by_pair, all.x=TRUE)
+    
+    # Provide invested and committed return values
+    invested_return <- dtfPairEval[, mean(pair_return, na.rm=TRUE)]
+    commited_return <- dtfPairEval[, (sum(pair_return, na.rm=TRUE) + sum(is.na(pair_return))) / k]
+  }
+  dtfPairEval[, c("pair_1", "pair_2") := tstrsplit(pair, "-", fixed=TRUE)]
+  dtfPairEval <- merge(dtfPairEval, dtfSP[, .(ticker, sector)], by.x="pair_1", by.y="ticker")
+  dtfPairEval <- merge(dtfPairEval, dtfSP[, .(ticker, sector)], by.x="pair_2", by.y="ticker")
+  dtfPairEval <- merge(dtfPairEval, bl_long, by="pair")
+  setnames(dtfPairEval, c("sector.x", "sector.y"), c("sector_1", "sector_2"))
   
   dtfBenchmarks = data.table(
              trade_year=trade_year,
@@ -205,11 +209,24 @@ back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, buy_sig
              start_index=start_index,
              n_pairs=k,
              buy_signal=buy_signal,
-             base_line_long=mean(bl_long),
-             committed=commited_return - 1,
-             invested=invested_return - 1)
+             baseline_long=bl_long[, mean(baseline_return)],
+             committed=commited_return,
+             invested=invested_return)
+
+  revenues[, trade_year := trade_year]
+  revenues[, threshold := threshold]
+  revenues[, start_index := start_index]
+  revenues[, n_pairs := k]
+  revenues[, buy_signal := buy_signal]
+  if ("pair" %in% names(revenues)) {
+    revenues[, c("pair_1", "pair_2") := tstrsplit(pair, "-", fixed=TRUE)]
+    revenues <- merge(revenues, dtfSP[, .(ticker, sector)], by.x="pair_1", by.y="ticker")
+    revenues <- merge(revenues, dtfSP[, .(ticker, sector)], by.x="pair_2", by.y="ticker")
+    setnames(revenues, c("sector.x", "sector.y"), c("sector_1", "sector_2"))
+  }
+
   
-  return(list(revenues=revenues, evaluation=dtfBenchmarks, pairs=dtfPairEval))
+  return(list(revenues=revenues, annual_returns=dtfBenchmarks, pairs=dtfPairEval))
 }
 
 
@@ -218,6 +235,6 @@ base_line_long_return <- function(portfolio_pairs, dt_trade)
   pos <- unlist(lapply(portfolio_pairs, strsplit, "-"))
   wts <- table(pos)
   rtn <- dt_trade[.N, unlist(.SD), .SDcols=unique(pos)]
-  ann_ret <- sum((1 + rtn)[names(wts)] * wts) - sum(wts)
-  return(ann_ret)
+  ret <- (rtn[names(wts)] %*% wts)[1, 1] / sum(wts)
+  return(1 + ret)
 }
