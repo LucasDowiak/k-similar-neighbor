@@ -10,6 +10,8 @@
 \usepackage{pdflscape}
 %\usepackage{algorithmic}
 %\usepackage{algorithm}
+\usepackage{adjustbox}
+\usepackage{array}
 \usepackage{graphicx}
 \usepackage{subfigure}
 
@@ -19,7 +21,7 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 
-\graphicspath{{/Users/lucasdowiak/Git/k-similar-neighbor/article/images/}}
+\graphicspath{{/Users/lucasdowiak/Git/dtw-in-finance/article/images/}}
 
 \usepackage[
   backend=biber,
@@ -347,14 +349,102 @@ To put these concepts into practice the dynamic time warping algorithm will be d
 
 \section{Pair Trading}
 
-One way to compare these measures is putting them to practical use. In this section a simple trading strategy is described that centers around finding "similar" pairs of stocks and trading off the expectation that any major short term deviations in their prices are eventually unwound over a longer time horizon. The spcecifics of this pair trading strategy are the same as the approach taken by \cite{Gatev_et_al_2006}, with a few adjustments made to take into account the unique nautre of dynamic time warping and its difference to correlation as a measure of similarity. This backtesting experiment is not carried out because of high expected returns, especially in the modern trading environment. The rise and refinement of high frequency trading now sees arbitrage opportunities resolved in microseconds\footcite[See][]{Aquilina_et_al_2021} while this article studies daily asset returns. In addition \cite{Gatev_et_al_2006} was published close to two decades ago in a widely read journal making its recipe part of the established financial canon. The benefits to using this particular trading strategy is that it provides a suitable context to directly compare the impact of using dynamic time warping -- instead of correlation -- to identify the "similar" pairs to trade.
+One way to compare these measures is putting them to practical use. In this section a simple trading strategy is described that centers around finding "similar" pairs of stocks and trading off the expectation that any major short term deviations in their prices are eventually unwound over a longer time horizon. If the returns to using dynamic time warping to form trading pairs are materially different than returns from a correlation based approach it could help us understand whether dtw can provide complimentary information to use in combination with correlation. The specifics of this pair trading strategy are the same as the approach taken by \cite{Gatev_et_al_2006} with a few adjustments made to take into account the unique nautre of dynamic time warping and its difference to correlation as a measure of similarity. This backtesting experiment is not carried out because of high expected returns, especially in the context of our modern trading environment. The rise of high frequency trading in the 1990's and 2000's has created the financial infrastructure that sees arbitrage opportunities resolved in microseconds\footcite[See][for a more detailed ]{Aquilina_et_al_2021} while this article studies asset returns at a daily frequency. In addition \cite{Gatev_et_al_2006} was published close to two decades ago in a widely read journal making its recipe part of the established financial canon. The benefits to using this particular trading strategy is that it provides a suitable context to directly compare the impact of using dynamic time warping -- instead of correlation -- to identify the "similar" pairs to trade.
+
+Given a single stock-pair in a trader's portfolio a buy-signal is trigged if the price deviation between the two stocks exceeds a certain threshold. Once triggered the trader goes long in the lower priced stock and short in the higher priced stock. The positions are unwound when the prices come back to parity, profits are recorded, and the trader stands ready to open another position given a new buy-signal. At the end of the trading period all open positions are closed at the prevailing price. To summarize, the general strategy has the following sequence of steps:
 
 \begin{enumerate}
-    \item During the 
-    \item Pair stocks together that are highly associated with each other.
-    \item Take advantage of any large temporary cumulative return deviations and bet on a likely re-alignment of the cumulative returns in the near future
-    \item Close out any open positions at the end of the trading window
+    \item Set length of time to use for pair selection and cross-validation for optimal buy-signal thresholds. Set length of time for the execution of the trading strategy. In this article a one year duration is used for both pair selection and trade execution periods.
+    \item Standardize all stock prices at the beginning of the pair selection and trading period intervals.
+    \item Pair Selection: Use recent past price movements to identify the top N pairs of stocks that are the most \textit{similar}. Use the same period to find the optimal buy-signal threshold via cross-validation.
+    \item Trading Period: Execute the strategy for each of the N stock pair in the portfolio. Close out any open positions at the end of the trading period.
 \end{enumerate}
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{Annual_Returns_to_Committed_Capital.png}
+    \caption{Barcharts indicating the annual committed returns of the trading strategy under different buy signals and portfolio sizes.}
+    \label{fig:annual_returns_to_committed_capital_by_buy_signal}
+\end{figure}
+
+\begin{table}[htb]
+    \fontsize{8pt}{8pt}\selectfont
+    \centering
+    \begin{tabular}{l r r l r r r r r r}
+        \multicolumn{9}{l}{\textbf{I. Returns on Committed Equity}} \\
+        \# Pairs & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
+        \hline
+        \vspace{-1mm} \\
+        Top 25    & unadjusted cor &  0.0018 & 0.0024          & 0.030 &  0.0011 & -0.873 & 5.039 & -0.085 & 0.061 \\
+        Top 25    & model cor      & -0.0033 & 0.0040          & 0.027 &  0.0003 & -1.199 & 4.417 & -0.078 & 0.032 \\
+        Top 25    & dtw            &  0.0185 & 0.0050{$^{**}$} & 0.041 &  0.0096 &  0.695 & 2.992 & -0.041 & 0.114 \\
+        \vspace{-1mm} \\
+        Top 50    & unadjusted cor & -0.0003 & 0.0017          & 0.023 & -0.0001 &  0.028 & 1.918 & -0.038 & 0.043 \\
+        Top 50    & model cor      & -0.0011 & 0.0026          & 0.025 & -0.0054 &  0.226 & 1.935 & -0.036 & 0.044 \\
+        Top 50    & dtw            &  0.0084 & 0.0054          & 0.034 &  0.0032 &  0.512 & 2.999 & -0.057 & 0.084 \\
+        \vspace{-1mm} \\
+        101-200   & unadjusted cor &  0.0047 & 0.0015{$**$}    & 0.019 &  0.0058 &  0.205 & 2.592 & -0.029 & 0.044 \\
+        101-200   & model cor      &  0.0015 & 0.0020          & 0.022 &  0.0073 & -1.242 & 5.263 & -0.066 & 0.034 \\
+        101-200   & dtw            & -0.0044 & 0.0057          & 0.042 & -0.0012 & -1.043 & 3.218 & -0.110 & 0.040 \\
+        \vspace{-1mm} \\
+        1001-1100 & unadjusted cor & -0.0074 & 0.0031{$^{*}$}  & 0.033 & -0.0018 & -0.337 & 2.962 & -0.083 & 0.060 \\
+        1001-1100 & model cor      &  0.0005 & 0.0039          & 0.026 & -0.0014 &  1.276 & 6.203 & -0.044 & 0.085 \\
+        1001-1100 & dtw            & -0.0027 & 0.0071          & 0.042 &  0.0057 & -0.085 & 2.294 & -0.086 & 0.065 \\
+        \vspace{-1mm} \\
+        \hline
+        \vspace{1 mm} \\
+        \multicolumn{9}{l}{\textbf{II. Returns on Fully Invested Equity}} \\
+        \# Pairs  & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
+        \hline
+        \vspace{-1mm} \\
+        Top 25    & unadjusted cor &  0.0100 & 0.0063          & 0.051 &  0.0021 &  0.057 & 4.071 & -0.112 & 0.132 \\
+        Top 25    & model cor      &  0.0034 & 0.0089          & 0.050 &  0.0005 &  0.434 & 3.994 & -0.093 & 0.133 \\
+        Top 25    & dtw            &  0.0189 & 0.0050{$^{**}$} & 0.042 &  0.0096 &  0.721 & 3.062 & -0.041 & 0.119 \\
+        \vspace{-1mm} \\
+        Top 50    & unadjusted cor &  0.0015 & 0.0032          & 0.038 & -0.0006 &  0.041 & 1.701 & -0.060 & 0.064 \\
+        Top 50    & model cor      &  0.0010 & 0.0055          & 0.043 & -0.0086 &  0.343 & 2.234 & -0.065 & 0.097 \\
+        Top 50    & dtw            &  0.0084 & 0.0055          & 0.034 &  0.0033 &  0.457 & 2.973 & -0.060 & 0.084 \\
+        \vspace{-1mm} \\
+        101-200   & unadjusted cor &  0.0097 & 0.0023{$^{**}$} & 0.031 &  0.0088 &  0.139 & 2.066 & -0.037 & 0.065 \\
+        101-200   & model cor      &  0.0046 & 0.0024{$+$}     & 0.032 &  0.0128 & -0.600 & 2.913 & -0.076 & 0.047 \\
+        101-200   & dtw            & -0.0045 & 0.0058          & 0.042 & -0.0012 & -1.046 & 3.222 & -0.111 & 0.041 \\
+        \vspace{-1mm} \\
+        1001-1100 & unadjusted cor & -0.0118 & 0.0060{$^{*}$}  & 0.050 & -0.0023 & -0.318 & 2.235 & -0.113 & 0.075 \\
+        1001-1100 & model cor      & -0.0028 & 0.0058          & 0.045 & -0.0020 & -0.293 & 4.727 & -0.125 & 0.107 \\
+        1001-1100 & dtw            & -0.0031 & 0.0071          & 0.043 &  0.0058 & -0.080 & 2.253 & -0.087 & 0.065 \\
+        \vspace{-1mm} \\
+        \hline
+        \vspace{1 mm} \\
+        \multicolumn{9}{l}{\textbf{III. Baseline Long Position}} \\
+        \# Pairs & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
+        \hline
+        \vspace{-1mm} \\
+        Top 25    & unadjusted cor & 0.0557 & 0.0228{$^{*}$}  & 0.232 & 0.1049 & -0.234 & 2.753 & -0.463 & 0.513 \\
+        Top 25    & model cor      & 0.0487 & 0.0225{$^{*}$}  & 0.235 & 0.0815 & -0.003 & 3.256 & -0.472 & 0.597 \\
+        Top 25    & dtw            & 0.0899 & 0.0140{$^{**}$} & 0.149 & 0.1371 & -1.196 & 4.021 & -0.333 & 0.266 \\
+        \vspace{-1mm} \\
+        Top 50    & unadjusted cor & 0.0648 & 0.0237{$^{**}$} & 0.227 & 0.1161 & -0.633 & 2.837 & -0.490 & 0.413 \\
+        Top 50    & model cor      & 0.0596 & 0.0241{$^{*}$}  & 0.227 & 0.0947 & -0.466 & 2.674 & -0.470 & 0.431 \\
+        Top 50    & dtw            & 0.0711 & 0.0148{$^{**}$} & 0.149 & 0.1266 & -1.079 & 3.986 & -0.339 & 0.274 \\
+        \vspace{-1mm} \\
+        101-200   & unadjusted cor & 0.0739 & 0.0219{$^{**}$} & 0.210 & 0.1129 & -0.890 & 3.521 & -0.496 & 0.362 \\
+        101-200   & model cor      & 0.0907 & 0.0255{$^{**}$} & 0.216 & 0.1432 & -0.719 & 3.599 & -0.505 & 0.427 \\
+        101-200   & dtw            & 0.0840 & 0.0181{$^{**}$} & 0.165 & 0.1309 & -1.073 & 4.193 & -0.388 & 0.293 \\
+        \vspace{-1mm} \\
+        1001-1100 & unadjusted cor & 0.0756 & 0.0281{$^{**}$} & 0.214 & 0.1423 & -1.033 & 3.905 & -0.522 & 0.362 \\
+        1001-1100 & model cor      & 0.0655 & 0.0280{$^{*}$}  & 0.205 & 0.0941 & -0.982 & 3.869 & -0.500 & 0.333 \\
+        1001-1100 & dtw            & 0.0954 & 0.0170{$^{**}$} & 0.171 & 0.1381 & -1.014 & 4.276 & -0.402 & 0.326 \\
+        \vspace{-1mm} \\
+        \hline
+    \end{tabular}
+    \caption{Average Annual Return Distribution}
+    \begin{tablenotes}
+        \item{\footnotesize Three different measures of portfolio returns are summarized in this table. The top section records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. Section II of the table records fully invested returns where the total return of the portfolio during the trading period is devided by the number of pairs selected to trade. Section III records the annual return of the portfolio if the trader simply goes long in at the beginning of the trading period.}
+        \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
+        \item{\footnotesize $^{1}$Standard errors are Newey-West estimates and significant values are } 
+    \end{tablenotes}
+\end{table}
 
 
 There are three different propsed methods for chosing the association measure:
@@ -370,51 +460,63 @@ TODO:
     \item Compare Top 5 and Top 20 correlation pairs. Returns between the two strategies are highly correlated. How often does the model make different pair recommendations?
 \end{enumerate}
 
+\newcolumntype{R}[2]{%
+    >{\adjustbox{angle=#1,lap=\width-(#2)}\bgroup}%
+    l%
+    <{\egroup}%
+}
+\newcommand*\rot{\multicolumn{1}{R{30}{1em}}}% no optional argument here, please!
 \begin{table}[!htb]
-    \begin{center}
-      \begin{tabular}{l r r r r r r r r}
-        \multicolumn{3}{l}{I. Returns on Committed Equity} \\
-        \hline
-        \# Pairs & Pair Strategy & Mean & SD & Median & Skew & Kurtosis & Min & Max \\
-        \hline
-        Top 5   & unadjusted cor &  0.016 & 0.034 &  0.012 & -1.077 & 5.025 & -0.088 & 0.068 \\
-        Top 5   &      model cor &  0.003 & 0.074 &  0.010 & -1.957 & 7.576 & -0.245 & 0.105 \\
-        Top 5   &            dtw &  0.016 & 0.057 &  0.023 & -0.208 & 3.579 & -0.126 & 0.137 \\
-        Top 20  & unadjusted cor & -0.001 & 0.036 &  0.004 & -2.079 & 7.794 & -0.123 & 0.047 \\
-        Top 20  &      model cor &  0.003 & 0.031 &  0.007 & -1.793 & 7.498 & -0.103 & 0.054 \\
-        Top 20  &            dtw &  0.016 & 0.042 &  0.014 &  0.159 & 3.232 & -0.072 & 0.100 \\
-        101-120 & unadjusted cor & -0.002 & 0.034 & -0.004 & -1.070 & 5.818 & -0.110 & 0.052 \\
-        101-120 &      model cor & -0.010 & 0.046 & -0.007 & -1.829 & 6.967 & -0.167 & 0.035 \\
-        101-120 &            dtw &  0.005 & 0.068 &  0.002 &  0.193 & 2.870 & -0.125 & 0.155 \\
+    \fontsize{9pt}{9pt}\selectfont
+    \centering
+    \begin{tabular}{l r r r r r r r r r r r}
+          & \rot{Communication Services} & \rot{Consumer Discretionary} & \rot{Consumer Staples} & \rot{Energy} & \rot{Financials} & \rot{Health Care} & \rot{Industrials} & \rot{Information Technology} & \rot{Materials} & \rot{Real Estate} & \rot{Utilities} \\
+        \textbf{Dynamic Time Warping} &    &    &    &    &    &    &    &    &    &    &    \\
+        Communication Services   & 14 &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . \\
+        Consumer Discretionary   &  . &  3 &  . &  . &  . &  . &  . &  . &  . &  . &   . \\
+        Consumer Staples         &  2 &  3 & 13 &  . &  . &  . &  . &  . &  . &  . &   . \\
+        Energy                   &  . &  . &  1 &  5 &  . &  . &  . &  . &  . &  . &   . \\
+        Financials               &  2 &  2 & 13 &  . & 50 &  . &  . &  . &  . &  . &   . \\
+        Health Care              &  3 &  . & 12 &  1 & 12 &  6 &  . &  . &  . &  . &   . \\
+        Industrials              &  3 &  4 &  7 &  3 &  8 &  6 & 20 &  . &  . &  . &   . \\
+        Information Technology   &  2 &  1 &  1 &  2 &  9 &  3 &  6 &  2 &  . &  . &   . \\
+        Materials                &  . &  3 &  1 &  2 &  4 &  1 &  6 &  2 &  2 &  . &   . \\
+        Real Estate              &  . &  1 &  1 &  . &  2 &  . &  2 &  . &  2 & 49 &   . \\
+        Utilities                &  4 &  4 & 25 &  2 & 11 &  9 &  6 &  1 &  3 &  9 & 178 \\
         \vspace{1 mm} \\
-        \multicolumn{3}{l}{II. Returns on Fully Invested Equity} \\
+        \textbf{Model Correlation}    &    &    &    &    &    &    &    &    &    &    &    \\
+        Communication Services   & 17 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
+        Consumer Discretionary   &  . & 36 &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
+        Consumer Staples         &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
+        Energy                   &  . &  . &  . & 52 &  . &  . &  . &  . &  . &  . &  . \\
+        Financials               &  . &  . &  . &  . & 117&  . &  . &  . &  . &  . &  . \\
+        Health Care              &  . &  . &  . &  . &  . &  1 &  . &  . &  . &  . &  . \\
+        Industrials              &  . &  . &  . &  . &  . &  . & 13 &  . &  . &  . &  . \\
+        Information Technology   &  . &  . &  . &  . &  . &  . &  . & 44 &  . &  . &  . \\
+        Materials                &  . &  . &  . &  . &  . &  . &  . &  . & 10 &  . &  . \\
+        Real Estate              &  . &  . &  . &  . &  . &  . &  . &  . &  3 &150 &  . \\
+        Utilities                &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &107 \\
+        \vspace{1 mm} \\
+        \textbf{Unadjusted Correlation}  &    &    &    &    &    &    &    &    &    &    &    \\
+        Communication Services & 17 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
+        Consumer Discretionary &  . & 30 &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
+        Consumer Staples       &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
+        Energy                 &  . &  . &  . & 47 &  . &  . &  . &  . &  . &  . &  . \\
+        Financials             &  . &  . &  . &  . &147 &  . &  . &  . &  . &  . &  . \\
+        Health Care            &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
+        Industrials            &  . &  . &  . &  . &  . &  . & 10 &  . &  . &  . &  . \\
+        Information Technology &  . &  . &  . &  . &  . &  . &  . & 36 &  . &  . &  . \\
+        Materials              &  . &  . &  . &  . &  . &  . &  . &  . &  5 &  . &  . \\
+        Real Estate            &  . &  . &  . &  . &  . &  . &  . &  . &  2 &161 &  . \\
+        Utilities              &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . & 95 \\
+        \vspace{1 mm} \\
         \hline
-        \# Pairs & Pair Strategy & Mean & SD & Median & Skew & Kurtosis & Min & Max \\
-        \hline
-        Top 5   & unadjusted cor &  0.027 & 0.059 & 0.030  & -0.638 & 3.216 & -0.110 & 0.115 \\
-        Top 5   &      model cor &  0.020 & 0.094 & 0.017  & -0.948 & 4.480 & -0.245 & 0.174 \\
-        Top 5   &            dtw &  0.016 & 0.057 & 0.023  & -0.205 & 3.446 & -0.126 & 0.137 \\
-        Top 20  & unadjusted cor &  0.008 & 0.055 & 0.006  & -0.686 & 5.218 & -0.145 & 0.132 \\
-        Top 20  &      model cor &  0.012 & 0.051 & 0.013  & -0.686 & 5.285 & -0.138 & 0.117 \\
-        Top 20  &            dtw &  0.016 & 0.043 & 0.014  &  0.184 & 3.151 & -0.072 & 0.100 \\
-        101-120 & unadjusted cor & -0.005 & 0.059 & -0.006 & -1.053 & 5.217 & -0.183 & 0.085 \\
-        101-120 &      model cor & -0.015 & 0.077 & -0.010 & -1.123 & 3.909 & -0.214 & 0.092 \\
-        101-120 &            dtw &  0.005 & 0.069 &  0.003 &  0.163 & 2.855 & -0.125 & 0.155 \\
-        \hline
-      \end{tabular}
-    \caption{Average Annual Return Distribution}
-    \end{center}
+    \end{tabular}
+    \caption{Sector Distribution of Top 25 Portfolio Pairs}
     \begin{tablenotes}
-        \item{\footnotesize Two different measures of portfolio returns are summarized in this table. The top section records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. See column one in the table. Section II. of the table records fully invested returns where the the total return of the portfolio during the trading period is devided by the number of pairs selected to trade.}
+        \item{\footnotesize Footnote size table note}
     \end{tablenotes}
 \end{table}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{Annual_Returns_to_Committed_Capital.png}
-    \caption{Barcharts indicating the annual return of the trading strategy under different buy signals and portfolio sizes.}
-    \label{fig:annual_returns_to_committed_capital_by_buy_signal}
-\end{figure}
 
 \section{Simulation Results}
 In order to gauge the relationship between the DGP process of two time series and their resulting DTW value we turn to simulation. For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
