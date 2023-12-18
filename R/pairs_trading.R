@@ -1,23 +1,63 @@
 # Pairs-Trading ----------------------------------------------------------------
 # Find the N most closely associated pairs
-find_pairs <- function(M, k=10L, si=1, dist.method=c("cor", "dtw"), omit_ticks=NULL)
+find_pairs <- function(M, k=10L, si=1, dist.method=c("cor", "dtw"), replace=TRUE,
+                       omit_ticks=NULL)
 {
   # M - association matrix
   dist.method <- match.arg(dist.method)
-  
+  cnames <- colnames(M)
   if (!is.null(omit_ticks)) {
-    cn <- colnames(M)
-    cn <- cn[!cn %in% omit_ticks]
-    M <- M[cn, cn]
+    cnames <- cnames[!cnames %in% omit_ticks]
+    M <- M[cnames, cnames]
   }
-  vals <- sort(M[lower.tri(M)])
+  M[upper.tri(M, diag=TRUE)] <- NA_real_
+  M <- as.data.table(reshape2::melt(M))[!is.na(value)]
+  M <- M[, `:=`(Var1=as.character(Var1), Var2=as.character(Var2))]
+  #> vals <- sort(M[lower.tri(M)])
+  #> svals <- summary(vals)
   if (dist.method == "cor") {
-    topn <- rev(vals)[si:(si + k - 1L)]
+    M <- M[order(-value)]
   } else {
-    topn <- vals[si:(si + k - 1L)]
+    M <- M[order(value)]
   }
-  out <- lapply(topn, function(x) row.names(which(M == x, arr.ind=TRUE)))
-  attr(out, 'summary') <- summary(vals)
+  if (replace) {
+    # take top k values
+    topn <- M[si:(si + k - 1L), value]
+    out <- lapply(split(M[si:(si + k - 1L), .SD], 1:k), function(x) c(x$Var1, x$Var2))
+    out <- unname(out)
+    #out <- M[si:(si + k - 1L), .(Var1, Var2)][, apply(.SD, 1, c)]
+    #out <- as.list(out)
+    svals <- M[, summary(value)]
+    #> topn <- vals[si:(si + k - 1L)]
+    #> out <- lapply(topn, function(x) row.names(which(M == x, arr.ind=TRUE)))
+  } else {
+    # while loop that rejects a pair if one of it's stocks is already part of the portfolio
+    MM <- vector("list", floor(length(cnames) / 2))
+    used_ticks <- c()
+    for (ii in seq_along(MM)) { #length(avail_ticks) > 0) {
+      used_ticks <- c(used_ticks, M[1, c(Var1, Var2)])
+      MM[[ii]] <- M[1, ]
+      M <- M[!(Var1 %in% used_ticks | Var2 %in% used_ticks)]
+    }
+    MM <- rbindlist(MM)
+    topn <- MM[si:(si + k - 1L), value]
+    out <- lapply(split(MM[si:(si + k - 1L), .SD], 1:k), function(x) c(x$Var1, x$Var2))
+    out <- unname(out)
+    svals <- MM[, summary(value)]
+    #> out <- vector("list", k)
+    #> topn <- c()
+    #> ii <- 1
+    #> while (any(sapply(out, is.null))) {
+    #>   p <- vals[1]
+    #>   ticks <- row.names(which(M == p, arr.ind=TRUE))
+    #>   if (!any(ticks %in% unlist(out))) {
+    #>     out[[ii]] <- ticks
+    #>     topn <- c(topn, p)
+    #>     ii <- ii + 1
+    #> }
+    #> vals <- vals[-1]
+  }
+  attr(out, 'summary') <- svals
   attr(out, 'values') <- topn
   attr(out, "dist.method") <- dist.method
   return(out)
@@ -142,7 +182,8 @@ back_test_pair <- function(pairs, dt_form, dt_trade, threshold=2)
 }
 
 
-back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, buy_signal=c("unadjusted_cor", "model_cor", "dtw"))
+back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, replace=TRUE,
+                               buy_signal=c("unadjusted_cor", "model_cor", "dtw"))
 {
   buy_signal <- match.arg(buy_signal)
   trade_year <- as.character(as.integer(label) + 1)
@@ -158,7 +199,8 @@ back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, buy_sig
   
   ## Find the top K pairs
   dm <- if (buy_signal == "dtw") "dtw" else "cor"
-  top_pairs <- find_pairs(M, k=k, si=start_index, dist.method=dm, omit_ticks=bad_ticks)
+  top_pairs <- find_pairs(M, k=k, si=start_index, dist.method=dm, replace=replace,
+                          omit_ticks=bad_ticks)
   pnames <- unlist(lapply(top_pairs, paste, collapse="-"))
   
   # Execute strategy on following year's returns

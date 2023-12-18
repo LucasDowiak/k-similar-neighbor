@@ -8,8 +8,8 @@ yrs.int <- 2000:2021
 yr_labels <- as.character(yrs.int)
 signals <- c("unadjusted", "model", "dtw")
 K <- c(25, 50, 100, 100)
-sidx <- c(1, 1, 101, 1001)
-thresh <- seq(1.5, 3., 0.1)
+sidx <- c(1, 1, 1, 101)
+thresh <- 2
 
 # 1
 outerpaste <- function(a, b) as.vector(outer(a, b, paste, sep="_"))
@@ -24,7 +24,7 @@ for (yr_lab in yr_labels) {
     for (k in seq_along(K)) {
       for (thsh in thresh) {
         tyr <- paste(c(yr_lab, sig, K[k], sidx[k], threshold=thsh), collapse="_")
-        tmp <- back_test_strategy(yr_lab, k=K[k], threshold=thsh, start_index=sidx[k], buy_signal=sig)
+        tmp <- back_test_strategy(yr_lab, k=K[k], threshold=thsh, start_index=sidx[k], buy_signal=sig, replace=TRUE)
         lst_ann_trade_ret[[tyr]] <- tmp
       }
     }
@@ -60,16 +60,19 @@ benchmarks <- rbindlist(lapply(lst_, `[[`, 2), fill=TRUE)
 benchmarks[, group := paste(start_index, n_pairs, sep=" : ")]
 benchmarks[, threshold := as.character(threshold)]
 benchmarks[, buy_signal:=factor(buy_signal, levels=c("unadjusted_cor", "model_cor", "dtw"))]
-benchmarks[, group:=factor(group, levels=c("1 : 25", "1 : 50", "101 : 100", "1001 : 100"))]
+benchmarks[, group:=factor(group, levels=c("1 : 25", "1 : 50", "1 : 100", "101 : 100"))]
+benchmarks[, .(baseline_long=mean(baseline_long - 1),
+               committed=mean(committed - 1),
+               invested=mean(invested - 1)), by=c("buy_signal", "group")]
 
 pairs <- rbindlist(lapply(lst_, `[[`, 3), fill=TRUE)
 pairs[, group := paste(start_index, n_pairs, sep=" : ")]
 pairs[, threshold := as.character(threshold)]
 
 # Standard Errors for the average can be found via regression
-lm1 <- lm((invested - 1) ~ -1 + buy_signal : group, data=benchmarks[threshold=="2"])
+lm1 <- lm((baseline_long - 1) ~ -1 + buy_signal : group, data=benchmarks[threshold=="2"])
 W <- sandwich::NeweyWest(lm1, lag=10, prewhite=FALSE)
-lmtest::coeftest(lm1, df=Inf, vcov. = W)
+round(lmtest::coeftest(lm1, df=Inf, vcov. = W), 4)
 
 
 # Calculate annual returns of the portfolio
@@ -86,7 +89,7 @@ distribution_stats <- function(x)
              maximum=max(x))
 }
 
-dtfRbs <- benchmarks[threshold=="2", distribution_stats(base_line_long - 1), by=c("buy_signal", "group")]
+dtfRbs <- benchmarks[threshold=="2", distribution_stats(baseline_long - 1), by=c("buy_signal", "group")]
 dtfRbs[, metric := "baseline_long"]
 dtfRcom <- benchmarks[threshold=="2", distribution_stats(committed - 1), by=c("buy_signal", "group")]
 dtfRcom[, metric := "committed"]
@@ -94,7 +97,7 @@ dtfRinv <- benchmarks[threshold=="2", distribution_stats(invested - 1), by=c("bu
 dtfRinv[, metric := "invested"]
 dtfR <- rbindlist(list(dtfRbs, dtfRcom, dtfRinv))
 dtfR[order(group)][metric == "baseline_long"]
-dtfR[order(group)][metric == "baseline_long", round(.SD, 4), .SDcols=3:9]
+dtfR[order(group)][metric == "baseline_long", round(.SD, 3), .SDcols=4:9]
 
 # -------------------------------------------------------------
 
@@ -166,17 +169,18 @@ dtfPairs <- merge(dtfPairs, dtfSP[, .(ticker, sector)], by.x="pair2", by.y="tick
 setnames(dtfPairs, "sector", "sector_2")
 
 
-dcast(dtfPairs[group=="Top 20" & buy_signal == "dtw"],
+dcast(pairs[group=="1 : 25" & buy_signal=="unadjusted_cor" & threshold=="2"],
       sector_1 ~ sector_2,
       value.var="pair",
-      fun.aggregate=length)[, 2:12]
-M <- dcast(dtfPairs[group=="Top 20" & buy_signal == "dtw"],
+      fun.aggregate=length)#[, 2:11]
+M <- dcast(pairs[group=="1 : 25" & buy_signal=="dtw" & threshold=="2"],
       sector_1 ~ sector_2,
       value.var="pair",
       fun.aggregate=length)[, 2:12]
 M <- as.matrix(M)
 M <- (M + t(M)) - diag(diag(M))
 M[upper.tri(M)] <- 0
-dtfPairs[, .N, by=c("sector_pair", "buy_signal", "group")]
+unname(M)
+pairs[threshold=="2", .N, by=c("buy_signal", "group")]
 
 # -------------------------------------------------------------
