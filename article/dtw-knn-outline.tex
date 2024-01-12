@@ -27,8 +27,8 @@
   backend=biber,
   url=false,
   doi=true,
-  style=authoryear,
-  citestyle=apa,
+  style=numeric,
+  citestyle=numeric,
   sorting=nty
 ]{biblatex}
 
@@ -64,13 +64,6 @@ and I estimated the sample variance-covariance matrix, we should not be surprise
 
 For this paper, I want to investigate other approaches for measuring the association of different time series and compare the results of those approaches to the standard correlation approach used in finance. My main point of reference has been an article by \cite{ElsingAgon2012} that explores topics in time series data mining. The authors provide a detailed survey of time series representations, various distance metrics for measures of association, and proper ways to index time series data for efficient querying and information retrieval. The discussions around various distance metrics are very interesting. \cite{ElsingAgon2012} categorize the these distance measures into four categories collected in figure \ref{fig:ds_dist_meas_table}. A very similar paper was published in Computational Economics very recently by \cite{FrancesWiemann2020}.
 
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=\textwidth]{ts_distance_method.png}
-    \caption{List of distance measures included in \cite{ElsingAgon2012}}
-    \label{fig:ds_dist_meas_table}
-  \end{figure}
-
 Instead of focusing on exact synchronous co-movements, many of the distance measures discussed in the data mining literature focus on comparing the shape or global structure of two different series. Below are a handful of distance measures that are mentioned in figure \ref{fig:ds_dist_meas_table} that I believe can be easily implemented.
 
 \begin{itemize}
@@ -89,25 +82,53 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \section{Relevant Literature}
 
+\cite{SakoeChiba_IEEE_1978} provides the original paper defining dynamic time warping in the field of speech recognition. It's influence has extended into data mining, agricultural and forestry monitoring,  
+Current applications in the finance and economic fields usually fall into one of three basic perspectives.
+\begin{enumerate}
+    \item Latent cluster identification where no explicit labels are provided or prior knowledge of any underlying multinomial distribution
+    \begin{itemize}
+        \item \parencite{FruhwirthKaufmann2004} cluster time series into K groups based on the fitted parameters of AR(p) and dynamic regression models.
+        \item \parencite{FrancesWiemann2020} apply dynamic time warping to quarterly real GDP of the 50 US states during the 2007 recession. The authors employ a novel distance metric and utlilize a K-Means algorithm proposed by \cite{PETITJEAN2011678} and adapted for time series to group the US states into seven distinct business cycle clusters.
+        \item 
+    \end{itemize}
+    \item Explicit Pattern Matching and Classification. A an attractive feature of DTW is i
+    \begin{itemize}
+        \item \cite{WAN2017151} uses DTW in support of technical anaylsis of financial assets.
+    \end{itemize}
+    \item Lead/Lag estimation. Linking asynchroneous time series. High frequency trading application. Leading economic indicator analysis.
+    \begin{itemize}
+        \item \parencite{JEONG20112231} Instead of providing a universal bound or step condition the authors come up with a temporal weighting function and apply it to the cost matrix before calculating the accumulated cost matrix. For temporal weights the authors use a generalized logistic function that uses two parameters to center and scale the output of the function. The scale parameter is optimized on a validation set while the Performance is evaluated on a test set. 
+    \end{itemize}
+    \item Weighted Distance
+    \begin{itemize}
+        \item \parencite{JEONG20112231} uses weighted distance. weights by logistic function
+    \end{itemize}
+    \item Counter-argument to using DTW on financial data - Hypothesis: Unit roots cause issues even controlling for different time series scales.
+    \begin{itemize}
+        \item \parencite{9145837_Entropic_DTW_Fin_Networks} graph approach to the variance-covariance 
+    \end{itemize}
+\end{enumerate}
+
 \parencite{ElsingAgon2012} view the analysis of time series data from a data mining perspective. The authors provide a detailed survey of time series representations, various distance metrics for measuring association, and proper ways to index time series data for efficient querying and information retrieval. The distance measure are classified into four categories: shape, edit, feature, and structure-based.
 
-\parencite{FruhwirthKaufmann2004} cluster time series into K groups based on the fitted parameters of AR(p) and dynamic regression models.
 
 \parencite{Mueller2007} provides an excellent summary of the principles of DTW and discuss several extensions with respect to the local and global parameters of the technique.
 
-\parencite{FrancesWiemann2020} apply dynamic time warping to quarterly real GDP of the 50 US states during the 2007 recession. The authors employ a novel distance metric and utlilize a K-Means algorithm proposed by \cite{PETITJEAN2011678} and adapted for time series to group the US states into seven distinct business cycle clusters.
+
+
+
 
 \parencite{WangXieHanSun2012} apply DTW to measure the pair-wise similarity between 35 foreign currencies. The authors then utilize a minimum spanning trees (MST) -- a novel graph algorithm -- to document the structural changes in the dependencies of the FX market over three separate years.
 
-\parencite{KotsifakosAthitsosPapapetrou_2011} are also motivitated from a data mining perspective and the ability to return relevant results from query to a large number of time series. The authors compare the an example-base query using DTW with a model-based approach using Hidden Markov Models (HMM).
+\parencite{KotsifakosAthitsosPapapetrou_2011} are also motivitated from a data mining perspective and the ability to return relevant results from query to a large number of time series. The authors compare an example-base query using DTW with a model-based approach using Hidden Markov Models (HMM).
 
 \parencite{KeoghRatanamahatana_2005} Provide a theory for the most efficient lower bound on the dtw value. The authors adapt Piecewise Aggregate Approximation (PAA) for comparing series in a time-warping context.
-
-\parencite{JEONG20112231} Instead of providing a universal bound or step condition the authors come up with a temporal weighting function and apply it to the cost matrix before calculating the accumulated cost matrix. For temporal weights the authors use a generalized logistic function that uses two parameters to center and scale the output of the function. The scale parameter is optimized on a validation set while the Performance is evaluated on a test set. 
 
 \parencite{DuyTakeuchi2023statistical} Rare paper dealing directly with statistical inference of the DTW measure.
 
 \parencite{WangXieHanSun2012} TBD
+
+Finance:
 
 \parencite{HowardTalisAlexeev_2020} Unpublished manuscript attempt that applies a DTW step to a classic CAPM stock return analysis. The CAPM model states that an asset's return is governed by the following relationship:
 
@@ -143,13 +164,13 @@ Define the return as $X_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)
     x_{t} = \mu_{t} + \epsilon_{t}
 \end{equation}
 
-\begin{equation}
+\begin{equation} \label{eq:conditional_mean}
     \mu_{t} = \mu(\phi, \theta, x_{\{s:\, s < t\}}, \varepsilon_{\{s:\, s < t\}}) = \phi_{0} + \sum_{i=1}^{p} \phi_{i} x_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j} + \varepsilon_{t}
 \end{equation}
 
 where $\varepsilon_{s}$ is an innovation term that satisfies $E[\varepsilon_{s}] = 0$ and $E[\varepsilon^{2}_{s}] = \sigma^{2}_{s}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH specifications.
 
-\begin{equation}
+\begin{equation} \label{eq:conditional_var}
     \sigma^{2}_{t} = \emph{C}(\varepsilon^{2}_{t-1}, \, \sigma^{2}_{t-1}) + \sum_{j=1}^{m} \alpha_{j} \emph{A}(\varepsilon^{2}_{t - j}) + \sum_{i=1}^{k} \beta_{i} \emph{B}(\sigma^{2}_{t - i})
 \end{equation}
 
@@ -161,7 +182,7 @@ The conditional mean and variance are used to center and scale the innovation te
 
 By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta = [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution $g$, and any necessary shape parameters $\lambda$ of the distribution:
 
-\begin{equation}
+\begin{equation} \label{eq:conditional_distr}
     f(x_{t} | \mu_{t}, \sigma^{2}_{t}, \lambda, \Delta) = \frac{1}{\sigma_{t}} g(z_{t} | \lambda, \Delta)
 \end{equation}
 
@@ -260,7 +281,7 @@ The boundary condition requires that the first and last indices of the two serie
 
 A warping path's total cost is the sum of the local costs it incurs as it travels from the start of the series (bottom left of $\boldsymbol{C}$) to their end (top right of $\boldsymbol{C}$):
 
-\begin{equation}
+\begin{equation} \label{eq:dtw_cost_matrix_definition}
     \mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) = \sum^{L}_{l=1} c(x_{t_{l}},\, y_{s_{l}})
 \end{equation}
 
@@ -294,7 +315,12 @@ With this definition of the accumulative cost matrix the optimal warping path ca
 
 \subsubsection{Common Extensions}
 
-The definition of the DTW in section \ref{sec:DTW_Algorithm} is an unconstrained one without restrictions beyond the boundary and step-size conditions. Most applications of dynamic time-warping constrain the extent of time distoration in some way. From a finance and macroeconomic perspective there are reasonable arguments for a limit as well. New information in markets dissipates over time. There are numerous modifications of the original DTW diverse set of industries and domains but applications to financial or economics are relatively sparse. Unit root behavior is a common challenge in the finance and macro-economic fields.
+There are numerous modifications of the original DTW diverse set of industries and domains but applications to financial or economics are relatively sparse. Most are applied to:
+
+
+The definition of the DTW in section \ref{sec:DTW_Algorithm} is an unconstrained one without restrictions beyond the boundary and step-size conditions. Most applications of dynamic time-warping constrain the extent of time distoration in some way. From a finance and macroeconomic perspective there are reasonable arguments for a limit as well. New information in markets dissipates over time.
+
+Unit root behavior is a common challenge in the finance and macro-economic fields and it's presence brings unique challenges to interpreting the DTW value and making reliable inferences about stock behaviour. 
 
 \begin{itemize}
     \item Temporal weight approaches
@@ -311,6 +337,8 @@ The definition of the DTW in section \ref{sec:DTW_Algorithm} is an unconstrained
             \item Sakoe-Chiba Band, Itakura Parallelogram
         \end{itemize}
 \end{itemize}
+
+This article uses the Sakoe Chiba Band with a 15 day window (3 weeks of daily trading data)
 
 \subsubsection{Example}
 
@@ -337,38 +365,67 @@ To put these concepts into practice the dynamic time warping algorithm will be d
     \label{fig:dtw_plot_cost_and_accum_cost}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{dtw_plot_cost_matrix_topography.jpeg}
-    \caption{This figure displays the optimal alignment between Aligent and GE stock return series. The topology lines are based on the cost matrix. From this view the warping path (in blue) is a "valley of least cost" traversing the local cost landscape.}
-    \label{fig:dtw_plot_cost_matrix_topography}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\textwidth]{dtw_plot_cost_matrix_topography.jpeg}
+%     \caption{This figure displays the optimal alignment between Aligent and GE stock return series. The topology lines are based on the % cost matrix. From this view the warping path (in blue) is a "valley of least cost" traversing the local cost landscape.}
+%     \label{fig:dtw_plot_cost_matrix_topography}
+% \end{figure}
 
 
 \pagebreak
 
-\section{Pair Trading}
 
-One way to compare these measures is putting them to practical use. In this section a simple trading strategy is described that centers around finding "similar" pairs of stocks and trading off the expectation that any major short term deviations in their prices are eventually unwound over a longer time horizon. If the returns to using dynamic time warping to form trading pairs are materially different than returns from a correlation based approach it could help us understand whether dtw can provide complimentary information to use in combination with correlation. The specifics of this pair trading strategy are the same as the approach taken by \cite{Gatev_et_al_2006} with a few adjustments made to take into account the unique nautre of dynamic time warping and its difference to correlation as a measure of similarity. This backtesting experiment is not carried out because of high expected returns, especially in the context of our modern trading environment. The rise of high frequency trading in the 1990's and 2000's has created the financial infrastructure that sees arbitrage opportunities resolved in microseconds\footcite[See][for a more detailed ]{Aquilina_et_al_2021} while this article studies asset returns at a daily frequency. In addition \cite{Gatev_et_al_2006} was published close to two decades ago in a widely read journal making its recipe part of the established financial canon. The benefits to using this particular trading strategy is that it provides a suitable context to directly compare the impact of using dynamic time warping -- instead of correlation -- to identify the "similar" pairs to trade.
+\section{Pair Trading} \label{sec:PairTrading}
 
-Given a single stock-pair in a trader's portfolio a buy-signal is trigged if the price deviation between the two stocks exceeds a certain threshold. Once triggered the trader goes long in the lower priced stock and short in the higher priced stock. The positions are unwound when the prices come back to parity, profits are recorded, and the trader stands ready to open another position given a new buy-signal. At the end of the trading period all open positions are closed at the prevailing price. To summarize, the general strategy has the following sequence of steps:
+
+One way to compare these measures is putting them to practical use. In this section a simple trading strategy is described that centers around finding "similar" pairs of stocks and trading off the expectation that any major short term deviations in their (normalized) prices are eventually unwound before the end of the trading period. For this trade strategy the critical decision is how to select pairs of stocks and what criterion to use for similarity. In this section we directly compare the returns of portfolios formed using correlation against portfolio returns that use dynamic time warping and euclidean distance to measure similarity. If the returns to using dynamic time warping to form trading pairs are materially different than returns from a correlation based approach it could help us understand whether this metric can provide meaningful information to use in the analysis of stock returns.
+
+The specifics of this pair trading strategy are the same as the approach taken by \cite{Gatev_et_al_2006}. The execution of this strategy takes place in two parts: a \textit{formation period} where a trader will create a portfolio of stock pairs and the \textit{trading period} where the trader will buy and sell those pairs according to a defined set of market signals. This experiment is not carried out because of high expected returns, especially in the context of our modern trading environment. The rise of high frequency trading in the 1990's and 2000's has created the financial infrastructure that sees arbitrage opportunities resolved in microseconds\footcite[See][for a more detailed ]{Aquilina_et_al_2021}. This article studies stock returns captured at a daily frequency and is at a natural disadvantage in comparison. In addition \cite{Gatev_et_al_2006} was published close to two decades ago in a widely read finance journal making its recipe part of the established canon. The benefits to using this particular trading strategy is that it provides a suitable context to directly compare the impact of using dynamic time warping -- instead of correlation -- to identify the "similar" pairs to trade.
+
+\subsection{Trading Strategy}
+
+The following subsections provide more detail about the formation and trading periods and how the different measures of association will be compared.
+
+\subsubsection{Formation Period}
+
+During the formation period the trader compares historical stock returns and uses a measure of similarity to form a portfolio of N pairs of the closest related stocks. In this article a one year time span serves as the duration of the formation period. Before stock comparisons are made prices are first transformed from their nominal price to a measure of their cumulative return. For any date $t$ a stock's standard price is found by using the following calculation:
+
+\begin{equation} \label{eq:standard_price}
+    p_{t} = \prod_{1}^{t} (1 + r_{t})
+\end{equation}
+
+After pair selection the trader again uses the price history in the formation period to calculate a critical value for the price differential experienced by each pair. This article follows \cite{Gatev_et_al_2006} and uses a two standard deviation threshold as a signal to open a position on the pair during the trading period. That is if $p_{t}$ and $q_{t}$ are the two standardize prices for a pair and $\boldsymbol{d}$ is the vector of absolute price differentials with elements $d_{t} = |p_{t} - q_{t}|$, then over the entire formation period the threshold that acts as a signal to open a trading position is set to $\boldsymbol{\bar{d}} + 2 \sigma_{\boldsymbol{d}}$.
+
+After price normalization, four different portfolio collections are created based on how we want to measure similarity. In this article, the cost function used in the dynanimc time warping function is the $L^{2}$-norm. (see section \ref{sec:DTW} and equation \ref{eq:dtw_cost_matrix_definition}) is 
+
+
+As mentioned before the central task of this section is to compare the performance of portfolios whose pairs are selected using correlation versus pairs that are formed using dynamic time warping. gainst  this section is evaluating is how to form There are different methods for chosing the association measure:
 
 \begin{enumerate}
-    \item Set length of time to use for pair selection and cross-validation for optimal buy-signal thresholds. Set length of time for the execution of the trading strategy. In this article a one year duration is used for both pair selection and trade execution periods.
-    \item Standardize all stock prices at the beginning of the pair selection and trading period intervals.
-    \item Pair Selection: Use recent past price movements to identify the top N pairs of stocks that are the most \textit{similar}. Use the same period to find the optimal buy-signal threshold via cross-validation.
-    \item Trading Period: Execute the strategy for each of the N stock pair in the portfolio. Close out any open positions at the end of the trading period.
+    \item Unadjusted Correlation: Measure closeness via correlation. Use static (unconditional) distributions and a two standard deviation threshold on the cumulative return differential as a signal to open positions.
+    \item Model Correlation 1: Model the returns using the ARIMA approach. This approach will enable the trader to study the return distribution of the market and possibly control for  non-normality . Measure closeness on the fitted residuals. Use rolling mean/variance values to calculate adjusted threshold during trading period
+    \item Model Correlation 2: Model the univariate returns using the ARIMA-GARCH framework. This approach will enable the trader to study the return distribution of the market and control for any deviations from normality that commonly occur in finance. These deviations (from the Guassian benchmark) include return distributions that exhibit fat tails, asymmetry, and/or volatility clustering. For a given formation period we only consider stocks that have successfully passed a battery of diagnostics that test the fit of the ARIMA-GARCH model. In addition, this restriction to stocks with well-fitted ARIMA-GARGH specifications applies to portfolios formed using any one of the four approaches.
+    \item Euclidean Distance: Used as a practical baseline for multiple reasons. First, \cite{Gatev_et_al_2006} using euclidean distance in their pair trading strategy and including it will allow for direct comparison. Second, euclidean distance can serve as benchmark to test what gains can be acheived if any time elasticity is present in the a stock pair's return evolution.
+    \item Dynamic Time Warping: Calculate the DTW metric between the cumulative returns of the pairs. Use synchronous L1 value and the two standard deviation signal to open positions.
 \end{enumerate}
 
+\subsubsection{Trading Period}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{Annual_Returns_to_Committed_Capital.png}
-    \caption{Barcharts indicating the annual committed returns of the trading strategy under different buy signals and portfolio sizes.}
-    \label{fig:annual_returns_to_committed_capital_by_buy_signal}
-\end{figure}
+Given a single stock pair in a trader's portfolio a position is opened if the price deviation between the two stocks exceeds the two standard deviation threshold. Once triggered the trader goes long in the lower priced stock and takes a short position in the higher priced stock. The positions are unwound when the prices come back to parity, profits are recorded, and the trader stands ready to open another position given a fresh buy-signal. That is a single pair can be opened and closed multiple times during a single trading period. If this happens this leads to multiple revenue streams over the duration of the trading period. The total return of this pair is calculated as the compounded return of these multiple revenue streams. Take note that the inclusion of a stock pair in the trader's portfolio does not mean that it must be traded. If the differential in the standard prices of the pair never deviate beyond the two standard deviation limit then a position in a pair will never be opened.
 
-\begin{table}[htb]
+\subsection{Post Trade Analysis}
+
+
+Hot takes on the return table:
+\begin{itemize}
+    \item For the correlation-based pair strategy there is benefit diversification. The standard deviation of the portfolio return decreases going from the top 25 to top 50. This does not hold true for the return distribution of the portfolio created with pairs formed with dtw.
+    \item As expected there does not appear to be significant arbitrage opportunities arbitrage opportunities 
+\end{itemize}
+- For the correlation-based pair strategy there is benefit to 
+
+
+\begin{table}[hp]
     \fontsize{8pt}{8pt}\selectfont
     \centering
     \begin{tabular}{l r r l r r r r r r}
@@ -376,21 +433,20 @@ Given a single stock-pair in a trader's portfolio a buy-signal is trigged if the
         \# Pairs & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
         \hline
         \vspace{-1mm} \\
-        Top 25    & unadjusted cor &  0.0018 & 0.0024          & 0.030 &  0.0011 & -0.873 & 5.039 & -0.085 & 0.061 \\
-        Top 25    & model cor      & -0.0033 & 0.0040          & 0.027 &  0.0003 & -1.199 & 4.417 & -0.078 & 0.032 \\
-        Top 25    & dtw            &  0.0185 & 0.0050{$^{**}$} & 0.041 &  0.0096 &  0.695 & 2.992 & -0.041 & 0.114 \\
+        Top 25    & Unadjusted cor &  0.0018 & 0.0024          & 0.030 &  0.0011 & -0.873 & 5.039 & -0.085 & 0.061 \\
+        Top 25    & Model cor      & -0.0033 & 0.0040          & 0.027 &  0.0003 & -1.199 & 4.417 & -0.078 & 0.032 \\
+        Top 25    & DTW            &  0.0185 & 0.0050{$^{**}$} & 0.041 &  0.0096 &  0.695 & 2.992 & -0.041 & 0.114 \\
+        Top 25    & Euclidean      &  0.0064 & 0.0040          & 0.034 & -0.0074 &  0.945 & 3.359 & -0.040 & 0.092 \\
         \vspace{-1mm} \\
-        Top 50    & unadjusted cor & -0.0003 & 0.0017          & 0.023 & -0.0001 &  0.028 & 1.918 & -0.038 & 0.043 \\
-        Top 50    & model cor      & -0.0011 & 0.0026          & 0.025 & -0.0054 &  0.226 & 1.935 & -0.036 & 0.044 \\
-        Top 50    & dtw            &  0.0084 & 0.0054          & 0.034 &  0.0032 &  0.512 & 2.999 & -0.057 & 0.084 \\
+        Top 50    & Unadjusted cor & -0.0003 & 0.0017          & 0.023 & -0.0001 &  0.028 & 1.918 & -0.038 & 0.043 \\
+        Top 50    & Model cor      & -0.0011 & 0.0026          & 0.025 & -0.0054 &  0.226 & 1.935 & -0.036 & 0.044 \\
+        Top 50    & DTW            &  0.0084 & 0.0054          & 0.034 &  0.0032 &  0.512 & 2.999 & -0.057 & 0.084 \\
+        Top 50    & Euclidean      &  0.0064 & 0.0040          & 0.035 & -0.0009 &  1.136 & 3.505 & -0.042 & 0.091 \\
         \vspace{-1mm} \\
-        101-200   & unadjusted cor &  0.0047 & 0.0015{$**$}    & 0.019 &  0.0058 &  0.205 & 2.592 & -0.029 & 0.044 \\
-        101-200   & model cor      &  0.0015 & 0.0020          & 0.022 &  0.0073 & -1.242 & 5.263 & -0.066 & 0.034 \\
-        101-200   & dtw            & -0.0044 & 0.0057          & 0.042 & -0.0012 & -1.043 & 3.218 & -0.110 & 0.040 \\
-        \vspace{-1mm} \\
-        1001-1100 & unadjusted cor & -0.0074 & 0.0031{$^{*}$}  & 0.033 & -0.0018 & -0.337 & 2.962 & -0.083 & 0.060 \\
-        1001-1100 & model cor      &  0.0005 & 0.0039          & 0.026 & -0.0014 &  1.276 & 6.203 & -0.044 & 0.085 \\
-        1001-1100 & dtw            & -0.0027 & 0.0071          & 0.042 &  0.0057 & -0.085 & 2.294 & -0.086 & 0.065 \\
+        Top 100   & Unadjusted cor &  0.0013 & 0.0022          & 0.028 &  0.0004 &  0.430 & 2.357 & -0.037 & 0.067 \\
+        Top 100   & Model cor      &  0.0007 & 0.0026          & 0.029 & -0.0017 &  0.412 & 2.735 & -0.051 & 0.071 \\
+        Top 100   & DTW            &  0.0083 & 0.0094          & 0.039 &  0.0034 &  0.897 & 4.070 & -0.062 & 0.109 \\
+        Top 100   & Euclidean      &  0.0073 & 0.0064          & 0.037 &  0.0057 &  0.763 & 3.619 & -0.045 & 0.107 \\
         \vspace{-1mm} \\
         \hline
         \vspace{1 mm} \\
@@ -398,21 +454,20 @@ Given a single stock-pair in a trader's portfolio a buy-signal is trigged if the
         \# Pairs  & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
         \hline
         \vspace{-1mm} \\
-        Top 25    & unadjusted cor &  0.0100 & 0.0063          & 0.051 &  0.0021 &  0.057 & 4.071 & -0.112 & 0.132 \\
-        Top 25    & model cor      &  0.0034 & 0.0089          & 0.050 &  0.0005 &  0.434 & 3.994 & -0.093 & 0.133 \\
-        Top 25    & dtw            &  0.0189 & 0.0050{$^{**}$} & 0.042 &  0.0096 &  0.721 & 3.062 & -0.041 & 0.119 \\
+        Top 25    & Unadjusted cor &  0.0100 & 0.0063          & 0.051 &  0.0021 &  0.057 & 4.071 & -0.112 & 0.132 \\
+        Top 25    & Model cor      &  0.0034 & 0.0089          & 0.050 &  0.0005 &  0.434 & 3.994 & -0.093 & 0.133 \\
+        Top 25    & DTW            &  0.0189 & 0.0050{$^{**}$} & 0.042 &  0.0096 &  0.721 & 3.062 & -0.041 & 0.119 \\
+        Top 25    & Euclidean      &  0.0067 & 0.0040{$+$}     & 0.035 & -0.0075 &  0.919 & 3.245 & -0.040 & 0.092 \\
         \vspace{-1mm} \\
-        Top 50    & unadjusted cor &  0.0015 & 0.0032          & 0.038 & -0.0006 &  0.041 & 1.701 & -0.060 & 0.064 \\
-        Top 50    & model cor      &  0.0010 & 0.0055          & 0.043 & -0.0086 &  0.343 & 2.234 & -0.065 & 0.097 \\
-        Top 50    & dtw            &  0.0084 & 0.0055          & 0.034 &  0.0033 &  0.457 & 2.973 & -0.060 & 0.084 \\
+        Top 50    & Unadjusted cor &  0.0015 & 0.0032          & 0.038 & -0.0006 &  0.041 & 1.701 & -0.060 & 0.064 \\
+        Top 50    & Model cor      &  0.0010 & 0.0055          & 0.043 & -0.0086 &  0.343 & 2.234 & -0.065 & 0.097 \\
+        Top 50    & DTW            &  0.0084 & 0.0055          & 0.034 &  0.0033 &  0.457 & 2.973 & -0.060 & 0.084 \\
+        Top 50    & Euclidean      &  0.0064 & 0.0045          & 0.035 & -0.0009 &  1.116 & 3.435 & -0.042 & 0.091 \\
         \vspace{-1mm} \\
-        101-200   & unadjusted cor &  0.0097 & 0.0023{$^{**}$} & 0.031 &  0.0088 &  0.139 & 2.066 & -0.037 & 0.065 \\
-        101-200   & model cor      &  0.0046 & 0.0024{$+$}     & 0.032 &  0.0128 & -0.600 & 2.913 & -0.076 & 0.047 \\
-        101-200   & dtw            & -0.0045 & 0.0058          & 0.042 & -0.0012 & -1.046 & 3.222 & -0.111 & 0.041 \\
-        \vspace{-1mm} \\
-        1001-1100 & unadjusted cor & -0.0118 & 0.0060{$^{*}$}  & 0.050 & -0.0023 & -0.318 & 2.235 & -0.113 & 0.075 \\
-        1001-1100 & model cor      & -0.0028 & 0.0058          & 0.045 & -0.0020 & -0.293 & 4.727 & -0.125 & 0.107 \\
-        1001-1100 & dtw            & -0.0031 & 0.0071          & 0.043 &  0.0058 & -0.080 & 2.253 & -0.087 & 0.065 \\
+        Top 100   & Unadjusted cor &  0.0032 & 0.0044          & 0.046 &  0.0007 &  0.134 & 1.556 & -0.062 & 0.073 \\
+        Top 100   & Model cor      &  0.0020 & 0.0047          & 0.046 & -0.0022 &  0.127 & 1.758 & -0.072 & 0.077 \\
+        Top 100   & DTW            &  0.0082 & 0.0095          & 0.040 &  0.0035 &  0.845 & 4.017 & -0.064 & 0.109 \\
+        Top 100   & Euclidean      &  0.0073 & 0.0065          & 0.037 &  0.0057 &  0.740 & 3.556 & -0.046 & 0.107 \\
         \vspace{-1mm} \\
         \hline
         \vspace{1 mm} \\
@@ -420,45 +475,31 @@ Given a single stock-pair in a trader's portfolio a buy-signal is trigged if the
         \# Pairs & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
         \hline
         \vspace{-1mm} \\
-        Top 25    & unadjusted cor & 0.0557 & 0.0228{$^{*}$}  & 0.232 & 0.1049 & -0.234 & 2.753 & -0.463 & 0.513 \\
-        Top 25    & model cor      & 0.0487 & 0.0225{$^{*}$}  & 0.235 & 0.0815 & -0.003 & 3.256 & -0.472 & 0.597 \\
-        Top 25    & dtw            & 0.0899 & 0.0140{$^{**}$} & 0.149 & 0.1371 & -1.196 & 4.021 & -0.333 & 0.266 \\
+        Top 25    & Unadjusted cor & 0.0557 & 0.0228{$^{*}$}  & 0.232 & 0.1049 & -0.234 & 2.753 & -0.463 & 0.513 \\
+        Top 25    & Model cor      & 0.0487 & 0.0225{$^{*}$}  & 0.235 & 0.0815 & -0.003 & 3.256 & -0.472 & 0.597 \\
+        Top 25    & DTW            & 0.0899 & 0.0140{$^{**}$} & 0.149 & 0.1371 & -1.196 & 4.021 & -0.333 & 0.266 \\
+        Top 25    & Euclidean      & 0.0970 & 0.0141{$^{**}$} & 0.151 & 0.1418 & -0.892 & 3.847 & -0.314 & 0.364 \\
         \vspace{-1mm} \\
-        Top 50    & unadjusted cor & 0.0648 & 0.0237{$^{**}$} & 0.227 & 0.1161 & -0.633 & 2.837 & -0.490 & 0.413 \\
-        Top 50    & model cor      & 0.0596 & 0.0241{$^{*}$}  & 0.227 & 0.0947 & -0.466 & 2.674 & -0.470 & 0.431 \\
-        Top 50    & dtw            & 0.0711 & 0.0148{$^{**}$} & 0.149 & 0.1266 & -1.079 & 3.986 & -0.339 & 0.274 \\
+        Top 50    & Unadjusted cor & 0.0648 & 0.0237{$^{**}$} & 0.227 & 0.1161 & -0.633 & 2.837 & -0.490 & 0.413 \\
+        Top 50    & Model cor      & 0.0596 & 0.0241{$^{*}$}  & 0.227 & 0.0947 & -0.466 & 2.674 & -0.470 & 0.431 \\
+        Top 50    & DTW            & 0.0711 & 0.0148{$^{**}$} & 0.149 & 0.1266 & -1.079 & 3.986 & -0.339 & 0.274 \\
+        Top 50    & Euclidean      & 0.0895 & 0.0142{$^{**}$} & 0.145 & 0.1238 & -0.947 & 3.559 & -0.302 & 0.304 \\
         \vspace{-1mm} \\
-        101-200   & unadjusted cor & 0.0739 & 0.0219{$^{**}$} & 0.210 & 0.1129 & -0.890 & 3.521 & -0.496 & 0.362 \\
-        101-200   & model cor      & 0.0907 & 0.0255{$^{**}$} & 0.216 & 0.1432 & -0.719 & 3.599 & -0.505 & 0.427 \\
-        101-200   & dtw            & 0.0840 & 0.0181{$^{**}$} & 0.165 & 0.1309 & -1.073 & 4.193 & -0.388 & 0.293 \\
-        \vspace{-1mm} \\
-        1001-1100 & unadjusted cor & 0.0756 & 0.0281{$^{**}$} & 0.214 & 0.1423 & -1.033 & 3.905 & -0.522 & 0.362 \\
-        1001-1100 & model cor      & 0.0655 & 0.0280{$^{*}$}  & 0.205 & 0.0941 & -0.982 & 3.869 & -0.500 & 0.333 \\
-        1001-1100 & dtw            & 0.0954 & 0.0170{$^{**}$} & 0.171 & 0.1381 & -1.014 & 4.276 & -0.402 & 0.326 \\
+        Top 100   & Unadjusted cor & 0.0700 & 0.0239{$^{**}$} & 0.216 & 0.1292 & -0.809 & 3.100 & -0.488 & 0.358 \\
+        Top 100   & Model cor      & 0.0715 & 0.0227{$^{**}$} & 0.220 & 0.1253 & -0.648 & 2.952 & -0.472 & 0.403 \\
+        Top 100   & DTW            & 0.0875 & 0.0163{$^{**}$} & 0.150 & 0.1335 & -1.027 & 3.882 & -0.334 & 0.288 \\
+        Top 100   & Euclidean      & 0.0912 & 0.0139{$^{**}$} & 0.148 & 0.1300 & -0.943 & 3.600 & -0.312 & 0.287 \\
         \vspace{-1mm} \\
         \hline
     \end{tabular}
     \caption{Average Annual Return Distribution}
     \begin{tablenotes}
-        \item{\footnotesize Three different measures of portfolio returns are summarized in this table. The top section records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. Section II of the table records fully invested returns where the total return of the portfolio during the trading period is devided by the number of pairs selected to trade. Section III records the annual return of the portfolio if the trader simply goes long in at the beginning of the trading period.}
+        \item{\footnotesize Three different measures of portfolio returns are summarized in this table. Section I records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. Section II of the table records fully invested returns where the total return of the portfolio during the trading period is devided by the number of pairs selected to trade. Section III records the annual return of the portfolio if the trader simply goes long in each pair at the beginning of the trading period.}
         \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
         \item{\footnotesize $^{1}$Standard errors are Newey-West estimates and significant values are } 
     \end{tablenotes}
 \end{table}
 
-
-There are three different propsed methods for chosing the association measure:
-\begin{enumerate}
-    \item Use the un-treated returns. Measure closeness via correlation. Use static (unconditional) distributions and a two standard deviation threshold on the cumulative return differential as a signal to open positions.
-    \item Filter the returns through an ARIMA-GARCH model. Measure closeness on the fitted residuals. Use rolling mean/variance values to calculate adjusted threshold during trading period
-    \item Calculate the DTW metric between the cumulative returns of the pairs. Use synchronous L1 value and the two standard deviation signal to open positions.
-\end{enumerate}
-
-TODO:
-\begin{enumerate}
-    \item Need to compare pairs formation between the three buy strategies
-    \item Compare Top 5 and Top 20 correlation pairs. Returns between the two strategies are highly correlated. How often does the model make different pair recommendations?
-\end{enumerate}
 
 \newcolumntype{R}[2]{%
     >{\adjustbox{angle=#1,lap=\width-(#2)}\bgroup}%
@@ -466,57 +507,102 @@ TODO:
     <{\egroup}%
 }
 \newcommand*\rot{\multicolumn{1}{R{30}{1em}}}% no optional argument here, please!
-\begin{table}[!htb]
-    \fontsize{9pt}{9pt}\selectfont
+
+\begin{table}[hp]
+    \fontsize{10pt}{10pt}\selectfont
     \centering
-    \begin{tabular}{l r r r r r r r r r r r}
-          & \rot{Communication Services} & \rot{Consumer Discretionary} & \rot{Consumer Staples} & \rot{Energy} & \rot{Financials} & \rot{Health Care} & \rot{Industrials} & \rot{Information Technology} & \rot{Materials} & \rot{Real Estate} & \rot{Utilities} \\
-        \textbf{Dynamic Time Warping} &    &    &    &    &    &    &    &    &    &    &    \\
-        Communication Services   & 14 &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . \\
-        Consumer Discretionary   &  . &  3 &  . &  . &  . &  . &  . &  . &  . &  . &   . \\
-        Consumer Staples         &  2 &  3 & 13 &  . &  . &  . &  . &  . &  . &  . &   . \\
-        Energy                   &  . &  . &  1 &  5 &  . &  . &  . &  . &  . &  . &   . \\
-        Financials               &  2 &  2 & 13 &  . & 50 &  . &  . &  . &  . &  . &   . \\
-        Health Care              &  3 &  . & 12 &  1 & 12 &  6 &  . &  . &  . &  . &   . \\
-        Industrials              &  3 &  4 &  7 &  3 &  8 &  6 & 20 &  . &  . &  . &   . \\
-        Information Technology   &  2 &  1 &  1 &  2 &  9 &  3 &  6 &  2 &  . &  . &   . \\
-        Materials                &  . &  3 &  1 &  2 &  4 &  1 &  6 &  2 &  2 &  . &   . \\
-        Real Estate              &  . &  1 &  1 &  . &  2 &  . &  2 &  . &  2 & 49 &   . \\
-        Utilities                &  4 &  4 & 25 &  2 & 11 &  9 &  6 &  1 &  3 &  9 & 178 \\
+    \begin{tabular}{l r r r r r r r r r r r | r r}
+          & \rot{Communication Services} & \rot{Consumer Discretionary} & \rot{Consumer Staples} & \rot{Energy} & \rot{Financials} & \rot{Health Care} & \rot{Industrials} & \rot{Information Technology} & \rot{Materials} & \rot{Real Estate} & \rot{Utilities} & \underline{Count} & \underline{\%} \\
+                                 &    &    &    &    &    &    &    &    &    &    &    &     &      \\
+        Communication Services   & 17 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  34 &  3.1 \\
+        Consumer Discretionary   &  . & 30 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  60 &  5.5 \\
+        Consumer Staples         &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . &    . \\
+        Energy                   &  . &  . &  . & 47 &  . &  . &  . &  . &  . &  . &  . &  94 &  8.5 \\
+        Financials               &  . &  . &  . &  . &147 &  . &  . &  . &  . &  . &  . & 294 & 26.7 \\
+        Health Care              &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . &    . \\
+        Industrials              &  . &  . &  . &  . &  . &  . & 10 &  . &  . &  . &  . &  20 &  1.8 \\
+        Information Technology   &  . &  . &  . &  . &  . &  . &  . & 36 &  . &  . &  . &  72 &  6.5 \\
+        Materials                &  . &  . &  . &  . &  . &  . &  . &  . &  5 &  . &  . &  12 &  1.1 \\
+        Real Estate              &  . &  . &  . &  . &  . &  . &  . &  . &  2 &161 &  . & 324 & 29.5 \\
+        Utilities                &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . & 95 & 190 & 17.3 \\
+        \vspace{0.25 mm} \\
+        \multicolumn{14}{c}{\textbf{Unadjusted Correlation}} \\
         \vspace{1 mm} \\
-        \textbf{Model Correlation}    &    &    &    &    &    &    &    &    &    &    &    \\
-        Communication Services   & 17 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
-        Consumer Discretionary   &  . & 36 &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
-        Consumer Staples         &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
-        Energy                   &  . &  . &  . & 52 &  . &  . &  . &  . &  . &  . &  . \\
-        Financials               &  . &  . &  . &  . & 117&  . &  . &  . &  . &  . &  . \\
-        Health Care              &  . &  . &  . &  . &  . &  1 &  . &  . &  . &  . &  . \\
-        Industrials              &  . &  . &  . &  . &  . &  . & 13 &  . &  . &  . &  . \\
-        Information Technology   &  . &  . &  . &  . &  . &  . &  . & 44 &  . &  . &  . \\
-        Materials                &  . &  . &  . &  . &  . &  . &  . &  . & 10 &  . &  . \\
-        Real Estate              &  . &  . &  . &  . &  . &  . &  . &  . &  3 &150 &  . \\
-        Utilities                &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &107 \\
-        \vspace{1 mm} \\
-        \textbf{Unadjusted Correlation}  &    &    &    &    &    &    &    &    &    &    &    \\
-        Communication Services & 17 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
-        Consumer Discretionary &  . & 30 &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
-        Consumer Staples       &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
-        Energy                 &  . &  . &  . & 47 &  . &  . &  . &  . &  . &  . &  . \\
-        Financials             &  . &  . &  . &  . &147 &  . &  . &  . &  . &  . &  . \\
-        Health Care            &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . \\
-        Industrials            &  . &  . &  . &  . &  . &  . & 10 &  . &  . &  . &  . \\
-        Information Technology &  . &  . &  . &  . &  . &  . &  . & 36 &  . &  . &  . \\
-        Materials              &  . &  . &  . &  . &  . &  . &  . &  . &  5 &  . &  . \\
-        Real Estate            &  . &  . &  . &  . &  . &  . &  . &  . &  2 &161 &  . \\
-        Utilities              &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . & 95 \\
+                                 &    &    &    &    &    &    &    &    &    &    &    &     &       \\
+        Communication Services   & 17 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  34 &  3.1 \\
+        Consumer Discretionary   &  . & 36 &  . &  . &  . &  . &  . &  . &  . &  . &  . &  72 &  6.5 \\
+        Consumer Staples         &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . &    . \\
+        Energy                   &  . &  . &  . & 52 &  . &  . &  . &  . &  . &  . &  . & 104 &  9.5 \\
+        Financials               &  . &  . &  . &  . & 117&  . &  . &  . &  . &  . &  . & 234 & 21.3 \\
+        Health Care              &  . &  . &  . &  . &  . &  1 &  . &  . &  . &  . &  . &   2 &  0.2 \\
+        Industrials              &  . &  . &  . &  . &  . &  . & 13 &  . &  . &  . &  . &  26 &  2.4 \\
+        Information Technology   &  . &  . &  . &  . &  . &  . &  . & 44 &  . &  . &  . &  88 &  8.0 \\
+        Materials                &  . &  . &  . &  . &  . &  . &  . &  . & 10 &  . &  . &  23 &  2.1 \\
+        Real Estate              &  . &  . &  . &  . &  . &  . &  . &  . &  3 &150 &  . & 303 & 27.5 \\
+        Utilities                &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &107 & 214 & 19.5 \\
+        \vspace{0.25 mm} \\
+        \multicolumn{14}{c}{\textbf{Model Correlation}} \\
         \vspace{1 mm} \\
         \hline
     \end{tabular}
-    \caption{Sector Distribution of Top 25 Portfolio Pairs}
+    \caption{Sector Distribution of Portfolio Pairs: Top 25 by Correlation}
     \begin{tablenotes}
-        \item{\footnotesize Footnote size table note}
+        \item{\footnotesize This table tabulates the sector distribution of all pairs in the annual portfolios constructed from 2011 to 2022. Two views are presented. On the left is the cross sector count of \textit{pairs}. On the right is the (marginal) sector count for all individual \textit{stocks} in the set of portfolios. Intra-industry pairs are the rule using either correlation based pairing strategy. The only few exceptions that are pairs between Real Estate and Materials stocks. Taken together the Financial, Real Estate, and Utility sectors account for 73.5 and 68.3 percent out of all stocks chosen in the unadjusted and modeled portfolios, respectively.}
+    \end{tablenotes}
+    \label{tbl:pair_cross_sector_tabulation:correlation}
+\end{table}
+
+
+\begin{table}[!htb]
+    \fontsize{10pt}{10pt}\selectfont
+    \centering
+    \begin{tabular}{l r r r r r r r r r r r | r r}
+          & \rot{Communication Services} & \rot{Consumer Discretionary} & \rot{Consumer Staples} & \rot{Energy} & \rot{Financials} & \rot{Health Care} & \rot{Industrials} & \rot{Information Technology} & \rot{Materials} & \rot{Real Estate} & \rot{Utilities} & \underline{Count} & \underline{\%} \\ 
+                                 &    &    &    &    &    &    &    &    &    &    &     \\
+        Communication Services   & 14 &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . &  44 &  4.0 \\
+        Consumer Discretionary   &  . &  3 &  . &  . &  . &  . &  . &  . &  . &  . &   . &  24 &  2.2 \\
+        Consumer Staples         &  2 &  3 & 13 &  . &  . &  . &  . &  . &  . &  . &   . &  92 &  8.4 \\
+        Energy                   &  . &  . &  1 &  5 &  . &  . &  . &  . &  . &  . &   . &  21 &  1.9 \\
+        Financials               &  2 &  2 & 13 &  . & 50 &  . &  . &  . &  . &  . &   . & 163 & 14.8 \\
+        Health Care              &  3 &  . & 12 &  1 & 12 &  6 &  . &  . &  . &  . &   . &  59 &  5.4 \\
+        Industrials              &  3 &  4 &  7 &  3 &  8 &  6 & 20 &  . &  . &  . &   . &  91 &  8.3 \\
+        Information Technology   &  2 &  1 &  1 &  2 &  9 &  3 &  6 &  2 &  . &  . &   . &  31 &  2.8 \\
+        Materials                &  . &  3 &  1 &  2 &  4 &  1 &  6 &  2 &  2 &  . &   . &  28 &  2.6 \\
+        Real Estate              &  . &  1 &  1 &  . &  2 &  . &  2 &  . &  2 & 49 &   . & 115 & 10.5 \\
+        Utilities                &  4 &  4 & 25 &  2 & 11 &  9 &  6 &  1 &  3 &  9 & 178 & 430 & 39.2 \\
+        \vspace{0.25 mm} \\
+        \multicolumn{14}{c}{\textbf{Dynamic Time Warping}} \\
+        \vspace{1 mm} \\
+                                 &    &    &    &    &    &    &    &    &    &    &    \\
+        Communication Services   & 14 &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . &  38 &  3.5 \\
+        Consumer Discretionary   &  . &  . &  . &  . &  . &  . &  . &  . &  . &  . &   . &   8 &  0.7 \\
+        Consumer Staples         &  1 &  3 & 19 &  . &  . &  . &  . &  . &  . &  . &   . &  86 &  7.8 \\
+        Energy                   &  . &  . &  . &  7 &  . &  . &  . &  . &  . &  . &   . &  18 &  1.6 \\
+        Financials               &  2 &  1 & 13 &  . & 71 &  . &  . &  . &  . &  . &   . & 191 & 17.4 \\
+        Health Care              &  1 &  . &  8 &  1 &  7 &  4 &  . &  . &  . &  . &   . &  34 &  3.1 \\
+        Industrials              &  1 &  1 &  2 &  . & 10 &  3 & 17 &  . &  . &  . &   . &  70 &  6.4 \\
+        Information Technology   &  1 &  . &  1 &  2 &  3 &  1 &  3 &  2 &  . &  . &   . &  18 &  1.6 \\
+        Materials                &  . &  1 &  . &  1 &  3 &  . &  9 &  2 &  3 &  . &   . &  26 &  2.4 \\
+        Real Estate              &  . &  1 &  . &  . &  2 &  . &  2 &  . &  1 & 72 &   . & 156 & 14.2 \\
+        Utilities                &  4 &  1 & 20 &  . &  8 &  5 &  5 &  1 &  3 &  6 & 200 & 453 & 41.3 \\
+        \vspace{0.25 mm} \\
+        \multicolumn{14}{c}{\textbf{Euclidean Distance}} \\
+        \vspace{1 mm} \\
+        \hline
+    \end{tabular}
+    \caption{Sector Distribution of Portfolio Pairs: Top 25 by $L^{2}$ Norm}
+    \begin{tablenotes}
+        \item{\footnotesize This table tabulates the sector distribution of all pairs in the annual portfolios constructed from 2011 to 2022. Two views are presented. On the left is the cross sector count of \textit{pairs}. On the right is the (marginal) sector count for all individual \textit{stocks} in the set of portfolios. Diversification away from intra-industry pairs is the main differentiator between the portfolios summarized here versus those using correlation as captured in table \ref{tbl:pair_cross_sector_tabulation:correlation}. Taken together the Financial, Real Estate, and Utility sectors account for 64.8 and 72.9 percent out of all stocks chosen in the time-warped and euclidean portfolios, respectively.}
     \end{tablenotes}
 \end{table}
+
+\begin{landscape}
+    \begin{figure}[hp]
+        \includegraphics[width=1.3\textwidth]{Annual_Returns_to_Committed_Capital.png}
+        \caption{Barcharts indicating the annual committed returns of the trading strategy under different buy signals and portfolio sizes.}
+        \label{fig:annual_returns_to_committed_capital_by_buy_signal}
+    \end{figure}
+\end{landscape}
 
 \section{Simulation Results}
 In order to gauge the relationship between the DGP process of two time series and their resulting DTW value we turn to simulation. For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
@@ -550,6 +636,40 @@ A random walk temporal weighting function could have the following form:
 \begin{equation}
     \omega(t, s) = \sum_{k=1}^{|t-s|} \beta^{|t-s|} \left( \sigma^{2}_{A,\, t} + \sigma^{2}_{B,\,s} \right)
 \end{equation}
+
+
+\subsection{A Relationship Between Correlation and DTW?}
+
+In section \ref{sec:PairTrading} a total of 10,018 ARIMA-GARCH models were estimated during the formation periods from 2000 to 2021 where each model was trained on a single year's worth of trading data. From these ten thousand marginal models a total of 2,199,276 pairs were formed and estimates of the pair's correlation and dynamic time warping distance were calculated over the duration of the study.
+
+These estimated models, combined with Copula theory, can be leveraged to study the range of dynamic time warping values that can be expected for a pair of stocks with a specific level of correlation (See section 2.3.1 of \cite{DowiakTV-COP} for more details on copulas and their applications). The simulation exercise has the following steps.
+
+\begin{enumerate}
+    \item For two arbitrary stocks, $A$ and $B$, the conditional mean, conditionl variance, and conditional density of the returns are recorded for each asset: $\hat{\mu}_{A,\,t}$, $\hat{\sigma}^{2}_{A,\,t}$, $\hat{g}_{A}$, and $\hat{\mu}_{B,\,t}$, $\hat{\sigma}^{2}_{B,\,t}$, $\hat{g}_{B}$ (see equations \ref{eq:conditional_mean}, \ref{eq:conditional_var}, and \ref{eq:conditional_distr} from section \ref{sec:ARMAGARCH-benchmark}).
+    \item The probability integral transform is used to reformulate each marginal model's fitted residuals as a sample from the uniform distribution.
+    \begin{equation} \nonumber
+        U_{A} = \hat{F}_{A}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{A,\,t}} \hat{g}_{A} \left(z | \hat{\mu}_{t}\right) dz
+    \end{equation}
+    \begin{equation} \nonumber
+        U_{B} = \hat{F}_{B}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{B,\,t}} \hat{g}_{B} \left(z | \hat{\mu}_{t}\right) dz
+    \end{equation}
+    The residuals, in their uniform representation [($u_{A,\,1}$, $u_{B,\,1}$), $\cdots$, ($u_{A,\,T}$, $u_{B,\,T}$)], are used to estimate a bivariate t-Copula with it's correlation $\hat{\rho}_{A,B}$ and degrees-of-freedom $\hat{\nu}_{A,B}$.
+    \item The estimated t-Copula is used as a data generating process to produce new sets of bivariate uniform distributions [($u^{(i)}_{A,\,1}$, $u^{(i)}_{B,\,1}$), $\cdots$, ($u^{(i)}_{A,\,T}$, $u^{(i)}_{B,\,T}$)]. Each observation $t$ in a new sample is centered and scaled according to the conditional mean and variance from the estimated ARIMA-GARCH models.
+    \begin{equation} \nonumber
+        r^{(i)}_{A,\,t} = \hat{F}^{-1}_{A} \left(u^{(i)}_{A,\,t}\,\,;\,\, \mu=\hat{\mu}_{A,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{A,\,t} \right)
+    \end{equation}
+    \begin{equation} \nonumber
+        r^{(i)}_{B,\,t} = \hat{F}^{-1}_{B} \left(u^{(i)}_{B,\,t}\,\,;\,\, \mu=\hat{\mu}_{B,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{B,\,t} \right)
+    \end{equation}
+    \item After a new set of return series are generated they are transformed from returns to price level using the standard price equation \ref{eq:standard_price} and the dynamic time warping algorithm is applied to the two resampled standard price series.
+    \item Repeat steps 1-4 N times to build up a distribution of dynamic time warping values for a pair of stock prices with a specific correlation value
+\end{enumerate}
+
+By marrying the conditional return models with a copula-based resampling approach many of the important characteristics of stock returns can be included in the monte carlo samples. These include auto-correlation, asymmetric returns, fat-tails, and volatility clustering observed in individual stocks as well as high levels of correlation in price movements between stocks over time. The original association and tail-dependency observed in the stock pairs is preserved by the copula while the unique idiosyncracies (See section \ref{sec:ARMAGARCH-benchmark}) of each stock is retained by the marginal models. This leaves only the natural variation of the distribution $g$ to drive the variation in the dynamic time warping values calculated in step 4. Assuming multivariate t-distributions for this simulation exercise is well founded. In the model selection process described in section \ref{sec:ARMAGARCH-benchmark} The t-distribution is chosen for all 10,018 marginal models in this study. The symmetric t-distribution is chosen 9324 times while the remaining 694 models are modeled with a skewed t-distribution.
+
+
+\pagebreak
+
 
 \begin{table}[!htb]
     \begin{center}
@@ -647,7 +767,16 @@ A random walk temporal weighting function could have the following form:
     \end{tablenotes}
 \end{table}
 
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{ts_distance_method.png}
+    \caption{List of distance measures included in \cite{ElsingAgon2012}}
+    \label{fig:ds_dist_meas_table}
+\end{figure}
+
+
 \pagebreak
+
 
 \printbibliography
 

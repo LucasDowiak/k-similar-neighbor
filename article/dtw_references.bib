@@ -296,6 +296,30 @@ financial time-series using dynamic time warping},
   url = {http://wp.lancs.ac.uk/finec2023/files/2023/01/FEC-2023-098-Clint-Howard.pdf}
 }
 
+@article{WAN2017151,
+title = {A formal approach to chart patterns classification in financial time series},
+journal = {Information Sciences},
+volume = {411},
+pages = {151-175},
+year = {2017},
+issn = {0020-0255},
+doi = {https://doi.org/10.1016/j.ins.2017.05.028},
+url = {https://www.sciencedirect.com/science/article/pii/S002002551631636X},
+author = {Yuqing Wan and Yain-Whar Si},
+keywords = {Chart patterns, Formal specification, Pattern matching, Financial time series, Technical analysis},
+abstract = {Classifying chart patterns from input subsequences is a crucial pre-processing step in technical analysis. In this paper, we compile comprehensive formal specifications of 53 chart patterns reported in the literature. A first-order logic representation is chosen to describe the shape and corresponding constraints of each pattern. These formal specifications are formulated in such a way that data mining algorithms can use them for classification without significant modification. These formal specifications are also intended to serve as a reference model for future research in the chart patterns classification area. Using these formal specifications, we perform extensive experiments using real datasets from NYSE Composite (NYSE), Hang Seng Index (HSI), and Amazon (AMZN). The performance of the proposed method is compared against Template Based (TB), Euclidean Distance (ED), and Dynamic Time Warping (DTW) approaches. The experimental results show that the rules translated from the specifications can be effectively used to identify chart patterns from real datasets.}
+}
+
+@unpublished{LiHu_DTW_for_fin_patt_recog_2020,
+  author = {Li, Yangqi and Hu, Taihua},
+  title  = {Dynamic Time Warping Application for Financial Pattern Recognition},
+  abstract = {Close price pattern is one of the widely applied technical indicators in market operations and trading. However, datasets or programming packages including calculation or labeling of close price patterns barely exist in public. With understanding of difficulties and flexibility of identifying a typical close price pattern, we developed a pattern recognition algorithm specially for close price patterns using Featured-based Dynamic Time Warping and Pattern Rule. The algorithm exhibits identified sequences with close resemblance of target financial patterns while incorporating some variations tolerable in human sense.},
+  month  = {07},
+  year   = {2020},
+  url = {http://dx.doi.org/10.2139/ssrn.3658339}
+}
+
+
 
 @article{Gatev_et_al_2006,
   author = {Gatev, Evan and Goetzmann, William N. and Rouwenhorst, K. Geert},
@@ -329,3 +353,27 @@ financial time-series using dynamic time warping},
   url = {https://doi.org/10.1093/qje/qjab032},
   eprint = {https://academic.oup.com/qje/article-pdf/137/1/493/41929626/qjab032.pdf},
 }
+
+
+@ARTICLE{SakoeChiba_IEEE_1978,
+  author={Sakoe, H. and Chiba, S.},
+  journal={IEEE Transactions on Acoustics, Speech, and Signal Processing}, 
+  title={Dynamic programming algorithm optimization for spoken word recognition}, 
+  year={1978},
+  volume={26},
+  number={1},
+  pages={43-49},
+  doi={10.1109/TASSP.1978.1163055}
+}
+
+
+@ARTICLE{9145837_Entropic_DTW_Fin_Networks,
+  author={Bai, Lu and Cui, Lixin and Zhang, Zhihong and Xu, Lixiang and Wang, Yue and Hancock, Edwin R.},
+  journal={IEEE Transactions on Neural Networks and Learning Systems}, 
+  title={Entropic Dynamic Time Warping Kernels for Co-Evolving Financial Time Series Analysis}, 
+  year={2023},
+  volume={34},
+  number={4},
+  pages={1808-1822},
+  doi={10.1109/TNNLS.2020.3006738},
+  abstract={Network representations are powerful tools to modeling the dynamic time-varying financial complex systems consisting of multiple co-evolving financial time series, e.g., stock prices. In this work, we develop a novel framework to compute the kernel-based similarity measure between dynamic time-varying financial networks. Specifically, we explore whether the proposed kernel can be employed to understand the structural evolution of the financial networks with time associated with standard kernel machines. For a set of time-varying financial networks with each vertex representing the individual time series of a different stock and each edge between a pair of time series representing the absolute value of their Pearson correlation, our start point is to compute the commute time (CT) matrix associated with the weighted adjacency matrix of the network structures, where each element of the matrix can be seen as the enhanced correlation value between pairwise stocks. For each network, we show how the CT matrix allows us to identify a reliable set of dominant correlated time series as well as an associated dominant probability distribution of the stock belonging to this set. Furthermore, we represent each original network as a discrete dominant Shannon entropy time series computed from the dominant probability distribution. With the dominant entropy time series for each pair of financial networks to hand, we develop an entropic dynamic time warping kernels through the classical dynamic time warping framework, for analyzing the financial time-varying networks. We show that the proposed kernel bridges the gap between graph kernels and the classical dynamic time warping framework for multiple financial time series analysis. Experiments on time-varying networks extracted through New York Stock Exchange (NYSE) database demonstrate that the effectiveness of the proposed method.}}
