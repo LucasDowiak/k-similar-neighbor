@@ -9,8 +9,8 @@ dtfR <- dtf[, lapply(.SD, function(x) c(NA_real_, diff(log(x)))), .SDcols=setdif
 dtfR[, Date := dtf$Date]
 fwrite(dtfR, file="data/SandP_log_return_history.csv")
 
-# Pearson Correlation ---------------------------------------------------------- 
-# ---------
+# ------------------------------------------------------------------------------ 
+# Pearson Correlation ----
 # Standard Residuals after ARIMA-GARCH estimation
 for (ii in 2000:2022) {
   yr <- as.character(ii)
@@ -50,6 +50,18 @@ for (ii in 2000:2021) {
 
 # DTW Matrix
 plot_sim_matrix("data/association_results/archive/dtw_20190201_20210219", type="dtw", tits="DTW: 2019-02-01 to 2021-02-19")
+
+
+# Euclidean Distance ---------------------------------------------------------- 
+# ---------
+# L2 distance to provide baseline for dynamic time warping
+for (ii in 2000:2022) {
+  yr <- as.character(ii)
+  dtfStdPrice <- fread(sprintf("data/label_analysis/%s_std_price.csv", yr))
+  rhos <- calculate_similarity(dtfStdPrice, dist.method="Euclidean")
+  write.table(rhos, file=sprintf("data/association_results/%s_L2.tsv", yr), sep="\t", col.names=NA)
+}
+
 
 
 # Plot Evolution of Metric over Periods ----------------------------------------
