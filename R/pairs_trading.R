@@ -1,6 +1,6 @@
 # Pairs-Trading ----------------------------------------------------------------
 # Find the N most closely associated pairs
-find_pairs <- function(M, k=10L, si=1, dist.method=c("cor", "dtw"), replace=TRUE,
+find_pairs <- function(M, k=10L, si=1, dist.method=c("cor", "dtw", "l2"), replace=TRUE,
                        omit_ticks=NULL)
 {
   # M - association matrix
@@ -183,7 +183,7 @@ back_test_pair <- function(pairs, dt_form, dt_trade, threshold=2)
 
 
 back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, replace=TRUE,
-                               buy_signal=c("unadjusted_cor", "model_cor", "dtw"))
+                               buy_signal=c("unadjusted_cor", "model_cor", "dtw", "l2"))
 {
   buy_signal <- match.arg(buy_signal)
   trade_year <- as.character(as.integer(label) + 1)
@@ -198,7 +198,7 @@ back_test_strategy <- function(label, k=10L, start_index=1, threshold=2, replace
   bad_ticks <- colnames(M)[!colnames(M) %in% names(dtfTradeCumRet)]
   
   ## Find the top K pairs
-  dm <- if (buy_signal == "dtw") "dtw" else "cor"
+  dm <- if (grepl("cor", buy_signal)) "cor" else buy_signal
   top_pairs <- find_pairs(M, k=k, si=start_index, dist.method=dm, replace=replace,
                           omit_ticks=bad_ticks)
   pnames <- unlist(lapply(top_pairs, paste, collapse="-"))
