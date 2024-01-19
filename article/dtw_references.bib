@@ -198,6 +198,27 @@
   abstract = {Mining sequential data is an old topic that has been revived in the last decade, due to the increasing availability of sequential datasets. Most works in this field are centred on the definition and use of a distance (or, at least, a similarity measure) between sequences of elements. A measure called dynamic time warping (DTW) seems to be currently the most relevant for a large panel of applications. This article is about the use of DTW in data mining algorithms, and focuses on the computation of an average of a set of sequences. Averaging is an essential tool for the analysis of data. For example, the K-means clustering algorithm repeatedly computes such an average, and needs to provide a description of the clusters it forms. Averaging is here a crucial step, which must be sound in order to make algorithms work accurately. When dealing with sequences, especially when sequences are compared with DTW, averaging is not a trivial task. Starting with existing techniques developed around DTW, the article suggests an analysis framework to classify averaging techniques. It then proceeds to study the two major questions lifted by the framework. First, we develop a global technique for averaging a set of sequences. This technique is original in that it avoids using iterative pairwise averaging. It is thus insensitive to ordering effects. Second, we describe a new strategy to reduce the length of the resulting average sequence. This has a favourable impact on performance, but also on the relevance of the results. Both aspects are evaluated on standard datasets, and the evaluation shows that they compare favourably with existing methods. The article ends by describing the use of averaging in clustering. The last section also introduces a new application domain, namely the analysis of satellite image time series, where data mining techniques provide an original approach.}
 }
 
+
+@article{Petitjean_et_al_2016,
+	author = {Petitjean, Fran\c{c}ois and Forestier, Germain and Webb, Geoffrey I. and Nicholson, Ann E. and Chen, Yanping and Keogh, Eamonn},
+  title = {Faster and more accurate classification of time series by exploiting a novel dynamic time warping averaging algorithm},
+	year = {2016},
+	abstract = {A concerted research effort over the past two decades has heralded significant improvements in both the efficiency and effectiveness of time series classification. The consensus that has emerged in the community is that the best solution is a surprisingly simple one. In virtually all domains, the most accurate classifier is the nearest neighbor algorithm with dynamic time warping as the distance measure. The time complexity of dynamic time warping means that successful deployments on resource-constrained devices remain elusive. Moreover, the recent explosion of interest in wearable computing devices, which typically have limited computational resources, has greatly increased the need for very efficient classification algorithms. A classic technique to obtain the benefits of the nearest neighbor algorithm, without inheriting its undesirable time and space complexity, is to use the nearest centroid algorithm. Unfortunately, the unique properties of (most) time series data mean that the centroid typically does not resemble any of the instances, an unintuitive and underappreciated fact. In this paper we demonstrate that we can exploit a recent result by Petitjean et al. to allow meaningful averaging of ``warped''time series, which then allows us to create super-efficient nearest ``centroid''classifiers that are at least as accurate as their more computationally challenged nearest neighbor relatives. We demonstrate empirically the utility of our approach by comparing it to all the appropriate strawmen algorithms on the ubiquitous UCR Benchmarks and with a case study in supporting insect classification on resource-constrained sensors.},
+	date = {2016/04/01},
+	date-added = {2024-01-17 16:54:45 -0500},
+	date-modified = {2024-01-17 16:54:45 -0500},
+	doi = {10.1007/s10115-015-0878-8},
+	id = {Petitjean2016},
+	isbn = {0219-3116},
+	journal = {Knowledge and Information Systems},
+	number = {1},
+	pages = {1--26},
+	url = {https://doi.org/10.1007/s10115-015-0878-8},
+	volume = {47},
+	bdsk-url-1 = {https://doi.org/10.1007/s10115-015-0878-8}
+}
+
+
 @article{FruhwirthKaufmann2004,
   author = {Fr{\"u}hwirth-Schnatter, Sylvia and Kaufmann, Sylvia},
   year = {2004},
@@ -355,7 +376,7 @@ abstract = {Classifying chart patterns from input subsequences is a crucial pre-
 }
 
 
-@ARTICLE{SakoeChiba_IEEE_1978,
+@article{SakoeChiba_IEEE_1978,
   author={Sakoe, H. and Chiba, S.},
   journal={IEEE Transactions on Acoustics, Speech, and Signal Processing}, 
   title={Dynamic programming algorithm optimization for spoken word recognition}, 
@@ -367,7 +388,7 @@ abstract = {Classifying chart patterns from input subsequences is a crucial pre-
 }
 
 
-@ARTICLE{9145837_Entropic_DTW_Fin_Networks,
+@article{9145837_Entropic_DTW_Fin_Networks,
   author={Bai, Lu and Cui, Lixin and Zhang, Zhihong and Xu, Lixiang and Wang, Yue and Hancock, Edwin R.},
   journal={IEEE Transactions on Neural Networks and Learning Systems}, 
   title={Entropic Dynamic Time Warping Kernels for Co-Evolving Financial Time Series Analysis}, 
@@ -377,3 +398,92 @@ abstract = {Classifying chart patterns from input subsequences is a crucial pre-
   pages={1808-1822},
   doi={10.1109/TNNLS.2020.3006738},
   abstract={Network representations are powerful tools to modeling the dynamic time-varying financial complex systems consisting of multiple co-evolving financial time series, e.g., stock prices. In this work, we develop a novel framework to compute the kernel-based similarity measure between dynamic time-varying financial networks. Specifically, we explore whether the proposed kernel can be employed to understand the structural evolution of the financial networks with time associated with standard kernel machines. For a set of time-varying financial networks with each vertex representing the individual time series of a different stock and each edge between a pair of time series representing the absolute value of their Pearson correlation, our start point is to compute the commute time (CT) matrix associated with the weighted adjacency matrix of the network structures, where each element of the matrix can be seen as the enhanced correlation value between pairwise stocks. For each network, we show how the CT matrix allows us to identify a reliable set of dominant correlated time series as well as an associated dominant probability distribution of the stock belonging to this set. Furthermore, we represent each original network as a discrete dominant Shannon entropy time series computed from the dominant probability distribution. With the dominant entropy time series for each pair of financial networks to hand, we develop an entropic dynamic time warping kernels through the classical dynamic time warping framework, for analyzing the financial time-varying networks. We show that the proposed kernel bridges the gap between graph kernels and the classical dynamic time warping framework for multiple financial time series analysis. Experiments on time-varying networks extracted through New York Stock Exchange (NYSE) database demonstrate that the effectiveness of the proposed method.}}
+
+@article{Maus_et_al_2016,
+  author={Maus, Victor and Camara, Gilberto and Cartaxo, Ricardo and Sanchez, Alber and Ramos, Fernando M. and de Queiroz, Gilberto R.},
+  journal={IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing}, 
+  title={A Time-Weighted Dynamic Time Warping Method for Land-Use and Land-Cover Mapping}, 
+  year={2016},
+  volume={9},
+  number={8},
+  pages={3729-3739},
+  doi={10.1109/JSTARS.2016.2517118}}
+
+
+@article{Ito_Sakemoto_2020,
+	abstract = {This paper investigates the lead--lag relationships in high-frequency data. We propose multinomial dynamic time warping (MDTW) that deals with non-synchronous observation, vast data, and time-varying lead--lag. MDTW directly estimates the lead--lags without lag candidates. Its computational complexity is linear with respect to the number of observation and it does not depend on the number of lag candidates. The experiments adopting artificial data and market data illustrate the effectiveness of our method compared to the existing methods.},
+	author = {Ito, Katsuya and Sakemoto, Ryuta},
+	date = {2020/09/01},
+	date-added = {2024-01-17 12:35:54 -0500},
+	date-modified = {2024-01-17 12:35:54 -0500},
+	doi = {10.1007/s10690-019-09295-z},
+	id = {Ito2020},
+	isbn = {1573-6946},
+	journal = {Asia-Pacific Financial Markets},
+	number = {3},
+	pages = {325--342},
+	title = {Direct Estimation of Lead--Lag Relationships Using Multinomial Dynamic Time Warping},
+	url = {https://doi.org/10.1007/s10690-019-09295-z},
+	volume = {27},
+	year = {2020},
+	bdsk-url-1 = {https://doi.org/10.1007/s10690-019-09295-z}}
+
+
+@article{Chaves_et_all_2021_Brazil_Crop_id,
+  title = {Time-weighted dynamic time warping analysis for mapping interannual cropping practices changes in large-scale agro-industrial farms in Brazilian Cerrado},
+  journal = {Science of Remote Sensing},
+  volume = {3},
+  pages = {100021},
+  year = {2021},
+  issn = {2666-0172},
+  doi = {https://doi.org/10.1016/j.srs.2021.100021},
+  url = {https://www.sciencedirect.com/science/article/pii/S2666017221000080},
+  author = {Michel E.D. Chaves and Marcelo de C. Alves and Thelma SÃ¡fadi and Marcelo S. de Oliveira and Michelle C.A. Picoli and Rolf E.O. Simoes and Guilherme A.V. Mataveli},
+  keywords = {Crop monitoring, Crop succession, Crop rotation, Phenology, Time-weighted dynamic time warping (TWDTW)},
+  abstract = {Methods for crop phenology detection using time series analysis have provided accurate information for large agricultural areas in shorter processing times, which can be useful for agronomic management and supply chain monitoring. Given the crop dynamics in the Brazilian Cerrado, with alternating crop type plantings, crop successions, and crop rotations, as well as climate and crop practices variation between harvest periods, these methods can be useful for detecting subtle land use and land cover changes at farm and crop field scales, improving thematic classifications and the near real-time crop monitoring. In this study, the Time-Weighted Dynamic Time Warping method was applied to recognize patterns in Moderate Resolution Imaging Spectroradiometer (MODIS) time series for land use and cover classification, identifying crop successions and rotations at crop field level in a large-scale agro-industrial agglomerate of farms located at Brazilian Cerrado. We detected and analyzed temporal cropping patterns in training samples to classify the MODIS time series and images, using a robust ground truth data set for validation. The method distinguished Cotton-fallow, Soybean-cotton, Soybean-maize, and Soybean-millet cropping patterns with an overall accuracy above 85\% for all evaluated harvest periods. Seasonal variations in the crop fields, caused by interannual succession and rotation, were detected. The method demonstrated the benefit of creating a spatial vector data set for supporting decision-making in several crop management contexts, improving crop and supply chain monitoring.}
+}
+
+
+@article{XiaoXingyuan2023LCCU,
+  abstract = {Reliable crop type classification supports the scientific basis for food security and sustainable agricultural development. However, it still lacks a limited-samples-based crop classification method which is labor- and time-efficient. To this end, we used the Google Earth Engine (GEE) and Sentinel-1A/B SAR time series to develop eight types of crop classification strategies based on different sampling methods of central and scattered, different perspectives of object-based and pixel-based, and different classifiers of the Time-Weighted Dynamic Time Warping (TWDTW) and Random Forest (RF). We carried out 30-times classifications with different samples for each strategy to classify the crop types at the North DakotaâMinnesota border in the U.S. We then compared their classification accuracies and assessed the accuracy sensitivity to sample size. The results found that the TWDTW generally performed better than RF, especially for small-sample classification. Object-based classifications had higher accuracies than pixel-based classifications, and the object-based TWDTW had the highest accuracy. RF performed better in scattered sampling than the central sampling strategy. TWDTW performed better than RF in distinguishing soybean and dry bean with similar curves. The accuracies improved for all eight classification strategies with increasing sample size, and TWDTW was more robust, while RF was more sensitive to sample size change. RF required many more samples than TWDTW to achieve satisfactory accuracy, and it performed better than TWDTW when the sample size exceeded 50. The accuracy comparisons indicated that the TWDTW has stronger temporal and spatial generalization capabilities and has high potential applications for early, historical, and limited-samples-based crop type classification. The findings of our research are worthwhile contributions to the methodology and practices of crop type classification as well as sustainable agricultural development.},
+  author = {Xiao, Xingyuan and Jiang, Linlong and Liu, Yaqun and Ren, Guozhen},
+  address = {Basel},
+  copyright = {COPYRIGHT 2023 MDPI AG},
+  issn = {2072-4292},
+  journal = {Remote sensing (Basel, Switzerland)},
+  keywords = {Accuracy ; Agricultural development ; Agricultural management ; Agriculture ; Analysis ; Classification ; Crops ; Food security ; Food supply ; Google Earth Engine ; Methods ; object-based crop classification ; Pixels ; Remote sensing ; Sample size ; Sampling ; Sampling methods ; sampling strategy ; Sensitivity analysis ; Sentinel-1 SAR time series ; simple non-iterative clustering ; Soybean ; Soybeans ; Sustainable agriculture ; Sustainable development ; Time series ; time-weighted dynamic time warping ; Warping},
+  language = {eng},
+  number = {4},
+  pages = {1112-},
+  publisher = {MDPI AG},
+  title = {Limited-Samples-Based Crop Classification Using a Time-Weighted Dynamic Time Warping Method, Sentinel-1 Imagery, and Google Earth Engine},
+  volume = {15},
+  year = {2023},
+}
+
+
+@article{NarinO.G.2022URAN,
+author = {Narin, O. G. and Bayik, C. and Abdikan, S. and Balik Sanli, F.},
+abstract = {Monitoring and management of agricultural lands are essential due to reasons affecting agriculture, such as increasing population and global climate. With the increase in the temporal resolution of satellite systems, time-series classifications have become popular in cropland mapping. Because annual plants can give similar spectral reflectance values on the same date. In this context, agricultural land was selected in the south of South Dakota in the United States. The area includes alfalfa, corn, soybeans, winter wheat plants, developed, grassland/pasture, herbaceous wetlands, and open water areas. The study aims to map croplands with vegetation indices produced by annual Sentinel-1 and Sentinel-2 satellites. In this context, Radar Vegetation Index (RVI) produced from 25 Sentinel-1, and the Normalized Difference Vegetation Index (NDVI) produced from 26 Sentinel-2 satellites were used for 2020. We used the Time-Weighted Dynamic Time Warping (TWDTW) algorithm, which separates and classifies the similarities between two time series with variable speeds with time constraints. For mapping, the indices were classified both individually and combined. The highest overall accuracy (77.2\%) was obtained with the combined use of NDVI and RVI. Among the plant classes, the lowest accuracy (83.71\%) was found, and it was determined that the plant classes did not mix much. Sentinel-2 satellite is not available before April due to weather conditions in the region. For this reason, since the Sentinel-1 satellite is not affected by weather conditions, it is thought that the use of two satellites together will be beneficial in time series analysis.},
+address = {Gottingen},
+copyright = {2022. This work is published under https://creativecommons.org/licenses/by/4.0/. Notwithstanding the ProQuest Terms and Conditions, you may use this content in accordance with the terms of the License.},
+issn = {2194-9034},
+journal = {International archives of the photogrammetry, remote sensing and spatial information sciences.},
+language = {eng},
+pages = {97-101},
+publisher = {Copernicus GmbH},
+title = {Using RVI and NDVI Time Series for Cropland Mapping with Time-Weighted Dynamic Time Warping},
+volume = {XLVIII-4/W3-2022},
+year = {2022},
+}
+
+@article{QuXuzhou2023Mmls,
+  author = {Qu, Xuzhou and Zhou, Jingping and Gu, Xiaohe and Wang, Yancang and Sun, Qian and Pan, Yuchun},
+  issn = {0168-1699},
+  journal = {Computers and electronics in agriculture},
+  language = {eng},
+  pages = {108365-},
+  title = {Monitoring maize lodging severity based on multi-temporal Sentinel-1 images using Time-weighted Dynamic time Warping},
+  volume = {215},
+  year = {2023},
+}
