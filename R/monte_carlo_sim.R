@@ -1,9 +1,7 @@
 setwd("~/Git/dtw-in-finance/")
 source("R/normality_tests.R")
 source("R/similarity_functions.R")
-library(data.table); library(rugarch)
-# mod1 <- readRDS("data/model_objects/DA_2007_2008/DA_2007_2008_AAPL.rds")
-# mod2 <- readRDS("data/model_objects/DA_2007_2008/DA_2007_2008_GE.rds")
+library(data.table); library(rugarch); library(VineCopula)
 
 files_ <- list.files("data/label_analysis/", pattern = "model_summary", full.names=TRUE)
 dtfModSum <- rbindlist(lapply(files_, fread))
@@ -43,8 +41,8 @@ dtfCors <- rbindlist(lapply(names(lstCors), melt_unique_assc_matrix, lst=lstCors
 setnames(dtfCors, "value", "model_cor")
 dtfCors[, year := substring(label, 1, 4)]
 dtfCors[, label := NULL]
-dtfCors[, summary(model_cor)]
-dtfCors[, hist(model_cor, breaks=40)]
+# dtfCors[, summary(model_cor)]
+# dtfCors[, hist(model_cor, breaks=40)]
 dtfCors[, cor_bin := cut(model_cor, dtfCors[, hist(model_cor, breaks=40, plot=FALSE)]$breaks)]
 dtfSmp1 <- dtfCors[, sample_cor_bin(.SD, 300), by=cor_bin][order(cor_bin)]
 dtfSmp1 <- merge(dtfSmp1, dtfDTW)
@@ -118,36 +116,48 @@ replicate_pair <- function(pair, B=100, to_std_price=TRUE, conditional_mu=TRUE,
 }
 
 
-
-
-# smp1_pair_model_locations
-BB <- 250
-collect <- vector("list", nrow(dtfSmp1))
-for (i in 1:11) { # nrow(dtfSmp1)) {
-  if (i %% 10 == 0) {
-    dtfSave <- rbindlist(collect)
-    fwrite(dtfSave, file="data/monte_carlo/Sample_pairs_corr_to_dtw_20240118_1.csv")
-    print(sprintf("Starting %d out of %d at %s.", i, dtfSmp1[, .N], Sys.time()))
-  }
-  t1 <- dtfSmp1[i, tick1]
-  t2 <- dtfSmp1[i, tick2]
-  yr_lb <- dtfSmp1[i, year]
-  m1_loc <- sprintf("data/model_objects/%s/%s_%s.rds", yr_lb, yr_lb, t1)
-  m2_loc <- sprintf("data/model_objects/%s/%s_%s.rds", yr_lb, yr_lb, t2)
-  mcsims <- replicate_pair(c(m1_loc, m2_loc), B=BB, to_std_price=TRUE,
+replicate_study <- function(pair, B)
+{
+  m1_loc <- sprintf("data/model_objects/%s/%s_%s.rds", pair$year, pair$year, pair$tick1)
+  m2_loc <- sprintf("data/model_objects/%s/%s_%s.rds", pair$year, pair$year, pair$tick2)
+  mcsims <- replicate_pair(c(m1_loc, m2_loc), B=B, to_std_price=TRUE,
                            conditional_mu=TRUE, conditional_sigma=TRUE)
-  mcsims2 <- replicate_pair(c(m1_loc, m2_loc), B=BB, to_std_price=TRUE,
+  mcsims2 <- replicate_pair(c(m1_loc, m2_loc), B=B, to_std_price=TRUE,
                             conditional_mu=FALSE, conditional_sigma=TRUE)
-  mcsims3 <- replicate_pair(c(m1_loc, m2_loc), B=BB, to_std_price=TRUE,
-                            conditional_mu=FALSE, conditional_sigma=FALSE)
+  mcsims3 <- replicate_pair(c(m1_loc, m2_loc), B=B, to_std_price=TRUE,
+                            conditional_mu=TRUE, conditional_sigma=FALSE)
   tmpDT <- rbindlist(list(data.table(label="Cond_Mean_and_Var", value=mcsims),
                           data.table(label="Cond_Var", value=mcsims2),
                           data.table(label="Cond_Mean", value=mcsims3)))
-  tmpDT[, `:=`(tick1=t1, tick2=t2, year=yr_lb)]
-  collect[[i]] <- tmpDT
+  tmpDT[, `:=`(tick1=pair$tick1, tick2=pair$tick2, year=pair$year)]
+  return(tmpDT)
 }
-dtf <- merge(dtfSmp1, rbindlist(collect))
-dtf <- merge(dtf, dtfDTW)
+
+
+
+
+BB <- 250
+cluster <- parallel::makeCluster(3)
+clusterEvalQ(cluster, library("data.table"))
+clusterEvalQ(cluster, library("rugarch"))
+clusterEvalQ(cluster, library("VineCopula"))
+clusterEvalQ(cluster, source("R/normality_tests.R"))
+clusterEvalQ(cluster, source("R/similarity_functions.R"))
+clusterExport(cluster, c("sample_distribution", "resample", "replicate_pair", "replicate_study"))
+batches <- split(dtfSmp1, 1:nrow(dtfSmp1) %% 400)
+collect <- vector("list", length(batches))
+for (b in seq_along(batches)) {
+  lst_ <- split(batches[[b]], 1:nrow(batches[[b]]))
+  print(sprintf("Batch %d of %d total started at %s", b, length(batches), Sys.time()))
+  collect[[b]] <- rbindlist(parLapply(cl=cluster, lst_, replicate_study, B=BB))
+  dtfSave <- rbindlist(collect)
+  fwrite(dtfSave, file="data/monte_carlo/Sample_pairs_corr_to_dtw_20240118_1.csv")
+  Sys.sleep(10)
+}
+stopCluster(cluster)
+
+# dtf <- merge(dtfSmp1, rbindlist(collect))
+# dtf <- merge(dtf, dtfDTW)
 dtf[, year := factor(year, levels=sort(unique(year)))]
 dtf[, IQR := `3rd Qu.` - `1st Qu.`]
 dtf[, violation := dtw < `5%` | dtw > `95%`]
