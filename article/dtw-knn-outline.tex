@@ -82,26 +82,29 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \section{Relevant Literature}
 
-\cite{SakoeChiba_IEEE_1978} provides the original paper defining dynamic time warping in the field of speech recognition. It's influence has extended into data mining, agricultural and forestry monitoring,  
-Current applications in the finance and economic fields usually fall into one of three basic perspectives.
+\cite{SakoeChiba_IEEE_1978} provides the original paper defining dynamic time warping in the field of speech recognition. It's influence has extended into applications such data mining, agricultural and forestry management, high-frequency trading.
+Current applications in the finance and economic fields usually fall into one of three basic perspectives. 
 \begin{enumerate}
     \item Latent cluster identification where no explicit labels are provided or prior knowledge of any underlying multinomial distribution
     \begin{itemize}
         \item \parencite{FruhwirthKaufmann2004} cluster time series into K groups based on the fitted parameters of AR(p) and dynamic regression models.
         \item \parencite{FrancesWiemann2020} apply dynamic time warping to quarterly real GDP of the 50 US states during the 2007 recession. The authors employ a novel distance metric and utlilize a K-Means algorithm proposed by \cite{PETITJEAN2011678} and adapted for time series to group the US states into seven distinct business cycle clusters.
-        \item 
+        \item \cite{PETITJEAN2011678} illustrates a method to find a global average for a set of sequences. The "average" of a set of sequences is defined as the sequence that minimizes the within group sum of sequares distances from each sequence in the set to the "average" sequence. The distance in between sequences is calculated by the dynamic time warping algorithm. The bulk of the paper discusses the process of updating the "average" sequence from one iteration to the next. 
     \end{itemize}
-    \item Explicit Pattern Matching and Classification. A an attractive feature of DTW is i
+    \item Template Pattern Matching and Nearest Neighbor Classification
     \begin{itemize}
         \item \cite{WAN2017151} uses DTW in support of technical anaylsis of financial assets.
+        \item \cite{Petitjean_et_al_2016} demonstrates that \cite{PETITJEAN2011678} can be used to form efficient nearest neighbor classification decisions where the nearest group average determines the classification. Performs better that Euclidean averages or mediod 
     \end{itemize}
-    \item Lead/Lag estimation. Linking asynchroneous time series. High frequency trading application. Leading economic indicator analysis.
+    \item Lead/Lag estimation. Temporal alignment. Linking asynchroneous time series. High frequency trading application. Leading economic indicator analysis. Land-use identification from Satelite data.
     \begin{itemize}
-        \item \parencite{JEONG20112231} Instead of providing a universal bound or step condition the authors come up with a temporal weighting function and apply it to the cost matrix before calculating the accumulated cost matrix. For temporal weights the authors use a generalized logistic function that uses two parameters to center and scale the output of the function. The scale parameter is optimized on a validation set while the Performance is evaluated on a test set. 
+        \item \parencite{JEONG20112231} Instead of providing a universal bound or step condition the authors come up with a temporal weighting function and apply it to the cost matrix before calculating the accumulated cost matrix. For temporal weights the authors use a generalized logistic function that uses two parameters to center and scale the output of the function. The scale parameter is optimized on a validation set while the Performance is evaluated on a test set.
+        \item \parencite{Maus_et_al_2016} This paper presents a time-weighted version of the dynamic time warping (DTW) method for land-use and land-cover classification using remote sensing image time series. Authors of the dtwSat package. Uses logistic-based time weights to temporally align signals from satelite imagery before classification decision. Supervised learning with manually labeled examples. The approach in this paper is copied by \parencite{Chaves_et_all_2021_Brazil_Crop_id}, \parencite{XiaoXingyuan2023LCCU}, \parencite{NarinO.G.2022URAN}, \parencite{QuXuzhou2023Mmls}
+        \item \parencite{Ito_Sakemoto_2020} Propose a Multinomial DTW (MDTW) to directly estimate any existing lead/lag relationship between pairs of financial assets trading at high-frequency. They compare their approach to existing methods in the literature. Evidence from this paper (See table \ref{tbl:correlation_to_log_dtw_regression}) supports our analysis that the variance of DTW increases as the correlation between asset movements decreases. This paper uses simulates stock pairs evolutions with a bivariate brownian motion governed by $\rho$ and $\sigma^{2}$. DTW is calculated on the (stationary) log return series, something that differentiates this work from mine. 
     \end{itemize}
     \item Weighted Distance
     \begin{itemize}
-        \item \parencite{JEONG20112231} uses weighted distance. weights by logistic function
+        \item \parencite{JEONG20112231}
     \end{itemize}
     \item Counter-argument to using DTW on financial data - Hypothesis: Unit roots cause issues even controlling for different time series scales.
     \begin{itemize}
@@ -433,20 +436,20 @@ Hot takes on the return table:
         \# Pairs & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
         \hline
         \vspace{-1mm} \\
-        Top 25    & Unadjusted cor &  0.0018 & 0.0024          & 0.030 &  0.0011 & -0.873 & 5.039 & -0.085 & 0.061 \\
-        Top 25    & Model cor      & -0.0033 & 0.0040          & 0.027 &  0.0003 & -1.199 & 4.417 & -0.078 & 0.032 \\
-        Top 25    & DTW            &  0.0185 & 0.0050{$^{**}$} & 0.041 &  0.0096 &  0.695 & 2.992 & -0.041 & 0.114 \\
-        Top 25    & Euclidean      &  0.0064 & 0.0040          & 0.034 & -0.0074 &  0.945 & 3.359 & -0.040 & 0.092 \\
+        Top 25    & Unadjusted cor &  0.0018 & 0.0063          & 0.030 &  0.0011 & -0.873 & 5.039 & -0.085 & 0.061 \\
+        Top 25    & Model cor      & -0.0033 & 0.0057          & 0.027 &  0.0003 & -1.199 & 4.417 & -0.078 & 0.032 \\
+        Top 25    & DTW            &  0.0185 & 0.0085{$^{*}$}  & 0.041 &  0.0096 &  0.695 & 2.992 & -0.041 & 0.114 \\
+        Top 25    & Euclidean      &  0.0064 & 0.0071          & 0.034 & -0.0074 &  0.945 & 3.359 & -0.040 & 0.092 \\
         \vspace{-1mm} \\
-        Top 50    & Unadjusted cor & -0.0003 & 0.0017          & 0.023 & -0.0001 &  0.028 & 1.918 & -0.038 & 0.043 \\
-        Top 50    & Model cor      & -0.0011 & 0.0026          & 0.025 & -0.0054 &  0.226 & 1.935 & -0.036 & 0.044 \\
-        Top 50    & DTW            &  0.0084 & 0.0054          & 0.034 &  0.0032 &  0.512 & 2.999 & -0.057 & 0.084 \\
-        Top 50    & Euclidean      &  0.0064 & 0.0040          & 0.035 & -0.0009 &  1.136 & 3.505 & -0.042 & 0.091 \\
+        Top 50    & Unadjusted cor & -0.0003 & 0.0049          & 0.023 & -0.0001 &  0.028 & 1.918 & -0.038 & 0.043 \\
+        Top 50    & Model cor      & -0.0011 & 0.0052          & 0.025 & -0.0054 &  0.226 & 1.935 & -0.036 & 0.044 \\
+        Top 50    & DTW            &  0.0084 & 0.0070          & 0.034 &  0.0032 &  0.512 & 2.999 & -0.057 & 0.084 \\
+        Top 50    & Euclidean      &  0.0064 & 0.0072          & 0.035 & -0.0009 &  1.136 & 3.505 & -0.042 & 0.091 \\
         \vspace{-1mm} \\
-        Top 100   & Unadjusted cor &  0.0013 & 0.0022          & 0.028 &  0.0004 &  0.430 & 2.357 & -0.037 & 0.067 \\
-        Top 100   & Model cor      &  0.0007 & 0.0026          & 0.029 & -0.0017 &  0.412 & 2.735 & -0.051 & 0.071 \\
-        Top 100   & DTW            &  0.0083 & 0.0094          & 0.039 &  0.0034 &  0.897 & 4.070 & -0.062 & 0.109 \\
-        Top 100   & Euclidean      &  0.0073 & 0.0064          & 0.037 &  0.0057 &  0.763 & 3.619 & -0.045 & 0.107 \\
+        Top 100   & Unadjusted cor &  0.0013 & 0.0058          & 0.028 &  0.0004 &  0.430 & 2.357 & -0.037 & 0.067 \\
+        Top 100   & Model cor      &  0.0007 & 0.0061          & 0.029 & -0.0017 &  0.412 & 2.735 & -0.051 & 0.071 \\
+        Top 100   & DTW            &  0.0083 & 0.0082          & 0.039 &  0.0034 &  0.897 & 4.070 & -0.062 & 0.109 \\
+        Top 100   & Euclidean      &  0.0073 & 0.0078          & 0.037 &  0.0057 &  0.763 & 3.619 & -0.045 & 0.107 \\
         \vspace{-1mm} \\
         \hline
         \vspace{1 mm} \\
@@ -454,20 +457,20 @@ Hot takes on the return table:
         \# Pairs  & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
         \hline
         \vspace{-1mm} \\
-        Top 25    & Unadjusted cor &  0.0100 & 0.0063          & 0.051 &  0.0021 &  0.057 & 4.071 & -0.112 & 0.132 \\
-        Top 25    & Model cor      &  0.0034 & 0.0089          & 0.050 &  0.0005 &  0.434 & 3.994 & -0.093 & 0.133 \\
-        Top 25    & DTW            &  0.0189 & 0.0050{$^{**}$} & 0.042 &  0.0096 &  0.721 & 3.062 & -0.041 & 0.119 \\
-        Top 25    & Euclidean      &  0.0067 & 0.0040{$+$}     & 0.035 & -0.0075 &  0.919 & 3.245 & -0.040 & 0.092 \\
+        Top 25    & Unadjusted cor &  0.0100 & 0.0106          & 0.051 &  0.0021 &  0.057 & 4.071 & -0.112 & 0.132 \\
+        Top 25    & Model cor      &  0.0034 & 0.0104          & 0.050 &  0.0005 &  0.434 & 3.994 & -0.093 & 0.133 \\
+        Top 25    & DTW            &  0.0189 & 0.0086{$^{*}$}  & 0.042 &  0.0096 &  0.721 & 3.062 & -0.041 & 0.119 \\
+        Top 25    & Euclidean      &  0.0067 & 0.0072          & 0.035 & -0.0075 &  0.919 & 3.245 & -0.040 & 0.092 \\
         \vspace{-1mm} \\
-        Top 50    & Unadjusted cor &  0.0015 & 0.0032          & 0.038 & -0.0006 &  0.041 & 1.701 & -0.060 & 0.064 \\
-        Top 50    & Model cor      &  0.0010 & 0.0055          & 0.043 & -0.0086 &  0.343 & 2.234 & -0.065 & 0.097 \\
-        Top 50    & DTW            &  0.0084 & 0.0055          & 0.034 &  0.0033 &  0.457 & 2.973 & -0.060 & 0.084 \\
-        Top 50    & Euclidean      &  0.0064 & 0.0045          & 0.035 & -0.0009 &  1.116 & 3.435 & -0.042 & 0.091 \\
+        Top 50    & Unadjusted cor &  0.0015 & 0.0078          & 0.038 & -0.0006 &  0.041 & 1.701 & -0.060 & 0.064 \\
+        Top 50    & Model cor      &  0.0010 & 0.0089          & 0.043 & -0.0086 &  0.343 & 2.234 & -0.065 & 0.097 \\
+        Top 50    & DTW            &  0.0084 & 0.0071          & 0.034 &  0.0033 &  0.457 & 2.973 & -0.060 & 0.084 \\
+        Top 50    & Euclidean      &  0.0064 & 0.0073          & 0.035 & -0.0009 &  1.116 & 3.435 & -0.042 & 0.091 \\
         \vspace{-1mm} \\
-        Top 100   & Unadjusted cor &  0.0032 & 0.0044          & 0.046 &  0.0007 &  0.134 & 1.556 & -0.062 & 0.073 \\
-        Top 100   & Model cor      &  0.0020 & 0.0047          & 0.046 & -0.0022 &  0.127 & 1.758 & -0.072 & 0.077 \\
-        Top 100   & DTW            &  0.0082 & 0.0095          & 0.040 &  0.0035 &  0.845 & 4.017 & -0.064 & 0.109 \\
-        Top 100   & Euclidean      &  0.0073 & 0.0065          & 0.037 &  0.0057 &  0.740 & 3.556 & -0.046 & 0.107 \\
+        Top 100   & Unadjusted cor &  0.0032 & 0.0095          & 0.046 &  0.0007 &  0.134 & 1.556 & -0.062 & 0.073 \\
+        Top 100   & Model cor      &  0.0020 & 0.0096          & 0.046 & -0.0022 &  0.127 & 1.758 & -0.072 & 0.077 \\
+        Top 100   & DTW            &  0.0082 & 0.0082          & 0.040 &  0.0035 &  0.845 & 4.017 & -0.064 & 0.109 \\
+        Top 100   & Euclidean      &  0.0073 & 0.0078          & 0.037 &  0.0057 &  0.740 & 3.556 & -0.046 & 0.107 \\
         \vspace{-1mm} \\
         \hline
         \vspace{1 mm} \\
@@ -475,20 +478,20 @@ Hot takes on the return table:
         \# Pairs & Pair Strategy & Mean & Std Err{$^{1}$} & Std Dev & Median & Skew & Kurtosis & Min & Max \\
         \hline
         \vspace{-1mm} \\
-        Top 25    & Unadjusted cor & 0.0557 & 0.0228{$^{*}$}  & 0.232 & 0.1049 & -0.234 & 2.753 & -0.463 & 0.513 \\
-        Top 25    & Model cor      & 0.0487 & 0.0225{$^{*}$}  & 0.235 & 0.0815 & -0.003 & 3.256 & -0.472 & 0.597 \\
-        Top 25    & DTW            & 0.0899 & 0.0140{$^{**}$} & 0.149 & 0.1371 & -1.196 & 4.021 & -0.333 & 0.266 \\
-        Top 25    & Euclidean      & 0.0970 & 0.0141{$^{**}$} & 0.151 & 0.1418 & -0.892 & 3.847 & -0.314 & 0.364 \\
+        Top 25    & Unadjusted cor & 0.0557 & 0.0483          & 0.232 & 0.1049 & -0.234 & 2.753 & -0.463 & 0.513 \\
+        Top 25    & Model cor      & 0.0487 & 0.0490          & 0.235 & 0.0815 & -0.003 & 3.256 & -0.472 & 0.597 \\
+        Top 25    & DTW            & 0.0899 & 0.0310{$^{**}$} & 0.149 & 0.1371 & -1.196 & 4.021 & -0.333 & 0.266 \\
+        Top 25    & Euclidean      & 0.0970 & 0.0315{$^{**}$} & 0.151 & 0.1418 & -0.892 & 3.847 & -0.314 & 0.364 \\
         \vspace{-1mm} \\
-        Top 50    & Unadjusted cor & 0.0648 & 0.0237{$^{**}$} & 0.227 & 0.1161 & -0.633 & 2.837 & -0.490 & 0.413 \\
-        Top 50    & Model cor      & 0.0596 & 0.0241{$^{*}$}  & 0.227 & 0.0947 & -0.466 & 2.674 & -0.470 & 0.431 \\
-        Top 50    & DTW            & 0.0711 & 0.0148{$^{**}$} & 0.149 & 0.1266 & -1.079 & 3.986 & -0.339 & 0.274 \\
-        Top 50    & Euclidean      & 0.0895 & 0.0142{$^{**}$} & 0.145 & 0.1238 & -0.947 & 3.559 & -0.302 & 0.304 \\
+        Top 50    & Unadjusted cor & 0.0648 & 0.0472          & 0.227 & 0.1161 & -0.633 & 2.837 & -0.490 & 0.413 \\
+        Top 50    & Model cor      & 0.0596 & 0.0472          & 0.227 & 0.0947 & -0.466 & 2.674 & -0.470 & 0.431 \\
+        Top 50    & DTW            & 0.0711 & 0.0311{$^{**}$} & 0.149 & 0.1266 & -1.079 & 3.986 & -0.339 & 0.274 \\
+        Top 50    & Euclidean      & 0.0895 & 0.0302{$^{**}$} & 0.145 & 0.1238 & -0.947 & 3.559 & -0.302 & 0.304 \\
         \vspace{-1mm} \\
-        Top 100   & Unadjusted cor & 0.0700 & 0.0239{$^{**}$} & 0.216 & 0.1292 & -0.809 & 3.100 & -0.488 & 0.358 \\
-        Top 100   & Model cor      & 0.0715 & 0.0227{$^{**}$} & 0.220 & 0.1253 & -0.648 & 2.952 & -0.472 & 0.403 \\
-        Top 100   & DTW            & 0.0875 & 0.0163{$^{**}$} & 0.150 & 0.1335 & -1.027 & 3.882 & -0.334 & 0.288 \\
-        Top 100   & Euclidean      & 0.0912 & 0.0139{$^{**}$} & 0.148 & 0.1300 & -0.943 & 3.600 & -0.312 & 0.287 \\
+        Top 100   & Unadjusted cor & 0.0700 & 0.0450          & 0.216 & 0.1292 & -0.809 & 3.100 & -0.488 & 0.358 \\
+        Top 100   & Model cor      & 0.0715 & 0.0458          & 0.220 & 0.1253 & -0.648 & 2.952 & -0.472 & 0.403 \\
+        Top 100   & DTW            & 0.0875 & 0.0312{$^{**}$} & 0.150 & 0.1335 & -1.027 & 3.882 & -0.334 & 0.288 \\
+        Top 100   & Euclidean      & 0.0912 & 0.0307{$^{**}$} & 0.148 & 0.1300 & -0.943 & 3.600 & -0.312 & 0.287 \\
         \vspace{-1mm} \\
         \hline
     \end{tabular}
@@ -648,12 +651,12 @@ These estimated models, combined with Copula theory, can be leveraged to study t
     \item For two arbitrary stocks, $A$ and $B$, the conditional mean, conditionl variance, and conditional density of the returns are recorded for each asset: $\hat{\mu}_{A,\,t}$, $\hat{\sigma}^{2}_{A,\,t}$, $\hat{g}_{A}$, and $\hat{\mu}_{B,\,t}$, $\hat{\sigma}^{2}_{B,\,t}$, $\hat{g}_{B}$ (see equations \ref{eq:conditional_mean}, \ref{eq:conditional_var}, and \ref{eq:conditional_distr} from section \ref{sec:ARMAGARCH-benchmark}).
     \item The probability integral transform is used to reformulate each marginal model's fitted residuals as a sample from the uniform distribution.
     \begin{equation} \nonumber
-        U_{A} = \hat{F}_{A}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{A,\,t}} \hat{g}_{A} \left(z | \hat{\mu}_{t}\right) dz
+        \hat{U}_{A} = \hat{F}_{A}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{A,\,t}} \hat{g}_{A} \left(z | \hat{\mu}_{t}\right) dz
     \end{equation}
     \begin{equation} \nonumber
-        U_{B} = \hat{F}_{B}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{B,\,t}} \hat{g}_{B} \left(z | \hat{\mu}_{t}\right) dz
+        \hat{U}_{B} = \hat{F}_{B}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{B,\,t}} \hat{g}_{B} \left(z | \hat{\mu}_{t}\right) dz
     \end{equation}
-    The residuals, in their uniform representation [($u_{A,\,1}$, $u_{B,\,1}$), $\cdots$, ($u_{A,\,T}$, $u_{B,\,T}$)], are used to estimate a bivariate t-Copula with it's correlation $\hat{\rho}_{A,B}$ and degrees-of-freedom $\hat{\nu}_{A,B}$.
+    The residuals, in their uniform representation [($\hat{u}_{A,\,1}$, $\hat{u}_{B,\,1}$), $\cdots$, ($\hat{u}_{A,\,T}$, $\hat{u}_{B,\,T}$)], are used to estimate a bivariate t-Copula which is defined by it's correlation $\rho_{A,B}$ and degrees-of-freedom $\nu_{A,B}$ parameters.
     \item The estimated t-Copula is used as a data generating process to produce new sets of bivariate uniform distributions [($u^{(i)}_{A,\,1}$, $u^{(i)}_{B,\,1}$), $\cdots$, ($u^{(i)}_{A,\,T}$, $u^{(i)}_{B,\,T}$)]. Each observation $t$ in a new sample is centered and scaled according to the conditional mean and variance from the estimated ARIMA-GARCH models.
     \begin{equation} \nonumber
         r^{(i)}_{A,\,t} = \hat{F}^{-1}_{A} \left(u^{(i)}_{A,\,t}\,\,;\,\, \mu=\hat{\mu}_{A,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{A,\,t} \right)
@@ -661,11 +664,56 @@ These estimated models, combined with Copula theory, can be leveraged to study t
     \begin{equation} \nonumber
         r^{(i)}_{B,\,t} = \hat{F}^{-1}_{B} \left(u^{(i)}_{B,\,t}\,\,;\,\, \mu=\hat{\mu}_{B,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{B,\,t} \right)
     \end{equation}
-    \item After a new set of return series are generated they are transformed from returns to price level using the standard price equation \ref{eq:standard_price} and the dynamic time warping algorithm is applied to the two resampled standard price series.
-    \item Repeat steps 1-4 N times to build up a distribution of dynamic time warping values for a pair of stock prices with a specific correlation value
+    \item After a new set of return series are generated they are transformed from returns to price level using the standard price equation \ref{eq:standard_price}.
+    \item Repeat steps one through four to build up a distribution of dynamic time warping values for a pair of stock prices with a specific correlation value
 \end{enumerate}
 
 By marrying the conditional return models with a copula-based resampling approach many of the important characteristics of stock returns can be included in the monte carlo samples. These include auto-correlation, asymmetric returns, fat-tails, and volatility clustering observed in individual stocks as well as high levels of correlation in price movements between stocks over time. The original association and tail-dependency observed in the stock pairs is preserved by the copula while the unique idiosyncracies (See section \ref{sec:ARMAGARCH-benchmark}) of each stock is retained by the marginal models. This leaves only the natural variation of the distribution $g$ to drive the variation in the dynamic time warping values calculated in step 4. Assuming multivariate t-distributions for this simulation exercise is well founded. In the model selection process described in section \ref{sec:ARMAGARCH-benchmark} The t-distribution is chosen for all 10,018 marginal models in this study. The symmetric t-distribution is chosen 9324 times while the remaining 694 models are modeled with a skewed t-distribution.
+
+
+\begin{table}
+    \centering
+    \begin{tabular}{l r l r l}
+         & Estimate & Std Err & Estimate & Std Err \\
+        \hline
+        Intercept       &   3.496 &  0.014{$^{**}$} &   3.552 & 0.043{$^{**}$}  \\
+        Abs Mean Diff   & 305.712 &  7.101{$^{**}$} & 275.777 & 7.383{$^{**}$}  \\
+        Mean Variance   &   0.892 &  0.246{$^{**}$} &   0.490 & 0.244{$^{*}$}   \\
+        1 - model cor 1 &  39.989 &  1.062{$^{**}$} &  50.439 & 1.344{$^{**}$}  \\
+        1 - model cor 2 & -17.317 &  0.880{$^{**}$} & -18.608 & 0.916{$^{**}$}  \\
+        Intra Sector    &  -0.019 &  0.030{$^{  }$} &   0.071 & 0.030{$^{*}$}   \\
+        2001            &      -- &              -- &   0.058 & 0.055           \\
+        2002            &      -- &              -- &  -0.266 & 0.074{$^{**}$}  \\
+        2003            &      -- &              -- &   0.046 & 0.075           \\
+        2004            &      -- &              -- &  -0.283 & 0.073{$^{**}$}  \\
+        2005            &      -- &              -- &  -0.234 & 0.077{$^{**}$}  \\
+        2006            &      -- &              -- &  -0.120 & 0.069{$^{+}$}   \\
+        2007            &      -- &              -- &  -0.048 & 0.077           \\
+        2008            &      -- &              -- &   0.146 & 0.060{$^{*}$}   \\
+        2009            &      -- &              -- &   0.612 & 0.062{$^{**}$}  \\
+        2010            &      -- &              -- &   0.092 & 0.062           \\
+        2011            &      -- &              -- &   0.042 & 0.056           \\
+        2012            &      -- &              -- &  -0.220 & 0.068{$^{**}$}  \\
+        2013            &      -- &              -- &  -0.032 & 0.067           \\
+        2014            &      -- &              -- &  -0.336 & 0.065{$^{**}$}  \\
+        2015            &      -- &              -- &  -0.177 & 0.061{$^{**}$}  \\
+        2016            &      -- &              -- &  -0.020 & 0.052           \\
+        2017            &      -- &              -- &  -0.436 & 0.047{$^{**}$}  \\
+        2018            &      -- &              -- &  -0.207 & 0.058{$^{**}$}  \\
+        2019            &      -- &              -- &  -0.158 & 0.049{$^{**}$}  \\
+        2020            &      -- &              -- &   0.256 & 0.054{$^{**}$}  \\
+        2021            &      -- &              -- &  -0.040 & 0.047           \\
+        2022            &      -- &              -- &   0.165 & 0.053{$^{**}$}  \\
+        \vspace{-1mm} \\
+    \end{tabular}
+    \caption{Relationship between correlation and dynamic time warping}
+    \begin{tablenotes}
+        \item{\footnotesize yada yada yada}
+        \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
+        \item{\footnotesize $^{1}$Standard errors are Newey-West estimates and significant values are } 
+    \end{tablenotes}
+    \label{tbl:correlation_to_log_dtw_regression}
+\end{table}
 
 
 \pagebreak
