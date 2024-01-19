@@ -46,6 +46,7 @@ benchmarks[, group:=factor(group, levels=c("1 : 25", "1 : 50", "1 : 100"))]
 benchmarks[, .(baseline_long=mean(baseline_long - 1),
                committed=mean(committed - 1),
                invested=mean(invested - 1)), by=c("buy_signal", "group")]
+benchmarks[, trade_year := as.integer(trade_year )]
 
 pairs <- rbindlist(lapply(lst_, `[[`, 3), fill=TRUE)
 pairs[, group := paste(start_index, n_pairs, sep=" : ")]
@@ -58,8 +59,8 @@ pairs[, sector_2 := factor(sector_2, levels=levs)]
 
 
 # Standard Errors for the average can be found via regression
-lm1 <- lm((invested - 1) ~ -1 + group, data=benchmarks[threshold=="2"])
-W <- sandwich::NeweyWest(lm1, lag=10, prewhite=FALSE)
+lm1 <- lm((baseline_long - 1) ~ -1 + buy_signal : group, data=benchmarks[threshold=="2"])
+W <- sandwich::NeweyWest(lm1, lag=3, prewhite=FALSE, order.by=benchmarks[threshold=="2"]$trade_year)
 round(lmtest::coeftest(lm1, df=Inf, vcov. = W), 4)
 
 
