@@ -41,11 +41,11 @@
 
 Measuring the association of two assets is a fundamental concept in finance and economics. Portfolio managers have to think about it when they open or close a position \cite{Markowitz1952PortfolioSelection, sharpe1963simplified}. Regulators and large Bank Holding Companies (BHC) have to consider it when designing stress tests. The most common method of measuring association is the Pearson correlation coefficient:
 
-\begin{equation} \label{eq:pearsons_rho}
+\begin{equation}
 \rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x})^{2} \sum_{t=1}^{T} (y_{t} - \bar{y})^{2}}}
 \end{equation}
 
-There's certainly nothing wrong about this statistic as the measure of association. I use it all the time. And even though the economic literature is clear-eyed about it's shortcomings (asymmetry, fat-tails) when trying to capture true return correlations between different financial time series, it's still the first measure researches estimate. When looking at the covariance expression on the numerator of equation (\ref{eq:pearsons_rho}), the correlation's assessment of association is based on the co-movements of the two variables for each time unit. This tight pairing is completely logical but it can also be restrictive. For instance, if I were to sample T draws from the following multivariate normal distribution:
+There's certainly nothing wrong about this statistic as the measure of association. I use it all the time. And even though the economic literature is clear-eyed about it's shortcomings (asymmetry, fat-tails) when trying to capture true return correlations between different financial time series, it's still the first measure researches estimate. When looking at the covariance expression on the numerator of equation \ref{eq:pearsons_rho}, the correlation's assessment of association is based on the co-movements of the two variables for each time unit. This tight pairing is completely logical but it can also be restrictive. For instance, if I were to sample T draws from the following multivariate normal distribution:
 
 \begin{equation}
     \boldsymbol{Z_{t}} \thicksim N(\boldsymbol{0}, \boldsymbol{\Sigma})
@@ -82,8 +82,21 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \section{Relevant Literature}
 
-\cite{SakoeChiba_IEEE_1978} provides the original paper defining dynamic time warping in the field of speech recognition. It's influence has extended into applications such data mining, agricultural and forestry management, high-frequency trading.
-Current applications in the finance and economic fields usually fall into one of three basic perspectives. 
+\cite{SakoeChiba_IEEE_1978} provides the original paper defining dynamic time warping with application in the field of speech recognition. It's influence has extended into applications such data mining, agricultural and forestry management, high-frequency trading.
+
+The algorithm has certian properties that are really convienent from the view of an analyst. It can handle times series of different lengths. This makes it useful where the timing of observations from inputs are not aligned such as in high frequency trading or streams of satalite sensors \parencite{Maus_et_al_2016}.
+
+Applications of dynamic time warping in the finance and economic literature usually fall into one of the following categories.
+
+\begin{enumerate}
+    \item The most popular use is to find clusters or other sub-populations in a large set of sequential data. The approach is similar in spirit to the common K-means classifiers but the challenge in sequential data, including economic time series, is to find an appropriate version of the "average" of a group of series. Using the euclidean distance between series can lead to a group representation that does not capture important shape features of the underlying set of series it is summarizing \parencite{PETITJEAN2011678}. One approach that prevents Several articles use a K-Medoid approach which selects a member of the set that minimizes the within-group dissimilarity.
+    \item Another general use for dynamic time warping Template Pattern Matching and Nearest Neighbor Classiﬁcation. Satelite imagery and stock pattern matching
+    \item Lead/Lag estimation and Temporal Realignment
+\end{enumerate}
+There's the simple k-means classification where the researcher is interested in sub-population structures.  Class classification and latent clusering 
+
+DTW is only one way to index a set of series for clustering applications. \cite{ElsingAgon2012} provides an overview of various methods and metrics to used to index a broad class of sequential data.
+
 \begin{enumerate}
     \item Latent cluster identification where no explicit labels are provided or prior knowledge of any underlying multinomial distribution
     \begin{itemize}
@@ -94,52 +107,40 @@ Current applications in the finance and economic fields usually fall into one of
     \item Template Pattern Matching and Nearest Neighbor Classification
     \begin{itemize}
         \item \cite{WAN2017151} uses DTW in support of technical anaylsis of financial assets.
-        \item \cite{Petitjean_et_al_2016} demonstrates that \cite{PETITJEAN2011678} can be used to form efficient nearest neighbor classification decisions where the nearest group average determines the classification. Performs better that Euclidean averages or mediod 
+        \item \cite{Petitjean_et_al_2016} demonstrates that \cite{PETITJEAN2011678} can be used to form efficient nearest neighbor classification decisions where the nearest group average determines the classification. Performs better that Euclidean averages or mediods.
+        \item \parencite{KotsifakosAthitsosPapapetrou_2011} are also motivitated from a data mining perspective and the ability to return relevant results from query to a large number of time series. The authors compare an example-base query using DTW with a model-based approach using Hidden Markov Models (HMM).
     \end{itemize}
     \item Lead/Lag estimation. Temporal alignment. Linking asynchroneous time series. High frequency trading application. Leading economic indicator analysis. Land-use identification from Satelite data.
     \begin{itemize}
         \item \parencite{JEONG20112231} Instead of providing a universal bound or step condition the authors come up with a temporal weighting function and apply it to the cost matrix before calculating the accumulated cost matrix. For temporal weights the authors use a generalized logistic function that uses two parameters to center and scale the output of the function. The scale parameter is optimized on a validation set while the Performance is evaluated on a test set.
-        \item \parencite{Maus_et_al_2016} This paper presents a time-weighted version of the dynamic time warping (DTW) method for land-use and land-cover classification using remote sensing image time series. Authors of the dtwSat package. Uses logistic-based time weights to temporally align signals from satelite imagery before classification decision. Supervised learning with manually labeled examples. The approach in this paper is copied by \parencite{Chaves_et_all_2021_Brazil_Crop_id}, \parencite{XiaoXingyuan2023LCCU}, \parencite{NarinO.G.2022URAN}, \parencite{QuXuzhou2023Mmls}
-        \item \parencite{Ito_Sakemoto_2020} Propose a Multinomial DTW (MDTW) to directly estimate any existing lead/lag relationship between pairs of financial assets trading at high-frequency. They compare their approach to existing methods in the literature. Evidence from this paper (See table \ref{tbl:correlation_to_log_dtw_regression}) supports our analysis that the variance of DTW increases as the correlation between asset movements decreases. This paper uses simulates stock pairs evolutions with a bivariate brownian motion governed by $\rho$ and $\sigma^{2}$. DTW is calculated on the (stationary) log return series, something that differentiates this work from mine. 
-    \end{itemize}
-    \item Weighted Distance
-    \begin{itemize}
-        \item \parencite{JEONG20112231}
+        \item \parencite{Maus_et_al_2016} This paper presents a time-weighted version of the dynamic time warping (DTW) method for land-use and land-cover classification using remote sensing image time series. Authors of the dtwSat package. Uses logistic-based time weights to temporally align signals from satelite imagery before classification decision. Weights are \textit{additive} to the DTW cost function. Supervised learning with manually labeled examples. The approach in this paper is copied by \parencite{Chaves_et_all_2021_Brazil_Crop_id}, \parencite{XiaoXingyuan2023LCCU}, \parencite{NarinO.G.2022URAN}, \parencite{QuXuzhou2023Mmls}
+        \item \parencite{Ito_Sakemoto_2020} Propose a Multinomial DTW (MDTW) to directly estimate any existing lead/lag relationship between pairs of financial assets trading at high-frequency. They compare their approach to existing methods in the literature. Evidence from this paper (See table \ref{tbl:correlation_to_log_dtw_regression}) supports our analysis that the variance of DTW increases as the correlation between asset movements decreases. This paper uses simulates stock pairs evolutions with a bivariate brownian motion governed by $\rho$ and $\sigma^{2}$. DTW is calculated on the (stationary) log return series similuated by the 2d brownian motion, something that differentiates this work from mine. 
     \end{itemize}
     \item Counter-argument to using DTW on financial data - Hypothesis: Unit roots cause issues even controlling for different time series scales.
     \begin{itemize}
-        \item \parencite{9145837_Entropic_DTW_Fin_Networks} graph approach to the variance-covariance 
+        \item \parencite{Urso_et_al_2021} Use raw returns instead of modeling conditional mean or variances. Multivariate time series clustering approach based on a trimmed mediod clustering model. Similar to \parencite{PETITJEAN2011678} in that both are concerned with finding an efficient "center" of a group of time series.
+        \item \parencite{9145837_Entropic_DTW_Fin_Networks} uses graph theory to model the dynamic nature of financial networks
+        \item \parencite{HowardTalisAlexeev_2020} Unpublished manuscript attempt that applies a DTW step to a classic CAPM stock return analysis. Concentrates on the high frequency domain. The CAPM model states that an asset's return is governed by the following relationship:
+        \begin{equation}
+            E[r_{j}] = r_{f} + \beta_{j} (E[r_{m}] - r_{f})
+        \end{equation}
+        Instead of running the above regression using  synchronous returns the authors first "align" the sequences using the DTW algorithm and then calculate the betas $\beta_{j} = Cov(r_{t_{l}}, r_{s_{l}}) / Var(r_{m})$. The authors build in The authors note that after approaching the estimation of $\beta$ in this way. Additional simulation results are used to show that their approach back out different forms of dynamic lead/lag evolution. Model price movements as a random walk without drift.
     \end{itemize}
 \end{enumerate}
 
 \parencite{ElsingAgon2012} view the analysis of time series data from a data mining perspective. The authors provide a detailed survey of time series representations, various distance metrics for measuring association, and proper ways to index time series data for efficient querying and information retrieval. The distance measure are classified into four categories: shape, edit, feature, and structure-based.
 
+\parencite{DuyTakeuchi2023statistical} Rare paper dealing directly with statistical inference of the DTW measure.
 
 \parencite{Mueller2007} provides an excellent summary of the principles of DTW and discuss several extensions with respect to the local and global parameters of the technique.
 
-
-
-
-
 \parencite{WangXieHanSun2012} apply DTW to measure the pair-wise similarity between 35 foreign currencies. The authors then utilize a minimum spanning trees (MST) -- a novel graph algorithm -- to document the structural changes in the dependencies of the FX market over three separate years.
 
-\parencite{KotsifakosAthitsosPapapetrou_2011} are also motivitated from a data mining perspective and the ability to return relevant results from query to a large number of time series. The authors compare an example-base query using DTW with a model-based approach using Hidden Markov Models (HMM).
+
 
 \parencite{KeoghRatanamahatana_2005} Provide a theory for the most efficient lower bound on the dtw value. The authors adapt Piecewise Aggregate Approximation (PAA) for comparing series in a time-warping context.
 
-\parencite{DuyTakeuchi2023statistical} Rare paper dealing directly with statistical inference of the DTW measure.
-
 \parencite{WangXieHanSun2012} TBD
-
-Finance:
-
-\parencite{HowardTalisAlexeev_2020} Unpublished manuscript attempt that applies a DTW step to a classic CAPM stock return analysis. The CAPM model states that an asset's return is governed by the following relationship:
-
-\begin{equation}
-    E[r_{j}] = r_{f} + \beta_{j} (E[r_{m}] - r_{f})
-\end{equation}
-
-Instead of running the above regression using  synchronous returns the authors first "align" the sequences using the DTW algorithm and then calculate the betas $\beta_{j} = Cov(r_{t_{l}}, r_{s_{l}}) / Var(r_{m})$. The authors note that after approaching the estimation of $\beta$ in this way
 
 \section{Data}
 
@@ -152,160 +153,115 @@ Studying the companies that make up the Standard and Poor's 500 will provide a r
     \label{fig:SandP_missing_map}
 \end{figure}
 
-
 The companies comprising the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} as of February 2021 are included in this essay's analysis. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary of the price history for the individual companies in the index.
+
+\pagebreak
 
 \section{Distance Measures}
 
-\subsection{ARMA-GARCH Benchmark} \label{sec:ARMAGARCH-benchmark}
+In this section the distance or dissimilarity measures discussed in this article are formally defined. It's important to distinguish the price of a stock versus its return since the distance measures discussed below do not always apply to the same representation of data. All upper-case variables are assumed to be invoiced in the price of the stock while lower-case variables are assumed to be return values. If $S_{t}$ is the spot price of a stock at time $t$ then the return on a stock from date $t-1$ to $t$ is defined as the log difference between consecutive spot prices.
 
-To benchmark the competing measures, a procedure is designed to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standardized residuals for each stock. For model validation, I will follow the same process as in section 4.3 of \cite{DowiakTV-COP}. Each model is checked to see if it is well specified and that the model residuals are abiding by the independent and identical distribution assumptions.
-
-Define the return as $X_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)$, where $S_{t}$ is the spot price at time $t$. The conditional mean for the log-returns can be formulated by the following ARMA process:
-
-\begin{equation} \label{eqn:marginalModel}
-    x_{t} = \mu_{t} + \epsilon_{t}
+\begin{equation} \label{eq:log_return_def}
+    x_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)
 \end{equation}
 
-\begin{equation} \label{eq:conditional_mean}
-    \mu_{t} = \mu(\phi, \theta, x_{\{s:\, s < t\}}, \varepsilon_{\{s:\, s < t\}}) = \phi_{0} + \sum_{i=1}^{p} \phi_{i} x_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j} + \varepsilon_{t}
+ Correlatation is applied to a stock's return series while euclidean distance and dynamic time warping are applied to a pair of stock's spot price. The decision to apply dynamic time warping to the price level is purposeful. The papers reference here that want to cluser time series usually use the price level or the nominal value of the series. This contrasts with the articles that want to estimate the magnitude of a leading or lagging temporal relationship. These articles typically apply dynamic time warping on the stationary log returns. Since the main focus of this article is on studying the relationship between correlation and dynamic time warping the decision is made to calculate dynamic time warping at the price level for the majority of this article\footnote{The only exception is during a simulation exercise in section \ref{sec:Uncorrelated_white_noise}}.
+
+\subsection{Correlation}
+
+The formal definition of Pearson's correlation was given in the introductory paragraph. It is reproduced here for easy reference. For two series of stock returns $(\boldsymbol{x}, \boldsymbol{y})$ the unadjusted correlation is
+
+\begin{equation} \label{eq:pearsons_rho}
+\rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x})^{2} \sum_{t=1}^{T} (y_{t} - \bar{y})^{2}}}
 \end{equation}
 
-where $\varepsilon_{s}$ is an innovation term that satisfies $E[\varepsilon_{s}] = 0$ and $E[\varepsilon^{2}_{s}] = \sigma^{2}_{s}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH specifications.
+where $\bar{x}$ is the arithmetic mean $\bar{x} = \frac{1}{T}\sum^{T}_{t=1} x_{t}$. This correlation measure is an unconditional one and makes no attempt to control for any explainable variance in the returns of either stock series. In order to support a set of simulation exercises in section \ref{sec:Corr_and_DTW_Relationship} a second, more complex, process will be used to estimate the correlation between to series. The conditional mean and conditional variance of each stock return series will be estimated by the ARMA-GARCH modeling framework. The models, once properly fit, can be used in conjuction with a Copula to estimate a bivariate distribution for a pair of stock returns. A t-Copula, which is characterized by it's correlation and degrees-of-freedom parameters ($\rho, \nu$), is optimized via maximum likelihood.
 
-\begin{equation} \label{eq:conditional_var}
-    \sigma^{2}_{t} = \emph{C}(\varepsilon^{2}_{t-1}, \, \sigma^{2}_{t-1}) + \sum_{j=1}^{m} \alpha_{j} \emph{A}(\varepsilon^{2}_{t - j}) + \sum_{i=1}^{k} \beta_{i} \emph{B}(\sigma^{2}_{t - i})
+\begin{align} \label{eq:t_copula}
+    C_{\boldsymbol{t}} \left(u, w; \rho,\nu \right) &= \boldsymbol{t}_{v}\left(t_{\nu}^{-1}\left(u\right), t_{\nu}^{-1}\left(w\right)\right) \\
+    &= \int_{-\infty}^{t_{\nu}^{-1}\left(u\right)}\int_{-\infty}^{t_{\nu}^{-1}\left(w\right)}q\left(1-\rho\right)^{-\frac{1}{2}}\left[1+\nu^{-1}\left(x^{2}-2\rho xy + y^{2}\right)\right]^{-\left(\nu + 2\right)
+    /2}dxdy \notag
+\end{align}
+
+The values $u$ and $w$ are a transformed representation\footnote{See equation \ref{eq:conditional_distr} in the Appendix} of random variables $x$ and $y$ from equation \ref{eq:pearsons_rho}. The modeled distribution ($g$), conditional mean ($\mu_{t}$), and conditional variance ($\sigma_{t}^{2}$) produced by the ARMA-GARCH framework facilitates this transform. The fitted correlation parameter ($\hat{\rho}_{x, y}$) from this estimation process is used as the second measure of correlation. Greater detail about the ARMA-GARCH modeling strategy used in this article is contained in the Appendix while \cite{DowiakTV-COP} summarizes Copula theory and it's application to foreign exchange rates.
+
+
+
+
+\subsection{Euclidean Distance} \label{sec:euclidean_distance}
+
+An important baseline to compare against dynamic time warping will be euclidean distance. Also referred to as the $L^{2}$-norm, euclidean distance is heavily used in non-finance fields to compare the similarity (or dissimilarity) between a pair of sequential data. It is defined on a pair of series with synchronous time stamps.
+
+\begin{equation} \label{eq:euclidean_distance}
+    ||\boldsymbol{X}, \boldsymbol{Y}||_{2} = \left[ (X_{1} - Y_{1})^{2} + (X_{2} - Y_{2})^{2} + \cdots + (X_{T} - Y_{T})^{2} \right]^{\frac{1}{2}}
 \end{equation}
 
-The conditional mean and variance are used to center and scale the innovation terms.
-
-\begin{equation}
-    z_{t}(\phi, \theta, \alpha, \beta) = \frac{x_{t} - \mu(x_{t-1}, \phi, \theta)}{\sigma(x_{t-1}, \alpha, \beta)}
-\end{equation}
-
-By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta = [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution $g$, and any necessary shape parameters $\lambda$ of the distribution:
-
-\begin{equation} \label{eq:conditional_distr}
-    f(x_{t} | \mu_{t}, \sigma^{2}_{t}, \lambda, \Delta) = \frac{1}{\sigma_{t}} g(z_{t} | \lambda, \Delta)
-\end{equation}
-
-The challenge for automating this process is two-fold. First, the size of the full model space is quite large. To list out all the dimensions that must be considered:
-
-\begin{itemize}
-    \item ARIMA model
-        \begin{itemize}
-            \item Constant term
-            \item Autoregressive order (p)
-            \item Moving average order (q)
-            \item Order of integration (d)
-            \item Seasonal autoregressive order (P)
-            \item Seasonal moving average order (Q)
-            \item Order of seasonal integration (D)
-        \end{itemize}
-        \item GARCH model
-        \begin{itemize}
-            \item Constant term
-            \item Autoregressive order (m)
-            \item Moving average order (k)
-            \item GARCH specification
-            \item Error distribution
-        \end{itemize}
-
-\end{itemize}
-
-A full grid-search over these dimensions is time-consuming and impractical. To reduce the number of specifications in the model set, the fitting procedure takes the following divide-and-conquer approach.
-
-\begin{enumerate}
-    \item \textbf{Estimate the conditional mean independently of the variance model.} Leveraging the work done by Hyndman and Khandakar \cite{HyndmanKhandakar2008AutoArima}, a step-wise strategy is used to search through the ARIMA model space for the best fit, which is evaluated via the Akaike information criterion (AIC). This is accomplished by using the Forecast package \cite{RForecast} running in the R statistical language \cite{RBase}. The following decisions are made: 
-    
-    \begin{itemize}
-        \item Always include a constant term
-        \item Set the integration terms to zero: $d = D = 0$
-    \end{itemize}
-    
-    \item \textbf{Estimate a set of GARCH models.} Set the conditional mean model to the specification found in step 1. Then iterate over every GARCH specification in the model set, re-estimating the combined ARMA and GARCH parameters at the same time for each conditional variance model. This is accomplished by using the rugarch package \cite{Rugarch}. The model set that is searched through considers the following dimensions:
-    
-    \begin{itemize}
-        \item Always include a constant term
-        \item ARCH specification: m = \{1, 2\}
-        \item GARCH specification: k = \{1, 2\}
-        \item Distributions: \emph{g} = \{Normal, Student-t, Skewed Student-t \cite{FernandezSteel1998}\}
-        \item Model Specification: \emph{A}, \emph{B}, \emph{C} = \{Standard GARCH \cite{Bollerslev1986Garch}, gjr-GARCH \cite{GJR1993Garch}, Component GARCH \cite{EngleLee1993APA} \}
-    \end{itemize}
-    
-    With these dimensions, a total of 36 volatility models are available to choose from.
-
-    \item \textbf{Select the best model specification.} The fitted residuals of a model are checked against a battery of tests to confirm the independent and identical assumptions as well as to verify the correct distribution has been selected. The tests used include: (a) Moment LM tests to check for any remaining auto-correlation in the first four moments, (b) Kolmogorov-Smirnov test to check the residuals against the chosen theoretical distribution, (c) Hong and Li \cite{HongLi2005} non-parametric density test jointly for i.i.d and correct distribution specification, (d) Shapiro-Wilks \cite{ShapiroWilks1965} test for normality, and (e) Jarque-Bera \cite{JarqueBera1980} test for joint normality for skew and kurtosis.
-    
-    With these tests in hand, finding the best model reduces to selecting the GARCH specification that:
-    
-    \begin{itemize}
-        \item Passes all five distributional tests
-        \item Minimizes the Bayesian information criterion (BIC)
-    \end{itemize}
-
-    If no specifications pass all five tests, then the one that minimizes the BIC across the 36 candidate models is selected.
-
-\end{enumerate}
-
-The specification for the ARMA process is found first independently of the GARCH process. Once the AR(p) and MA(q) orders have been found, this specification is set and remains the same as different volatility models are estimated. Note that the parameter estimates are not held constant, just the specification. For each new GARCH fit, the ARMA parameters are all re-estimated.
-
+Euclidean distance, as defined in equation \ref{eq:euclidean_distance}, serves as benchmark similarity measure where no time elasticity is allowed beween the two series.
 
 \subsection{Dynamic Time Warping} \label{sec:DTW}
 
-Dynamic time warping (DTW) is an alternative method for comparing the association between two discrete time series. It differs from Pearson's correlation measure in that the time indices between the two series at moments of comparison are not constrained to equal each other -- like in Equation (\ref{eq:pearsons_rho}). Time is allowed to stretch and compress before a local cost\footnote{This is the languaged used in \cite{Mueller2007} but other authors use "association", "dissimilarity", or "distance" functions.} $c$ function is applied to the pairs of values from the two time series. This article will adhere to the classic definition of dynamic time warping. For notation this article this article borrows heavily from \cite{Mueller2007}.
+Dynamic time warping (DTW) is an alternative method for comparing the association between two discrete time series. It differs from Pearson's correlation measure in that the time indices between the two series at moments of comparison are not constrained to equal each other -- like in equations \ref{eq:pearsons_rho} and \ref{eq:euclidean_distance}. Time is allowed to stretch and compress before a local cost function is applied to the pairs of values from the two series. This article will adhere to the classic definition of dynamic time warping. For notation this article borrows heavily from \cite{Mueller2007}.
 
 \subsubsection{Algorithm} \label{sec:DTW_Algorithm}
 
-Suppose there are two time series: $x_{t}$ for $t \in [1:T]$ and $y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the time index of one series to the other: $p_{l} = (t_{l}, \, s_{l}) \in [1:T] \times [1:S]$ for $l \in [1:L]$. For each point in the warping path $p_{l}$ there is a cost function quantifying the distance between the values of the series.
+Suppose there are two time series: $X_{t}$ for $t \in [1:T]$ and $Y_{s}$ for $s \in [1:S]$. A \emph{warping path} is a sequence $\boldsymbol{p} = [p_{1},..., p_{L}]$ where each element is a mapping from the time index of one series to the other: $p_{l} = (t_{l}, \, s_{l}) \in [1:T] \times [1:S]$ for $l \in [1:L]$. For each point in the warping path $p_{l}$ there is a cost function quantifying the distance between the values of the series.
 
-\begin{equation}
-    c: x_{t_{l}} \times y_{s_{l}} \rightarrow \mathbb{R}_{\ge 0}
+\begin{equation} \label{eq:local_cost_function}
+    c: X_{t_{l}} \times Y_{s_{l}} \rightarrow \mathbb{R}_{\ge 0}
 \end{equation}
 
-The behaviour of the warping paths do follow some conditions, which are listed below:
+The behavior of the warping paths obey two conditions which are listed below.
 
-\begin{itemize}
-    \item \emph{Boundary Condition}: $p_{1} = (1, 1)$ and $p_{L} = (T, S)$ 
-    \item \emph{Step-Size Condition}: $p_{l} - p_{l - 1} \in \{ (1, 0), (0, 1), (1, 1) \} $
-\end{itemize}
+\begin{align}
+    \text{Boundary Condition:} \quad & p_{1} = (1, 1) \text{ and } p_{L} = (T, S) \\ 
+    \text{Step-Size Condition:} \quad& p_{l} - p_{l - 1} \in \{ (1, 0), (0, 1), (1, 1) \} \label{eq:dtw_condition}
+\end{align}
 
-The boundary condition requires that the first and last indices of the two series are mapped to each other. The step-size condition governs the evolution of the warping path. It ensures a non-decreasing monotonicity in the indices of \emph{both} series such that $t_{i} \le t_{j}$ and $s_{i} \le s_{j}$ if $i \le j$. A $T \times S$ cost matrix can be created that stores the associated cost between all values in the two series:
+The boundary condition requires that the first and last indices of the two series are to be mapped to each other. The step-size condition governs the evolution of the warping path. It ensures a non-decreasing monotonicity in the indices of \emph{both} series such that $t_{i} \le t_{j}$ and $s_{i} \le s_{j}$ if $i \le j$. A $T \times S$ cost matrix can be created that stores the associated cost between all values in the two series:
 
 \begin{equation}
     \mathbf{C}(\boldsymbol{X}, \boldsymbol{Y}) = \left[ 
         \begin{array}{cccc}
-            c(x_{T}, y_{1}) & c(x_{T}, y_{2}) & \cdots & c(x_{T}, y_{S}) \\ 
+            c(X_{T}, Y_{1}) & c(X_{T}, Y_{2}) & \cdots & c(X_{T}, Y_{S}) \\ 
             \vdots          & \vdots          & \vdots & \vdots          \\
-            c(x_{2}, y_{1}) & c(x_{2}, y_{2}) & \cdots & c(x_{2}, y_{S}) \\ 
-            c(x_{1}, y_{1}) & c(x_{1}, y_{2}) & \cdots & c(x_{1}, y_{S})
+            c(X_{2}, Y_{1}) & c(X_{2}, Y_{2}) & \cdots & c(X_{2}, Y_{S}) \\ 
+            c(X_{1}, Y_{1}) & c(X_{1}, Y_{2}) & \cdots & c(X_{1}, Y_{S})
     \end{array}\right]
 \end{equation}
 
-A warping path's total cost is the sum of the local costs it incurs as it travels from the start of the series (bottom left of $\boldsymbol{C}$) to their end (top right of $\boldsymbol{C}$):
+This article uses squared distance\footnote{$c(X_{i}, Y_{j}) = (X_{i} - Y_{j})^2$} for the local cost function to make it comparable with the euclidean distance defined in section \ref{sec:euclidean_distance}. A warping path's total cost is the sum of the local costs it incurs as it travels from the start of the series (bottom left of $\boldsymbol{C}$) to their end (top right of $\boldsymbol{C}$):
 
 \begin{equation} \label{eq:dtw_cost_matrix_definition}
-    \mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) = \sum^{L}_{l=1} c(x_{t_{l}},\, y_{s_{l}})
+    \mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) = \sum^{L}_{l=1} c(X_{t_{l}},\, Y_{s_{l}})
 \end{equation}
 
-There are many permissable\footnote{Permissable as governed by the boundary and step conditions} warping paths between two series. In fact the number of permissable paths has exponential growth in the values of $T$ and $S$. The aim during optimization is to find the warping path that minimizes the total cost. If the set of all warping paths are denoted $\mathbb{P}(\boldsymbol{X}, \boldsymbol{Y})$ then the value of the optimal warping path has the property
+There are many admissable\footnote{Admissable as governed by the boundary and step conditions} warping paths between the two series. The aim during optimization is to find the warping path that minimizes the total cost. If the set of all warping paths are denoted $\mathbb{P}(\boldsymbol{X}, \boldsymbol{Y})$ then the value of the optimal warping path has the property
 
 \begin{equation}
     \mathbb{c}_{\boldsymbol{p}^{*}}(\boldsymbol{X}, \boldsymbol{Y}) \le \mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) \,\, \textrm{for all} \,\, \boldsymbol{p} \in \mathbb{P}(\boldsymbol{X}, \boldsymbol{Y})
 \end{equation}
 
-and the value of the DTW measure between $\boldsymbol{X}$ and $\boldsymbol{Y}$ is set to $\mathbb{c}_{\boldsymbol{p^{*}}}(\boldsymbol{X}, \boldsymbol{Y})$. An interested party could solve this optimization problem by estimating the total cost of all warping paths and select the one that minimizes this value. The challenge though is efficient computation. Since the number of warping paths grows exponentially the compuational time needed to check every warping path becomes problematic for large series. The proposed solution is to leverage \emph{dynamic programming} to reduce the computational time needed to find the optimal solution. Instead of dealing with exponential growth of permissable warping paths the DTW algorithm can find the optimal warping path in $\mathcal{O}(TS)$ calculations. To do so an \emph{accumulated cost matrix} $\boldsymbol{A}$ needs to be defined. The accumulated cost matrix has the same dimension as the cost matrix. Defining $A_{t,s}$ as the value of $\boldsymbol{A}$ at the $t^{th}$ row and the $s^{th}$ column of the accumulated cost matrix, the matrix has the following three identities:
+and the value of the DTW measure between $\boldsymbol{X}$ and $\boldsymbol{Y}$ is set to $\mathbb{c}_{\boldsymbol{p^{*}}}(\boldsymbol{X}, \boldsymbol{Y})$. An interested party could solve this optimization problem by estimating the total cost of all warping paths and select the one that minimizes this value. The challenge though is efficient computation. Since the number of warping paths grows exponentially in $T$ and $S$, the computation time needed to check every warping path becomes problematic for large series.
 
-\begin{equation}
-    A_{t,1} = \sum^{t}_{k=1} c(x_{k}, y_{1}) \,\, \textrm{for} \,\, t \in [1:T]
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{dtw_plot_cost_and_accum_cost.jpeg}
+    \caption{The left image is the cost matrix for the first ten values of the Teradyne and Lam Research stock prices after standardization. The local cost function is the euclidean distance. The right image is the accumulative cost matrix for the same sequence of prices. The \textit{optimal warping path} is annotated with white outlines. The gray shading tracks the range of values in each matrix. Darker shades of gray represent smaller values while lighter shades of gray represents larger values. Note that the scale of shading is not uniform across images.}
+    \label{fig:dtw_plot_cost_and_accum_cost}
+\end{figure}
+
+The proposed solution is to leverage \emph{dynamic programming} to reduce the computational needed to find the optimal solution. Instead of dealing with exponential growth of warping paths the dynamict time warping algorithm is designed to find the optimal warping path in $\mathcal{O}(TS)$ calculations. To do so an \emph{accumulated cost matrix} $\boldsymbol{A}$ needs to be defined. The accumulated cost matrix has the same dimension as the cost matrix. Defining $A_{t,s}$ as the value of $\boldsymbol{A}$ at the $t^{th}$ row and the $s^{th}$ column of the accumulated cost matrix, the matrix has the following three identities:
+
+\begin{equation} \label{eq:dtw_accum_cost_x_axis}
+    A_{t,1} = \sum^{t}_{k=1} c(X_{k}, Y_{1}) \,\, \textrm{for} \,\, t \in [1:T]
 \end{equation}
 
-\begin{equation}
-    A_{1,s} = \sum^{s}_{k=1} c(x_{1}, y_{k}) \,\, \textrm{for} \,\, s \in [1:S]
+\begin{equation} \label{eq:dtw_accum_cost_y_axis}
+    A_{1,s} = \sum^{s}_{k=1} c(X_{1}, Y_{k}) \,\, \textrm{for} \,\, s \in [1:S]
 \end{equation}
 
-\begin{equation}
-    A_{t, s} = c(x_{t}, y_{s}) + \min\left(A_{t-1, s-1}, \, A_{t-1, s}, \, A_{t, s-1}\right)
+\begin{equation} \label{eq:dtw_recursive_calculation}
+    A_{t, s} = c(X_{t}, Y_{s}) + \min\left(A_{t-1, s-1}, \, A_{t-1, s}, \, A_{t, s-1}\right)
 \end{equation}
 
 With this definition of the accumulative cost matrix the optimal warping path can be found by the following recursive procedure:
@@ -316,67 +272,22 @@ With this definition of the accumulative cost matrix the optimal warping path ca
                                             \argmin \left[ A_{t-1, s-1},\, A_{t, s-1},\, A_{t-1, s} \right] & \textrm{otherwise} \end{cases}$
 \end{enumerate}
 
-\subsubsection{Common Extensions}
-
-There are numerous modifications of the original DTW diverse set of industries and domains but applications to financial or economics are relatively sparse. Most are applied to:
-
-
-The definition of the DTW in section \ref{sec:DTW_Algorithm} is an unconstrained one without restrictions beyond the boundary and step-size conditions. Most applications of dynamic time-warping constrain the extent of time distoration in some way. From a finance and macroeconomic perspective there are reasonable arguments for a limit as well. New information in markets dissipates over time.
-
-Unit root behavior is a common challenge in the finance and macro-economic fields and it's presence brings unique challenges to interpreting the DTW value and making reliable inferences about stock behaviour. 
-
-\begin{itemize}
-    \item Temporal weight approaches
-        \begin{itemize}
-            \item \parencite{JEONG20112231}
-            \item This article if we choose a weighting function suitable for 
-        \end{itemize}
-    \item Step-Size Constraints
-        \begin{itemize}
-            \item Sakoe and Chiba (1978)
-        \end{itemize}
-    \item Global Bounds
-        \begin{itemize}
-            \item Sakoe-Chiba Band, Itakura Parallelogram
-        \end{itemize}
-\end{itemize}
-
-This article uses the Sakoe Chiba Band with a 15 day window (3 weeks of daily trading data)
-
-\subsubsection{Example}
-
-To put these concepts into practice the dynamic time warping algorithm will be demonstrated on the stock prices for Agilent Technologies (A) and General Electric (GE) from the first half of 2019. Instead of the original price level the series will be standardized by setting the price on January 2, 2019 equal to one. Figure \ref{fig:dtw_plot_stock_price_index_matching} summarizes the price movement of these two stocks and shows which price values are matched together by their optimal warping path. Figure \ref{fig:dtw_plot_warping_between_agilent_and_ge} displays the full optimal warping paths and discusses the influence of boundary and step-size conditions on it's shape. Figure \ref{fig:dtw_plot_cost_and_accum_cost} displays the cost and accumulated cost matrices for the first ten days of the two series. The optimal warping path is annotated in both.
+One more condition is added to this article's application of dynamic time warping. The maximum warping distance between the two return series no greater than 15 trading days. This type of global constraint is called a Sakoe-Chiba band \parencite{SakoeChiba_IEEE_1978} and is frequently used for it's simplicity and it's performance \parencite{geler2019dynamic}. Most applications of dynamic time-warping constrain the extent of time distoration in some way. From a finance and macroeconomic perspective there are reasonable arguments for a limit as well. The value of new information in markets dissipates quickly over time.
 
 \begin{figure}
     \centering
-    \includegraphics[width=\textwidth]{dtw_plot_stock_price_index_matching.jpeg}
-    \caption{This figures shows a normalized view of the Agilent and GE stock price for the first half of 2019. The normalization divides the stock price by it's value on the first market day of the year, January 2nd, 2019. Dynamic time warping is applied on the standardized series. The total length is 124 days ending on June 28th. The dashed gray lines connect elements of the index pair in the optimized warping path. The DTW finds the warping path that has the least total cost.}
+    \includegraphics[width=\textwidth]{Distance_Measure_Quad_Plot.png}
+    \caption{These figures record an unusual case of a stock pair with strong positive correlation but a large dynamic time warping distance. All figures summarize data on Teradyne Inc. (TER) and Lam Research Corp. (LRCX) stock for the 2021 calendar year. \textbf{Top-Left} This figure shows the cumlulative return of Teradyne Inc. and Lam Research Corp. The line segements connect the indicies from the optimal warping path. The algorithm is run on the cumulative return series (see equation \ref{eq:standard_price}) of each stock in the pair. A 15-day Sakoe-Chiba window provides a global constraint. \textbf{Bottom-Left} The same cumulative price chart as the top-left but with Euclidean line segments. The line segments are vertical because there is no time dilation. The euclidean distance between the pair's normalized prices is 3.345. \textbf{Top-Rigt} A scatter-plot of un-modeled log-returns. The sample pearson correlation is 0.84. \textbf{Bottom-Right}. The fitted conditional variance from each series' esitmated ARMA-GARCH model.}
     \label{fig:dtw_plot_stock_price_index_matching}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{dtw_plot_warping_between_agilent_and_ge.jpeg}
-    \caption{This figure displays the full warping path between Agilent and GE stock prices in the first half of 2019. The two peripheral images show their respective standardized stock prices while the central image traces the warping path as it connects the indicies of the two series. The influence of the step-condition is seen immediately in the marginal increments of the path. They are non-decreasing. This allows time to "stretch" but not be put into reverse. At the end of the warping path (top right part of the image) the boundary condition becomes binding--seen by the vertical line at the tail end--as the last index in GE's series is reached before the last index of Agilent's.}
-    \label{fig:dtw_plot_warping_between_agilent_and_ge}
-\end{figure}
+\subsubsection{Extended Discussion}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{dtw_plot_cost_and_accum_cost.jpeg}
-    \caption{The left image is the cost matrix for the first ten values of the Agilent and GE stock prices after standardization. The local cost function is the euclidean distance. The right image is the accumulative cost matrix for the same sequence of prices. The optimal warping path is annotated with white outlines. The gray shading tracks the range of values in each matrix. Darker shades of gray represent smaller values while lighter shades of gray represents larger values. Note that the scale of shading is not uniform across images.}
-    \label{fig:dtw_plot_cost_and_accum_cost}
-\end{figure}
+The details in section \ref{sec:DTW_Algorithm} describe the classic dynamic time warping used in this article. There are numerous variations and extensions that have been discussed that touch on every facet of the algorithm. The boundary condition can be relaxed and the step-condition can be altered to change the local constraints at each step of the dynamic programming procedure \parencite{SakoeChiba_IEEE_1978}. Weighting the local cost value in equations \ref{eq:dtw_cost_matrix_definition} - \ref{eq:dtw_recursive_calculation} as a function of the time difference between the two return values has been a popular approach in financial applications, especially when trying to estimate a constant temporal relationship\footnote{The warping path from equation \ref{eq:dtw_cost_matrix_definition} with multiplicative weights could have the following definition: $\mathbb{c}_{\boldsymbol{p}}(\boldsymbol{X}, \boldsymbol{Y}) = \sum^{L}_{l=1} c(X_{t_{l}},\, Y_{s_{l}}) \cdot \omega(|t_{l} - s_{l}|)$}. Curiously, additive weights are the prefered scheme when looking to optimize cluster performance \parencite{PETITJEAN2011678, Petitjean_et_al_2016}. Aside from local constraints, global restrictions, like the Sakoe-Chiba band discussed at the end of section \ref{sec:DTW_Algorithm}, can be used to restrict the total amount of warping allowed between two series \parencite{Itakura_1975, SakoeChiba_IEEE_1978, Mueller2007}. 
 
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=\textwidth]{dtw_plot_cost_matrix_topography.jpeg}
-%     \caption{This figure displays the optimal alignment between Aligent and GE stock return series. The topology lines are based on the % cost matrix. From this view the warping path (in blue) is a "valley of least cost" traversing the local cost landscape.}
-%     \label{fig:dtw_plot_cost_matrix_topography}
-% \end{figure}
+\subsection{Examples}
 
-
-\pagebreak
+To put these concepts into practice the dynamic time warping algorithm will be demonstrated on the stock prices for Teradyne Inc. (TER) and Lam Research Corp. (LRCX) for the 2021 calendar year. Instead of the original stock price each series is normalized by calculating the cumulative return of each stock's log-returns using equation \ref{eq:standard_price}. Figure \ref{fig:dtw_plot_cost_and_accum_cost} displays the cost matrix and accumulated cost matrix for the first ten trading days of the two series. The optimal warping path is annotated by the sequence of boxes outlined in white. Figure \ref{fig:dtw_plot_stock_price_index_matching} provides four graphs summarizing topics covered in this section. The top-left graph shows the cumulative return of Teradyne Inc. and Lam Research Corp. stock with line segements connecting the indicies from the optimal warping path. The algorithm is run on the pair's cumulative return series (see equation \ref{eq:standard_price}). A 15-day Sakoe-Chiba window provides a global constraint. The bottom-left graph is the same as the top-left but contains vertical line segments between synchronous points in time. The euclidean distance between the pair's normalized prices is 3.345. \textbf{Top-Rigt} A scatter-plot of un-modeled log-returns. The sample pearson correlation is 0.84. \textbf{Bottom-Right}. The fitted conditional variance from each series' esitmated ARMA-GARCH model.
 
 
 \section{Pair Trading} \label{sec:PairTrading}
@@ -384,7 +295,7 @@ To put these concepts into practice the dynamic time warping algorithm will be d
 
 One way to compare these measures is putting them to practical use. In this section a simple trading strategy is described that centers around finding "similar" pairs of stocks and trading off the expectation that any major short term deviations in their (normalized) prices are eventually unwound before the end of the trading period. For this trade strategy the critical decision is how to select pairs of stocks and what criterion to use for similarity. In this section we directly compare the returns of portfolios formed using correlation against portfolio returns that use dynamic time warping and euclidean distance to measure similarity. If the returns to using dynamic time warping to form trading pairs are materially different than returns from a correlation based approach it could help us understand whether this metric can provide meaningful information to use in the analysis of stock returns.
 
-The specifics of this pair trading strategy are the same as the approach taken by \cite{Gatev_et_al_2006}. The execution of this strategy takes place in two parts: a \textit{formation period} where a trader will create a portfolio of stock pairs and the \textit{trading period} where the trader will buy and sell those pairs according to a defined set of market signals. This experiment is not carried out because of high expected returns, especially in the context of our modern trading environment. The rise of high frequency trading in the 1990's and 2000's has created the financial infrastructure that sees arbitrage opportunities resolved in microseconds\footcite[See][for a more detailed ]{Aquilina_et_al_2021}. This article studies stock returns captured at a daily frequency and is at a natural disadvantage in comparison. In addition \cite{Gatev_et_al_2006} was published close to two decades ago in a widely read finance journal making its recipe part of the established canon. The benefits to using this particular trading strategy is that it provides a suitable context to directly compare the impact of using dynamic time warping -- instead of correlation -- to identify the "similar" pairs to trade.
+The specifics of this pair trading strategy are the same as the approach taken by \cite{Gatev_et_al_2006}. The execution of this strategy takes place in two parts: a \textit{formation period} where a trader will create a portfolio of stock pairs and the \textit{trading period} where the trader will buy and sell those pairs according to a defined set of market signals. This experiment is not carried out because of high expected returns, especially in the context of our modern trading environment. The rise of high frequency trading in the 1990's and 2000's has created the financial infrastructure that sees arbitrage opportunities resolved in microseconds\parencite{Aquilina_et_al_2021}. This article studies stock returns captured at a daily frequency and is at a natural disadvantage in comparison. In addition \cite{Gatev_et_al_2006} was published close to two decades ago in a widely read finance journal making its recipe part of the established canon. The benefits to using this particular trading strategy is that it provides a suitable context to directly compare the impact of using dynamic time warping -- instead of correlation -- to identify the "similar" pairs to trade.
 
 \subsection{Trading Strategy}
 
@@ -403,13 +314,12 @@ After pair selection the trader again uses the price history in the formation pe
 After price normalization, four different portfolio collections are created based on how we want to measure similarity. In this article, the cost function used in the dynanimc time warping function is the $L^{2}$-norm. (see section \ref{sec:DTW} and equation \ref{eq:dtw_cost_matrix_definition}) is 
 
 
-As mentioned before the central task of this section is to compare the performance of portfolios whose pairs are selected using correlation versus pairs that are formed using dynamic time warping. gainst  this section is evaluating is how to form There are different methods for chosing the association measure:
+As mentioned before the central task of this section is to compare the performance of portfolios whose pairs are selected using correlation versus pairs that are formed using dynamic time warping. gainst  this section is evaluating is how to formThere are different methods for chosing the association measure:
 
 \begin{enumerate}
     \item Unadjusted Correlation: Measure closeness via correlation. Use static (unconditional) distributions and a two standard deviation threshold on the cumulative return differential as a signal to open positions.
-    \item Model Correlation 1: Model the returns using the ARIMA approach. This approach will enable the trader to study the return distribution of the market and possibly control for  non-normality . Measure closeness on the fitted residuals. Use rolling mean/variance values to calculate adjusted threshold during trading period
-    \item Model Correlation 2: Model the univariate returns using the ARIMA-GARCH framework. This approach will enable the trader to study the return distribution of the market and control for any deviations from normality that commonly occur in finance. These deviations (from the Guassian benchmark) include return distributions that exhibit fat tails, asymmetry, and/or volatility clustering. For a given formation period we only consider stocks that have successfully passed a battery of diagnostics that test the fit of the ARIMA-GARCH model. In addition, this restriction to stocks with well-fitted ARIMA-GARGH specifications applies to portfolios formed using any one of the four approaches.
-    \item Euclidean Distance: Used as a practical baseline for multiple reasons. First, \cite{Gatev_et_al_2006} using euclidean distance in their pair trading strategy and including it will allow for direct comparison. Second, euclidean distance can serve as benchmark to test what gains can be acheived if any time elasticity is present in the a stock pair's return evolution.
+    \item Model Correlation: Model the univariate returns using the ARIMA-GARCH framework. This approach will enable the trader to study the return distribution of the market and control for any deviations from normality that commonly occur in finance. These deviations (from the Guassian benchmark) include return distributions that exhibit fat tails, asymmetry, and/or volatility clustering. For a given formation period we only consider stocks that have successfully passed a battery of diagnostics that test the fit of the ARIMA-GARCH model. In addition, this restriction to stocks with well-fitted ARIMA-GARGH specifications applies to portfolios formed using any one of the four approaches.
+    \item Euclidean Distance, a: Used as a practical baseline for multiple reasons. First, \cite{Gatev_et_al_2006} using euclidean distance in their pair trading strategy and including it will allow for direct comparison.
     \item Dynamic Time Warping: Calculate the DTW metric between the cumulative returns of the pairs. Use synchronous L1 value and the two standard deviation signal to open positions.
 \end{enumerate}
 
@@ -423,7 +333,7 @@ Given a single stock pair in a trader's portfolio a position is opened if the pr
 Hot takes on the return table:
 \begin{itemize}
     \item For the correlation-based pair strategy there is benefit diversification. The standard deviation of the portfolio return decreases going from the top 25 to top 50. This does not hold true for the return distribution of the portfolio created with pairs formed with dtw.
-    \item As expected there does not appear to be significant arbitrage opportunities arbitrage opportunities 
+    \item As expected there does not appear to be significant arbitrage opportunities arbitrage opportunities. It's a bit surprising that dynamic time warping 
 \end{itemize}
 - For the correlation-based pair strategy there is benefit to 
 
@@ -499,7 +409,7 @@ Hot takes on the return table:
     \begin{tablenotes}
         \item{\footnotesize Three different measures of portfolio returns are summarized in this table. Section I records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. Section II of the table records fully invested returns where the total return of the portfolio during the trading period is devided by the number of pairs selected to trade. Section III records the annual return of the portfolio if the trader simply goes long in each pair at the beginning of the trading period.}
         \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
-        \item{\footnotesize $^{1}$Standard errors are Newey-West estimates and significant values are } 
+        \item{\footnotesize $^{1}$Standard errors are Newey-West estimates and significant values are for normally distributed tails.} 
     \end{tablenotes}
 \end{table}
 
@@ -607,8 +517,21 @@ Hot takes on the return table:
     \end{figure}
 \end{landscape}
 
-\section{Simulation Results}
-In order to gauge the relationship between the DGP process of two time series and their resulting DTW value we turn to simulation. For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
+\section{Testing for a Relationship Between Correlation and DTW} \label{sec:Corr_and_DTW_Relationship}
+
+In order to gauge the relationship between the DGP process of two time series and their resulting DTW value this article turns to simulation. There reason to turn to simulation is a simple one: at the time of writing, the authors have found no existing theory on the convergance of DTW when applied to time series that exhibit brownian motion, random walk, or other non-stationary behaviour. This may be due to the fact that dynamic time warping is not a valid metric. Although DTW takes non-negative values and is symmetric\footnote{Symmetry is not always guranteed. This article uses a symmetric cost function and a symmetric step-condition (see equation \ref{eq:local_cost_function} and condition \ref{eq:dtw_condition}). See one of the early authoritative works for a detailed discussion on global constraints and step-conditions \cite{SakoeChiba_IEEE_1978}.}, there is no gurantee that it satisfies the triangle inequality, $d(x, z) \leq d(x, y) + d(y, z)$. 
+
+A rigorous approach would require specifying  functional central limit theorem that is appropriate 
+
+Points to make:
+\begin{enumerate}
+    \item Dyamic time warping is not a metric. 
+    \item The sample is created by stratifying across the observed correlation parameter. The range of correlation values is segmented into adjacent bins with a uniform width set to 0.05, e.g: [1, 0.95), [0.95, 0.9), ..., [-0.6, -0.65). For each bin 300 hundred stock pairs or randomly sampled. If a bin has less than 300 pairs then all pairs in that bin are included.
+\end{enumerate}
+
+\subsection{Uncorrelated White Noise and Random Walks} \label{sec:Uncorrelated_white_noise}
+
+For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
 
 \begin{equation}
     X_{t} = \omega + \epsilon_{t} \qquad \epsilon_{t} \thicksim \mathcal{N}(0, \sigma^{2})
@@ -620,48 +543,39 @@ This stationary process represents a simplified ARIMA-GARCH model, replacing the
     X_{t} = \omega + X_{t-1} + \epsilon_{t} \qquad \epsilon_{t} \thicksim \mathcal{N}(0, \sigma^{2})
 \end{equation}
 
-From equation (\ref{eq:random_walk}) at any time $t$ we know both the expectation and the variance of both random walk processes:
+From equation \ref{eq:random_walk} at any time $t$ we know both the expectation and the variance of both random walk processes:
 
 \begin{equation}
     X_{i,t} \thicksim \mathcal{N}(t\omega_{i}, \, t\sigma_{i}^{2})
 \end{equation}
 
-A random walk temporal weighting function could have the following form:
 
-\begin{equation}
-    \omega_{t, s} = \lvert t - s \rvert \sqrt{ \sigma_{A,\, t} \sigma_{B,\, s} }
-\end{equation}
+\subsection{Monte Carlo Simulation based on the ARIMA-GARCH Framework} \label{sec:MC_sim_arma_garch}
 
-\begin{equation}
-    \omega_{t, s} = \rho \lvert t - s \rvert \sigma_{A,\, t} \sigma_{B,\, s}
-\end{equation}
+In section \ref{sec:PairTrading} a total of 10,018 ARIMA-GARCH models were estimated during the formation periods from 2000 to 2021 where each model was trained on a single year's worth of trading data. From these ten thousand marginal models a total of 2,199,276 pairs were formed and estimates of the pair's correlation and dynamic time warping distance were calculated over the duration of the study. These observed stock returns and the models optimized on top of them provide a diverse sample to study what, if any, relationship exists between correlation and dynamic time warping when estimtated on the same pair of stock price returns. Common sense would suggest that dynamic time warping values should be at their lowest when the correlation of the stock returns of the pair are at their highest, implying a negative relationship between the two. In the special case where the log price returns are perfectly correlated then the dynamic time warping value should be equal to zero. While this section does lay out evidence comfirming a negative relationship between the two we find that the variance of DTW values is significance at all levels of correlation. 
 
-\begin{equation}
-    \omega(t, s) = \sum_{k=1}^{|t-s|} \beta^{|t-s|} \left( \sigma^{2}_{A,\, t} + \sigma^{2}_{B,\,s} \right)
-\end{equation}
+Points to make:
+\begin{enumerate}
+    \item The sample is created by stratifying across the observed correlation parameter. The range of correlation values is segmented into adjacent bins with a uniform width set to 0.05, e.g: [1, 0.95), [0.95, 0.9), ..., [-0.6, -0.65). For each bin 300 hundred stock pairs or randomly sampled. If a bin has less than 300 pairs then all pairs in that bin are included.
+\end{enumerate}
 
-
-\subsection{A Relationship Between Correlation and DTW?}
-
-In section \ref{sec:PairTrading} a total of 10,018 ARIMA-GARCH models were estimated during the formation periods from 2000 to 2021 where each model was trained on a single year's worth of trading data. From these ten thousand marginal models a total of 2,199,276 pairs were formed and estimates of the pair's correlation and dynamic time warping distance were calculated over the duration of the study.
-
-These estimated models, combined with Copula theory, can be leveraged to study the range of dynamic time warping values that can be expected for a pair of stocks with a specific level of correlation (See section 2.3.1 of \cite{DowiakTV-COP} for more details on copulas and their applications). The simulation exercise has the following steps.
+These estimated models, combined with Copula theory, can be leveraged to study the range of dynamic time warping values that can be expected for a pair of stocks with a specific level of correlation (See section 2 of \cite{DowiakTV-COP} for more details on copulas and their applications). The simulation exercise has the following steps.
 
 \begin{enumerate}
     \item For two arbitrary stocks, $A$ and $B$, the conditional mean, conditionl variance, and conditional density of the returns are recorded for each asset: $\hat{\mu}_{A,\,t}$, $\hat{\sigma}^{2}_{A,\,t}$, $\hat{g}_{A}$, and $\hat{\mu}_{B,\,t}$, $\hat{\sigma}^{2}_{B,\,t}$, $\hat{g}_{B}$ (see equations \ref{eq:conditional_mean}, \ref{eq:conditional_var}, and \ref{eq:conditional_distr} from section \ref{sec:ARMAGARCH-benchmark}).
     \item The probability integral transform is used to reformulate each marginal model's fitted residuals as a sample from the uniform distribution.
-    \begin{equation} \nonumber
+    \begin{equation} \label{eq:MC_F_distr_A}
         \hat{U}_{A} = \hat{F}_{A}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{A,\,t}} \hat{g}_{A} \left(z | \hat{\mu}_{t}\right) dz
     \end{equation}
-    \begin{equation} \nonumber
+    \begin{equation} \label{eq:MC_F_distr_B}
         \hat{U}_{B} = \hat{F}_{B}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{B,\,t}} \hat{g}_{B} \left(z | \hat{\mu}_{t}\right) dz
     \end{equation}
     The residuals, in their uniform representation [($\hat{u}_{A,\,1}$, $\hat{u}_{B,\,1}$), $\cdots$, ($\hat{u}_{A,\,T}$, $\hat{u}_{B,\,T}$)], are used to estimate a bivariate t-Copula which is defined by it's correlation $\rho_{A,B}$ and degrees-of-freedom $\nu_{A,B}$ parameters.
     \item The estimated t-Copula is used as a data generating process to produce new sets of bivariate uniform distributions [($u^{(i)}_{A,\,1}$, $u^{(i)}_{B,\,1}$), $\cdots$, ($u^{(i)}_{A,\,T}$, $u^{(i)}_{B,\,T}$)]. Each observation $t$ in a new sample is centered and scaled according to the conditional mean and variance from the estimated ARIMA-GARCH models.
-    \begin{equation} \nonumber
+    \begin{equation} \label{eq:MC_invF_distr_A}
         r^{(i)}_{A,\,t} = \hat{F}^{-1}_{A} \left(u^{(i)}_{A,\,t}\,\,;\,\, \mu=\hat{\mu}_{A,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{A,\,t} \right)
     \end{equation}
-    \begin{equation} \nonumber
+    \begin{equation} \label{eq:MC_invF_distr_B}
         r^{(i)}_{B,\,t} = \hat{F}^{-1}_{B} \left(u^{(i)}_{B,\,t}\,\,;\,\, \mu=\hat{\mu}_{B,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{B,\,t} \right)
     \end{equation}
     \item After a new set of return series are generated they are transformed from returns to price level using the standard price equation \ref{eq:standard_price}.
@@ -670,18 +584,47 @@ These estimated models, combined with Copula theory, can be leveraged to study t
 
 By marrying the conditional return models with a copula-based resampling approach many of the important characteristics of stock returns can be included in the monte carlo samples. These include auto-correlation, asymmetric returns, fat-tails, and volatility clustering observed in individual stocks as well as high levels of correlation in price movements between stocks over time. The original association and tail-dependency observed in the stock pairs is preserved by the copula while the unique idiosyncracies (See section \ref{sec:ARMAGARCH-benchmark}) of each stock is retained by the marginal models. This leaves only the natural variation of the distribution $g$ to drive the variation in the dynamic time warping values calculated in step 4. Assuming multivariate t-distributions for this simulation exercise is well founded. In the model selection process described in section \ref{sec:ARMAGARCH-benchmark} The t-distribution is chosen for all 10,018 marginal models in this study. The symmetric t-distribution is chosen 9324 times while the remaining 694 models are modeled with a skewed t-distribution.
 
+This article finds evidence that modeling the conditional mean and especially the conditional variance is materially important if the researcher wants to perform bootstrapped confidence intervals
+
+
+\begin{table}
+    \fontsize{11pt}{11pt}\selectfont
+    \centering
+    \begin{tabular}{r r r r r r r r r r}
+        \hline
+                          & \multicolumn{4}{c}{Time-Varying Mean Pair$^{1}$} & & \multicolumn{4}{c}{Constant Mean Pair$^{1}$} \\ \cline{2-10}
+                          & 1\%   & 5\%   & 10\%  & N     & & 1\%   & 5\%    & 10\%  & N  \\
+        Unconditional     & 0.108 & 0.151 & 0.190 & 5,087 & & 0.074 &  0.115 & 0.158 & 4,666 \\
+        Cond Mean         & 0.114 & 0.161 & 0.203 & 5,087 & &    -- &     -- &    -- &   -- \\
+        Cond Var          & 0.020 & 0.052 & 0.087 & 5,087 & & 0.022 &  0.055 & 0.090 & 2,333 \\
+        Cond Mean and Var & 0.026 & 0.061 & 0.106 & 5,087 & & 0.023 &  0.051 & 0.091 & 2,333 \\
+        \hline
+    \end{tabular}
+    \caption{Percent Violations of Monte Carlo Confidence Intervals}
+    \begin{tablenotes}
+        \item{The values in the table represent the proportion of randomly sampled stock pairs from section \ref{sec:PairTrading} whose observed dynamic warping value falls outside the Monte Carlos confidence intervals constructed using the simulation approach described in section \ref{sec:MC_sim_arma_garch}. The left set of columns summarizes stock pairs where one or more of the stocks in the pair were chosen to have an autoregressive or moving average componennt in their mean equation (see equation \ref{eq:conditional_mean}). The set of columns on the right are for pairs where both stocks were modeled with intercept terms only. In this case the conditional mean and the unconditional mean are the same. Rows correspond to different model assumptions when simulating new pairs of return series described in equations \ref{eq:MC_invF_distr_A} annd \ref{eq:MC_invF_distr_B}.}
+        \item B = 250; Relatively small number of bootstraps helps explain the one percent
+    \end{tablenotes}
+    \label{tbl:monte_carlo_confidence_intervals}
+\end{table}
+
 
 \begin{table}
     \centering
     \begin{tabular}{l r l r l}
          & Estimate & Std Err & Estimate & Std Err \\
         \hline
+        \vspace{-1mm} \\
+        Dependent Var.  & log(dtw)&                 & log(dtw)&                 \\
+        \\
         Intercept       &   3.496 &  0.014{$^{**}$} &   3.552 & 0.043{$^{**}$}  \\
-        Abs Mean Diff   & 305.712 &  7.101{$^{**}$} & 275.777 & 7.383{$^{**}$}  \\
+        Abs-Mean-Diff   & 305.712 &  7.101{$^{**}$} & 275.777 & 7.383{$^{**}$}  \\
+        % TODO: Sum-of-Variance
         Mean Variance   &   0.892 &  0.246{$^{**}$} &   0.490 & 0.244{$^{*}$}   \\
+        % TODO: Change to Model-Cor
         1 - model cor 1 &  39.989 &  1.062{$^{**}$} &  50.439 & 1.344{$^{**}$}  \\
         1 - model cor 2 & -17.317 &  0.880{$^{**}$} & -18.608 & 0.916{$^{**}$}  \\
-        Intra Sector    &  -0.019 &  0.030{$^{  }$} &   0.071 & 0.030{$^{*}$}   \\
+        Intra-Sector    &  -0.019 &  0.030{$^{  }$} &   0.071 & 0.030{$^{*}$}   \\
         2001            &      -- &              -- &   0.058 & 0.055           \\
         2002            &      -- &              -- &  -0.266 & 0.074{$^{**}$}  \\
         2003            &      -- &              -- &   0.046 & 0.075           \\
@@ -705,12 +648,12 @@ By marrying the conditional return models with a copula-based resampling approac
         2021            &      -- &              -- &  -0.040 & 0.047           \\
         2022            &      -- &              -- &   0.165 & 0.053{$^{**}$}  \\
         \vspace{-1mm} \\
+        \hline
     \end{tabular}
     \caption{Relationship between correlation and dynamic time warping}
     \begin{tablenotes}
-        \item{\footnotesize yada yada yada}
+        \item{Regression analysis ran on the correlation between observed correlation and dynamic time warping values for a stratified sample of stock pairs modeled in section \ref{sec:PairTrading}}
         \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
-        \item{\footnotesize $^{1}$Standard errors are Newey-West estimates and significant values are } 
     \end{tablenotes}
     \label{tbl:correlation_to_log_dtw_regression}
 \end{table}
@@ -751,6 +694,7 @@ By marrying the conditional return models with a copula-based resampling approac
         \item {\footnotesize \textbf{Note}: The distributions of the DTW samples are really symmetric. The median and mean remain close in value over all configurations.}
         \item{\footnotesize \textbf{Note}: For the stationary series the deterministic component (distance between the mean values) plays an influencial role in the location of the center of the DTW distribution.}
     \end{tablenotes}
+    \label{tbl:dtw_white_noise}
 \end{table}
 
 \begin{table}[!htb]
@@ -779,6 +723,7 @@ By marrying the conditional return models with a copula-based resampling approac
         \item {\footnotesize \textbf{Note}: The DTW value is divided by the series length (T).}
         \item{\footnotesize \textbf{Note}: }
     \end{tablenotes}
+    \label{tbl:dtw_random_walk_no_drift}
 \end{table}
 
 \begin{table}[!htb]
@@ -813,6 +758,7 @@ By marrying the conditional return models with a copula-based resampling approac
         \item {\footnotesize \textbf{Note}: The distributions are skewed towards larger values of the DTW metric (mean is greater than the median).}
         \item{\footnotesize \textbf{Note}: Compare the last row of each section where variance or the distance between intercepts is set to 16. For the white noise process the strongest factor contributing to the mean DTW value is the difference between the mean values. In comparison, the response to an increase in the variance of either series is muted.}
     \end{tablenotes}
+    \label{tbl:dtw_random_walk_with_drift}
 \end{table}
 
 \begin{figure}[!ht]
@@ -825,6 +771,101 @@ By marrying the conditional return models with a copula-based resampling approac
 
 \pagebreak
 
+\appendix 
+
+\section{ARMA-GARCH Modeling} \label{sec:ARMAGARCH-benchmark}
+
+Discuss 
+To benchmark the competing measures, a procedure is designed to estimate a valid ARMA-GARCH model for the log returns of each member of the S\&P 500. After controlling for the conditional mean (ARMA) and the conditional variance (GARCH) of the stock's DGP, pair-wise correlation values are calculated on the standardized residuals for each stock. For model validation, I will follow the same process as in section 4.3 of \cite{DowiakTV-COP}. Each model is checked to see if it is well specified and that the model residuals are abiding by the independent and identical distribution assumptions.
+
+The conditional mean for the log-returns can be formulated by the following ARMA process:
+
+\begin{equation} \label{eqn:marginalModel}
+    x_{t} = \mu_{t} + \epsilon_{t}
+\end{equation}
+
+\begin{equation} \label{eq:conditional_mean}
+    \mu_{t} = \mu(\phi, \theta, x_{\{s:\, s < t\}}, \varepsilon_{\{s:\, s < t\}}) = \phi_{0} + \sum_{i=1}^{p} \phi_{i} x_{t-i} + \sum_{j=1}^{q} \theta_{j} \, \varepsilon_{t - j} + \varepsilon_{t}
+\end{equation}
+
+where $\varepsilon_{s}$ is an innovation term that satisfies $E[\varepsilon_{s}] = 0$ and $E[\varepsilon^{2}_{s}] = \sigma^{2}_{s}$. The conditional volatility process for the models under consideration can be generalized with the following formula. Functions \emph{A}, \emph{B}, \emph{C} are generic stand-ins that will differ across the various GARCH specifications.
+
+\begin{equation} \label{eq:conditional_var}
+    \sigma^{2}_{t} = \emph{C}(\varepsilon^{2}_{t-1}, \, \sigma^{2}_{t-1}) + \sum_{j=1}^{m} \alpha_{j} \emph{A}(\varepsilon^{2}_{t - j}) + \sum_{i=1}^{k} \beta_{i} \emph{B}(\sigma^{2}_{t - i})
+\end{equation}
+
+The conditional mean and variance are used to center and scale the innovation terms.
+
+\begin{equation} \label{eq:z_score_returns}
+    z_{t}(\phi, \theta, \alpha, \beta) = \frac{x_{t} - \mu(x_{t-1}, \phi, \theta)}{\sigma(x_{t-1}, \alpha, \beta)}
+\end{equation}
+
+By collecting all the parameters in the conditional mean and variance equations into one vector $\Delta = [\phi, \theta, \alpha, \beta]$, the functional form for the error terms $f$ can be written as a product of $\Delta$, the chosen error distribution $g$, and any necessary shape parameters $\lambda$ of the distribution:
+
+\begin{equation} \label{eq:conditional_distr}
+    f(x_{t} | \mu_{t}, \sigma^{2}_{t}, \lambda, \Delta) = \frac{1}{\sigma_{t}} g(z_{t} | \lambda, \Delta)
+\end{equation}
+
+The challenge for automating this process is two-fold. First, the size of the full model space is quite large. To list out all the dimensions that must be considered:
+
+\begin{itemize}
+    \item ARIMA model
+        \begin{itemize}
+            \item Constant term
+            \item Autoregressive order (p)
+            \item Moving average order (q)
+            \item Order of integration (d)
+            \item Seasonal autoregressive order (P)
+            \item Seasonal moving average order (Q)
+            \item Order of seasonal integration (D)
+        \end{itemize}
+        \item GARCH model
+        \begin{itemize}
+            \item Constant term
+            \item Autoregressive order (m)
+            \item Moving average order (k)
+            \item GARCH specification
+            \item Error distribution
+        \end{itemize}
+
+\end{itemize}
+
+A full grid-search over these dimensions is time-consuming and impractical. To reduce the number of specifications in the model set, the fitting procedure takes the following divide-and-conquer approach.
+
+\begin{enumerate}
+    \item \textbf{Estimate the conditional mean independently of the variance model.} Leveraging the work done by Hyndman and Khandakar \cite{HyndmanKhandakar2008AutoArima}, a step-wise strategy is used to search through the ARIMA model space for the best fit, which is evaluated via the Akaike information criterion (AIC). This is accomplished by using the Forecast package \cite{RForecast} running in the R statistical language \cite{RBase}. The following decisions are made: 
+    
+    \begin{itemize}
+        \item Always include a constant term
+        \item Set the integration terms to zero: $d = D = 0$
+    \end{itemize}
+    
+    \item \textbf{Estimate a set of GARCH models.} Set the conditional mean model to the specification found in step 1. Then iterate over every GARCH specification in the model set, re-estimating the combined ARMA and GARCH parameters at the same time for each conditional variance model. This is accomplished by using the rugarch package \cite{Rugarch}. The model set that is searched through considers the following dimensions:
+    
+    \begin{itemize}
+        \item Always include a constant term
+        \item ARCH specification: m = \{1, 2\}
+        \item GARCH specification: k = \{1, 2\}
+        \item Distributions: \emph{g} = \{Normal, Student-t, Skewed Student-t \cite{FernandezSteel1998}\}
+        \item Model Specification: \emph{A}, \emph{B}, \emph{C} = \{Standard GARCH \cite{Bollerslev1986Garch}, gjr-GARCH \cite{GJR1993Garch}, Component GARCH \cite{EngleLee1993APA} \}
+    \end{itemize}
+    
+    With these dimensions, a total of 36 volatility models are available to choose from.
+
+    \item \textbf{Select the best model specification.} The fitted residuals of a model are checked against a battery of tests to confirm the independent and identical assumptions as well as to verify the correct distribution has been selected. The tests used include: (a) Moment LM tests to check for any remaining auto-correlation in the first four moments, (b) Kolmogorov-Smirnov test to check the residuals against the chosen theoretical distribution, (c) Hong and Li \cite{HongLi2005} non-parametric density test jointly for i.i.d and correct distribution specification, (d) Shapiro-Wilks \cite{ShapiroWilks1965} test for normality, and (e) Jarque-Bera \cite{JarqueBera1980} test for joint normality for skew and kurtosis.
+    
+    With these tests in hand, finding the best model reduces to selecting the GARCH specification that:
+    
+    \begin{itemize}
+        \item Passes all five distributional tests
+        \item Minimizes the Bayesian information criterion (BIC)
+    \end{itemize}
+
+    If no specifications pass all five tests, then the one that minimizes the BIC across the 36 candidate models is selected.
+
+\end{enumerate}
+
+The specification for the ARMA process is found first independently of the GARCH process. Once the AR(p) and MA(q) orders have been found, this specification is set and remains the same as different volatility models are estimated. Note that the parameter estimates are not held constant, just the specification. For each new GARCH fit, the ARMA parameters are all re-estimated.
 
 \printbibliography
 
