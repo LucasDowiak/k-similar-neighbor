@@ -26,30 +26,14 @@ plot(dtfM0708$cor, dtfM0708$dtw, ylim=c(0, 700), xlim=c(0, 1), main="2007-2008",
 
 
 # Vanilla DTW vs Weighted DTW vs 
-t1 <- "SBUX"; t2 <- "CSCO"
+t1 <- "MSFT"; t2 <- "ADBE"
+dtfStdPrc <- fread("data/label_analysis/2018_std_price.csv")
+m1 <- readRDS(sprintf("data/model_objects/2018/2018_%s.rds", t1))
+m2 <- readRDS(sprintf("data/model_objects/2018/2018_%s.rds", t2))
 
-m1 <- readRDS(sprintf("data/model_objects/DA_2019_2020/DA_2019_2020_%s.rds", t1))
-m2 <- readRDS(sprintf("data/model_objects/DA_2019_2020/DA_2019_2020_%s.rds", t2))
-
-p <- dtfStdPrc1920[[t1]]
-q <- dtfStdPrc1920[[t2]]
-N <- dtfStdPrc1920[, .N]
-
-g <- 0.03
-wm <- 1
-c0 <- N/4
-log_fun <- function(x, g, c0, wm=1)
-{
-  wm / (1 + exp(-g * (x - c0)))
-}
-
-
-w <- 0.03
-beta <- 0.99
-l <- 2
-D <- outer(p, q, function(i, j) abs(i - j))
-W <- outer(1:length(p), 1:length(q), function(i, j) log_fun(abs(i - j), g=0.03, c0=N/4))
-C <- (D * W)**(l)
+p <- dtfStdPrc[[t1]]
+q <- dtfStdPrc[[t2]]
+N <- dtfStdPrc[, .N]
 
 summary(c(C))
 image(D**2, y=1:505, col=grDevices::terrain.colors(100), x=1:505, 
@@ -58,7 +42,7 @@ contour(D**2, x = 1:505, y = 1:505, add = TRUE)
 
 
 unc_dtw <- dtw(p, q, keep.internals=TRUE, window.type="none")
-scb_dtw <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(w * N))
+scb_dtw <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=15)
 
 unc_wgt_dtw <- dtw(C, keep.internals=TRUE, window.type="none")
 scb_wgt_dtw <- dtw(C, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(w * N))
@@ -241,7 +225,7 @@ round(tt, 2)
 sweep(m_rho, 2, diag(m_rho), `-`)
 m_rho_tt[upper.tri(m_rho_tt) & m_rho_tt > 0.05]
 
-
+# ------------------------------------------------------------------------------
 
 
 # Year-on-Year cluster analysis
@@ -334,6 +318,8 @@ aa <- cluster_and_plot_series(D=results[["2010"]], Price=lst_years[["2010"]],
 bb <- cluster_and_plot_series(D=results[["2011"]], Price=lst_years[["2011"]],
                               k=9, return_melted = TRUE, method="ward")
 
+# ------------------------------------------------------------------------------
+
 
 # Troubleshoot model diagnostics for failed model specifications 
 # ------------------------------------------------------------------------------
@@ -376,14 +362,13 @@ spec_mod <- ugarchspec(
 fit_ <- try(ugarchfit(spec=spec_mod, data=u))
 marg_tests <- marginal_tests(fit_, print=TRUE, plot=TRUE)
 verify_marginal_test(marg_tests)
+# ------------------------------------------------------------------------------
 
 
 # Simulate GARCH models
 # -------------------------------------------------
-
 spec0708 <- read_json("data/marginal_specifications_2007_2008.json")
 gvbt <- good_vs_bad_symbols(spec0708)
-
 
 gvbt$fail_ticks
 
@@ -415,6 +400,8 @@ simU <- ugarchsim(fit=fitU, n.sim=400, n.start=100, m.sim=1)
 simV <- ugarchsim(fit=fitV, n.sim=400, n.start=100, m.sim=1)
 cor(simU@simulation$seriesSim, simV@simulation$seriesSim)
 
+
+# ------------------------------------------------------------------------------
 
 
 
