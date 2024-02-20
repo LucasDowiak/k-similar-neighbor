@@ -56,7 +56,9 @@ levs <- pairs[, sort(unique(c(sector_1, sector_2)))]
 pairs[, sector_1 := factor(sector_1, levels=levs)]
 pairs[, sector_2 := factor(sector_2, levels=levs)]
 
-
+# Percent of formed pairs that are traded
+tmpP <- pairs[, as.list(table(is.na(pair_return))), by=c("buy_signal", "group")]
+tmpP[, percent :=  `FALSE` / rowSums(.SD), .SDcols=c("FALSE", "TRUE")]
 
 # Standard Errors for the average can be found via regression
 lm1 <- lm((baseline_long - 1) ~ -1 + buy_signal : group, data=benchmarks[threshold=="2"])
@@ -93,17 +95,18 @@ dtfR[order(group)][metric == "invested", round(.SD, 3), .SDcols=4:9]
 
 # Plot annual returns by group and buy signal
 # -------------------------------------------------------------
-library(ggplot2) # ; library(colorBlindness); library(viridisLite)
+library(ggplot2); library(colorBlindness); library(viridisLite)
 benchmarks[, portfolio_returns := committed - 1]
 benchmarks[, trade_year_int := as.integer(trade_year)]
 y_lab <- "Return on Committed Capital"
 # Annual returns on invested capital by buy-signal
-p1 <- ggplot(data=benchmarks[group=="1 : 25"]) +
-  geom_col(aes(x=trade_year, y=portfolio_returns, fill=buy_signal), width=0.5, position=position_dodge()) +
-  theme(legend.position="none", legend.title=element_blank(),
+p1 <- ggplot(data=benchmarks[group=="1 : 25"], aes(x=trade_year, y=portfolio_returns, fill=buy_signal)) +
+  geom_col(width=0.5, position=position_dodge()) +
+  theme(legend.position="none",
+        legend.title=element_blank(),
         axis.title=element_text(size=8)) + 
   scale_fill_viridis_d() +
-  ylim(c(-0.06, .12)) +
+  ylim(c(-0.1, .12)) +
   ggtitle("Top 25 Pairs") +
   xlab(label=NULL) + ylab(label=y_lab)
 
@@ -114,7 +117,7 @@ p2 <- ggplot(data=benchmarks[group=="1 : 50"]) +
   theme(legend.position="none", legend.title=element_blank(),
         axis.title=element_text(size=8)) + 
   scale_fill_viridis_d() +
-  ylim(c(-0.06, .12)) +
+  ylim(c(-0.1, .12)) +
   ggtitle("Top 50 Pairs") +
   xlab(label=NULL) + ylab(label=y_lab)
 
@@ -125,7 +128,7 @@ p3 <- ggplot(data=benchmarks[group=="1 : 100"]) +
   theme(legend.position="none", legend.title=element_blank(),
         axis.title = element_text(size=8)) +
   scale_fill_viridis_d() +
-  ylim(c(-0.06, .12)) +
+  ylim(c(-0.1, .12)) +
   ggtitle("Top 100 Pairs") +
   xlab(label=NULL) + ylab(label=y_lab)
 

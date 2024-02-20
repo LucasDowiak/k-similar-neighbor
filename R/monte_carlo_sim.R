@@ -3,17 +3,6 @@ source("R/normality_tests.R")
 source("R/similarity_functions.R")
 library(data.table); library(rugarch); library(VineCopula)
 
-files_ <- list.files("data/label_analysis/", pattern = "model_summary", full.names=TRUE)
-dtfModSum <- rbindlist(lapply(files_, fread))
-
-files_ <- list.files("data/association_results/", pattern = "model_cor", full.names=TRUE)
-lstCors <- lapply(files_, read_association_table)
-names(lstCors) <- sapply(files_, function(x) strsplit(x, "//")[[1]][2])
-
-file_ <- list.files("data/association_results/", pattern="dtw", full.names=TRUE)
-lstDTW <- lapply(files_, read_association_table)
-names(lstDTW) <- sapply(files_, function(x) strsplit(x, "//")[[1]][2])
-
 melt_unique_assc_matrix <- function(nm, lst) {
   M <- lst[[nm]]
   M[upper.tri(M, diag=TRUE)] <- NA_real_
@@ -32,23 +21,45 @@ sample_cor_bin <- function(DT, size=10)
   }
 }
 
+
+files_ <- list.files("data/label_analysis/", pattern = "model_summary", full.names=TRUE)
+dtfModSum <- rbindlist(lapply(files_, fread))# , colClasses=c("label"="character")))
+dtfModSum[, time_varying_mean := as.numeric(ar > 0 | ma > 0)]
+setnames(dtfModSum, "label", "year")
+
+
+files_ <- list.files("data/association_results/", pattern = "model_cor", full.names=TRUE)
+lstCors <- lapply(files_, read_association_table)
+names(lstCors) <- sapply(files_, function(x) strsplit(x, "//")[[1]][2])
+dtfCors <- rbindlist(lapply(names(lstCors), melt_unique_assc_matrix, lst=lstCors))
+setnames(dtfCors, "value", "model_cor")
+dtfCors[, year := substring(label, 1, 4)]
+dtfCors[, label := NULL]
+dtfCors[, cor_bin := cut(model_cor, dtfCors[, hist(model_cor, breaks=40, plot=FALSE)]$breaks)]
+
+
+files_ <- list.files("data/association_results/", pattern="dtw", full.names=TRUE)
+lstDTW <- lapply(files_, read_association_table)
+names(lstDTW) <- sapply(files_, function(x) strsplit(x, "//")[[1]][2])
 dtfDTW <- rbindlist(lapply(names(lstDTW), melt_unique_assc_matrix, lst=lstDTW))
 dtfDTW[, year := substring(label, 1, 4)]
 dtfDTW[, label := NULL]
 setnames(dtfDTW, "value", "dtw")
 
-dtfCors <- rbindlist(lapply(names(lstCors), melt_unique_assc_matrix, lst=lstCors))
-setnames(dtfCors, "value", "model_cor")
-dtfCors[, year := substring(label, 1, 4)]
-dtfCors[, label := NULL]
-# dtfCors[, summary(model_cor)]
-# dtfCors[, hist(model_cor, breaks=40)]
-dtfCors[, cor_bin := cut(model_cor, dtfCors[, hist(model_cor, breaks=40, plot=FALSE)]$breaks)]
-dtfSmp1 <- dtfCors[, sample_cor_bin(.SD, 300), by=cor_bin][order(cor_bin)]
-dtfSmp1 <- merge(dtfSmp1, dtfDTW)
-fwrite(dtfSmp1, file="data/monte_carlo/sample_20240118_1.csv")
 
-# Extract fitted distribution from uGARCH-fit
+dtfDist <- merge(dtfCors, dtfDTW)
+dtfDist[, year := as.integer(year)]
+dtfDist[, tick1 := as.character(tick1)]
+dtfDist[, tick2 := as.character(tick2)]
+
+# dtfSmp1 <- dtfCors[, sample_cor_bin(.SD, 300), by=cor_bin][order(cor_bin)]
+# dtfSmp1 <- merge(dtfSmp1, dtfDTW)
+# fwrite(dtfSmp1, file="data/monte_carlo/sample_20240118_1.csv")
+dtf <- fread("data/monte_carlo/")
+
+
+# Extract fitted distribution from uGARCH-fit and perform monte-carlo sampling
+# ------------------------------------------------
 sample_distribution <- function(obj, u, to_std_price=TRUE, conditional_mu=TRUE,
                                 conditional_sigma=TRUE)
 {
@@ -134,8 +145,6 @@ replicate_study <- function(pair, B)
 }
 
 
-
-
 BB <- 250
 cluster <- parallel::makeCluster(3)
 clusterEvalQ(cluster, library("data.table"))
@@ -156,19 +165,48 @@ for (b in seq_along(batches)) {
 }
 stopCluster(cluster)
 
-# dtf <- merge(dtfSmp1, rbindlist(collect))
-# dtf <- merge(dtf, dtfDTW)
-dtf[, year := factor(year, levels=sort(unique(year)))]
-dtf[, IQR := `3rd Qu.` - `1st Qu.`]
-dtf[, violation := dtw < `5%` | dtw > `95%`]
-fwrite(dtf, file="data/Sample_pairs_corr_to_dtw.csv")
-dtf[, mean(violation)] # It should be close to 10%
+# dtfSmp1 <- fread("data/monte_carlo/sample_20240118_1.csv")
+dtfSave <- fread("data/monte_carlo/Sample_pairs_corr_to_dtw_20240118_1.csv")
+dtfSave2 <- fread("data/monte_carlo/Sample_pairs_corr_to_dtw_20240118_2.csv")
+dtfSave2[, value := as.numeric(value)]
+dtfSave3 <- rbindlist(list(dtfSave, dtfSave2))
 
-# TODO: 1. pull in unconditional mean and variance, industry, year variables into the data frame
-#       2. regress against 
+dtfCI <- dtfSave3[, as.list(quantile(value, c(0.005, 0.025, 0.05, 0.95, 0.975, 0.995))),
+                 by=c("tick1", "tick2", "year", "label")]
+dtfCI <- merge(dtfCI, dtfDist)
 
 
-# Plots ---
+dtfCI <- merge(dtfCI, dtfModSum[, .SD, .SDcols=c("tick", "year", "time_varying_mean")],
+                 by.x=c("tick1", "year"), by.y=c("tick", "year"))
+setnames(dtfCI, "time_varying_mean", "t1_time_varying_mean")
+dtfCI <- merge(dtfCI, dtfModSum[, .SD, .SDcols=c("tick", "year", "time_varying_mean")],
+                 by.x=c("tick2", "year"), by.y=c("tick", "year"))
+setnames(dtfCI, "time_varying_mean", "t2_time_varying_mean")
+
+dtfCI[, tmv_present := t1_time_varying_mean + t2_time_varying_mean]
+dtfCI[, viol_01 := (dtw < `0.5%` | dtw > `99.5%`)]
+dtfCI[, viol_05 := (dtw < `2.5%` | dtw > `97.5%`)]
+dtfCI[, viol_10 := (dtw < `5%` | dtw > `95%`)]
+
+dtfCI[tmv_present > 0,
+      as.list(round(c(colMeans(.SD), N=.N), 3)),
+      .SDcols=c("viol_01", "viol_05", "viol_10"),
+      by=c("label")][order(label)]
+
+dtfCI[tmv_present == 0,
+      as.list(round(c(colMeans(.SD), N=.N), 3)),
+      .SDcols=c("viol_01", "viol_05", "viol_10"),
+      by=c("label")][order(label)]
+
+dtfCI[tmv_present == 0 & (label %in% c("Unconditional", "Cond_Mean")) ,
+      as.list(round(c(colMeans(.SD), N=.N), 3)),
+      .SDcols=c("viol_01", "viol_05", "viol_10")]
+
+# ------------------------------------------------
+
+
+
+# Plots
 # ------------------------------------------------
 library(ggplot2)
 
@@ -193,8 +231,10 @@ summary(lm(log(dtw) ~ poly(model_cor, 2), data=dtf))
 
 # ------------------------------------------------
 
-# Model Stats: Unc Mean, Unc Variance, Persistance, Halflife
+# Regression Stats: Unc Mean, Unc Variance, Persistance, Halflife
 # ------------------------------------------------
+dtf <- fread("data/Sample_pairs_corr_to_dtw.csv")
+dtf[, year := as.character(year)]
 collect3 <- vector("list", dtf[,.N])
 for (i in 1:nrow(dtf)) {
   if (i %% 100 == 0) {
@@ -209,17 +249,17 @@ for (i in 1:nrow(dtf)) {
   out <- data.table(tick1=t1, tick2=t2, year=as.character(yr_lb),
                     t1_unc_mean=uncmean(mod1$model), t1_unc_var=uncvariance(mod1$model),
                     t1_pers=persistence(mod1$model), t1_haflife=halflife(mod1$model),
-                    t1_omega=coef(mod1$model)["omega"],
+                    t1_omega=coef(mod1$model)["omega"], t1_vmodel=mod1$model@model$modeldesc$vmodel,
+                    t1_distr=mod1$model@model$modeldesc$distribution,
                     t2_unc_mean=uncmean(mod2$model), t2_unc_var=uncvariance(mod2$model),
-                    t2_pers=persistence(mod1$model), t2_haflife=halflife(mod2$model),
-                    t2_omega=coef(mod2$model)["omega"])
+                    t2_pers=persistence(mod2$model), t2_haflife=halflife(mod2$model),
+                    t2_omega=coef(mod2$model)["omega"], t2_vmodel=mod2$model@model$modeldesc$vmodel,
+                    t2_distr=mod2$model@model$modeldesc$distribution)
   collect3[[i]] <- out
 }
 dtfModStats <- rbindlist(collect3)
 dtfModStats[, year := as.character(year)]
-# ------------------------------------------------
-dtf <- fread("data/Sample_pairs_corr_to_dtw.csv")
-dtf[, year := as.character(year)]
+
 dtfSPComp <- fread("data/SandP_companies.csv")
 dtf2 <- merge(dtf, dtfModStats)
 dtf2 <- merge(dtf2, dtfSPComp[, .(ticker, t1_sector=sector, t1_subindustry=subindustry)],
@@ -229,20 +269,31 @@ dtf2 <- merge(dtf2, dtfSPComp[, .(ticker, t2_sector=sector, t2_subindustry=subin
 sub_industry_levels <- sort(unique(dtfSPComp$subindustry))
 dtf2[, t1_sector := factor(t1_sector, levels=sort(unique(t1_sector)))]
 dtf2[, t1_subindustry := factor(t1_subindustry, levels=sub_industry_levels)]
+dtf2[, t1_vmodel := factor(t1_vmodel)]
+dtf2[, t1_distr := factor(t1_distr)]
 dtf2[, t2_sector := factor(t2_sector, levels=sort(unique(t2_sector)))]
 dtf2[, t2_subindustry := factor(t2_subindustry, levels=sub_industry_levels)]
+dtf2[, t2_vmodel := factor(t2_vmodel)]
+dtf2[, t2_distr := factor(t2_distr)]
 
 dtf2[, intra_sector := as.integer(t1_sector == t2_sector)]
 dtf2[, abs_mean_diff := abs(t1_unc_mean - t2_unc_mean)]
 dtf2[, abs_omega_diff := abs(t1_omega - t2_omega)]
 dtf2[, mean_var := apply(.SD, 1, mean), .SDcols=c("t1_unc_var", "t2_unc_var")]
+dtf2[, sum_var := apply(.SD, 1, sum), .SDcols=c("t1_unc_var", "t2_unc_var")]
 dtf2[, max_var := apply(.SD, 1, max), .SDcols=c("t1_unc_var", "t2_unc_var")]
 dtf2[, lm_year := factor(year, levels=sort(unique(year)))]
+dtf2[, pers_geom_avg := apply(.SD, 1, function(x) sqrt(prod(x))), .SDcols=c("t1_pers", "t2_pers")]
 
-lm_model <- lm(log(dtw) ~ abs_mean_diff + mean_var + poly(1 - model_cor, 2) + intra_sector,
-               data=dtf2)
-lm_model_year <- lm(log(dtw) ~ abs_mean_diff + mean_var + poly(1 - model_cor, 2) + intra_sector + lm_year,
-                    data=dtf2)
+
+
+summary(lm(log(dtw) ~ abs_mean_diff + sum_var + pers_geom_avg + poly(model_cor, 2) + intra_sector,
+               data=dtf2))
+summary(lm(log(dtw) ~ abs_mean_diff + sum_var + pers_geom_avg + poly(model_cor, 2) + intra_sector + lm_year,
+           data=dtf2))
+summary(lm(log(dtw) ~ abs_mean_diff + sum_var + pers_geom_avg + poly(model_cor, 2) + intra_sector + lm_year + t1_distr * t2_distr + t1_vmodel * t2_vmodel,
+           data=dtf2))
+
 
 round(summary(lm_model)$coefficients, 3)
 round(summary(lm_model_year)$coefficients, 3)
