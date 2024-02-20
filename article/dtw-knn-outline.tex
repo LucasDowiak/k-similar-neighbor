@@ -33,7 +33,6 @@
 ]{biblatex}
 
 \addbibresource{dtw_references.bib}
-%\bibliography{dtw_references}
 
 \begin{document}
 
@@ -84,7 +83,7 @@ Instead of focusing on exact synchronous co-movements, many of the distance meas
 
 \cite{SakoeChiba_IEEE_1978} provides the original paper defining dynamic time warping with application in the field of speech recognition. It's influence has extended into applications such data mining, agricultural and forestry management, high-frequency trading.
 
-The algorithm has certian properties that are really convienent from the view of an analyst. It can handle times series of different lengths. This makes it useful where the timing of observations from inputs are not aligned such as in high frequency trading or streams of satalite sensors \parencite{Maus_et_al_2016}.
+The algorithm has certian properties that are really convienent from the view of an analyst. It can handle times series of different lengths as well as series with observations that are not perfectly synchronous in time like equationn \ref{eq:pearsons_rho}.  This makes it useful where the timing of observations from inputs are not aligned such as in high frequency trading or streams of satalite sensors \parencite{Maus_et_al_2016}.
 
 Applications of dynamic time warping in the finance and economic literature usually fall into one of the following categories.
 
@@ -142,22 +141,28 @@ DTW is only one way to index a set of series for clustering applications. \cite{
 
 \parencite{WangXieHanSun2012} TBD
 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{ts_distance_method.png}
+    \caption{List of distance measures included in \cite{ElsingAgon2012}}
+    \label{fig:ds_dist_meas_table}
+\end{figure}
+
 \section{Data}
 
-Studying the companies that make up the Standard and Poor's 500 will provide a rich sample to look for comparisons. Three different time periods will be considered. The financial crisis of 2007-2008, the moderate economic period between 2015 and 2016, and the dramatic shut-down economy of 2019-2020. With a focus on the these three time periods, the market upheaval surrounding the financial crisis and Covid-19 serve as a natural experiment with the moderate-but-steady growth of 2015-2016 acting as a control. This is especially true of the Covid-19 timeframe. Some industries bounced back strongly (Technology) while others struggled to recover (Travel, Hospitality). These alternate reactions will ensure that there is enough heterogeneity in the "shape" of the stock values of these companies to make meaningful comparisons. Natural industry classifications will also provide a good reference point to any latent clustering that is discovered.
+The companies comprising the S\&P 500, as of October 2023, are included in this essay's analysis. These large-cap U.S. based companies provide a reliable sample with highly liquid markets for their stock and broad diversity across sectors. The date range under consideration begins in January 2000 and extends to October 2023. This two decade timeframe covers a number of macroeconomic crises: the fallout from the bursting of the dot-com bubble from 2000-2002, the financial crisis of 2007-2008, and the dramatic shut-down economy of 2020. Interceding these marcroeconomic shocks are two bull markets: a five year bull-run in the early 2000's and the decade long bull-run throughout the 2010s. The daily adjusted close for each stock is sourced by an API provided by Alpha Advantage\footnote{https://www.alphavantage.co/}. The adjusted close takes into account any reinvested dividends as well as stock splits or the introduction of new stock that occured over the duration of the period.
+
+Over time, the composition of the index changes as new companies are introduced and existing companies fall out. There are many companies in this essay that do not have a full history dating back to 2000. Of the 503 stocks in the sample there are 352 with a history that extends back to the beginning of 2000. See Figure \ref{fig:SandP_missing_map} for a visual summary of the price history for the sample of companies considered in this essay.
 
 \begin{figure}
     \centering
-    \includegraphics[width=\textwidth]{SandP_missing_map_pptx.png}
-    \caption{Missing map of the S\&P data set. The red horizontal bars demark the timeframes under consideration. Of the 505 tickers in the dataset, there are 423 with a full series stock values from 2007 onward, 480 from 2015 onward, and 494 from 2019 onward.}
+    \includegraphics[width=\textwidth]{SandP_missing_map.png}
+    \caption{This image captures the available history, by stock, of the S\&P data used in this essay. Light blue shading indicates timestamps where price data is not available. Dark blue represents available history. Of the 503 stocks in the dataset, there are 349 with a full series of prices throughout the time period undner investigation.}
     \label{fig:SandP_missing_map}
 \end{figure}
 
-The companies comprising the S\&P's Wikipedia page\footnote{https://en.wikipedia.org/wiki/List\_of\_S\&P\_500\_companies} as of February 2021 are included in this essay's analysis. Using an API made freely available by Alpha Advantage\footnote{https://www.alphavantage.co/}, daily historical series of the current companies in the index have been obtained. Dates range from Nov 1999 to Feb 2021. See Figure \ref{fig:SandP_missing_map} for a visual summary of the price history for the individual companies in the index.
 
-\pagebreak
-
-\section{Distance Measures}
+\section{Distance Measures} \label{sec:Distance_Measures}
 
 In this section the distance or dissimilarity measures discussed in this article are formally defined. It's important to distinguish the price of a stock versus its return since the distance measures discussed below do not always apply to the same representation of data. All upper-case variables are assumed to be invoiced in the price of the stock while lower-case variables are assumed to be return values. If $S_{t}$ is the spot price of a stock at time $t$ then the return on a stock from date $t-1$ to $t$ is defined as the log difference between consecutive spot prices.
 
@@ -165,7 +170,7 @@ In this section the distance or dissimilarity measures discussed in this article
     x_{t} = \log \left(S_{t}\right) - \log\left(S_{t-1}\right)
 \end{equation}
 
- Correlatation is applied to a stock's return series while euclidean distance and dynamic time warping are applied to a pair of stock's spot price. The decision to apply dynamic time warping to the price level is purposeful. The papers reference here that want to cluser time series usually use the price level or the nominal value of the series. This contrasts with the articles that want to estimate the magnitude of a leading or lagging temporal relationship. These articles typically apply dynamic time warping on the stationary log returns. Since the main focus of this article is on studying the relationship between correlation and dynamic time warping the decision is made to calculate dynamic time warping at the price level for the majority of this article\footnote{The only exception is during a simulation exercise in section \ref{sec:Uncorrelated_white_noise}}.
+ Correlatation is applied to a stock's return series while euclidean distance and dynamic time warping are applied to a pair of stock's spot price. The decision to apply dynamic time warping to the price level is purposeful. The papers reference here that want to cluser time series usually use the price level or the nominal value of the series. This contrasts with the articles that want to estimate the magnitude of a leading or lagging temporal relationship. These articles typically apply dynamic time warping on the stationary log returns. Since the main focus of this article is on studying the relationship between correlation and dynamic time warping the decision is made to calculate dynamic time warping at the price level for the majority of this article\footnote{Simulation exercises conducted in section \ref{sec:Uncorrelated_white_noise} are an exception}.
 
 \subsection{Correlation}
 
@@ -277,7 +282,7 @@ One more condition is added to this article's application of dynamic time warpin
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{Distance_Measure_Quad_Plot.png}
-    \caption{These figures record an unusual case of a stock pair with strong positive correlation but a large dynamic time warping distance. All figures summarize data on Teradyne Inc. (TER) and Lam Research Corp. (LRCX) stock for the 2021 calendar year. \textbf{Top-Left} This figure shows the cumlulative return of Teradyne Inc. and Lam Research Corp. The line segements connect the indicies from the optimal warping path. The algorithm is run on the cumulative return series (see equation \ref{eq:standard_price}) of each stock in the pair. A 15-day Sakoe-Chiba window provides a global constraint. \textbf{Bottom-Left} The same cumulative price chart as the top-left but with Euclidean line segments. The line segments are vertical because there is no time dilation. The euclidean distance between the pair's normalized prices is 3.345. \textbf{Top-Rigt} A scatter-plot of un-modeled log-returns. The sample pearson correlation is 0.84. \textbf{Bottom-Right}. The fitted conditional variance from each series' esitmated ARMA-GARCH model.}
+    \caption{These figures record an unusual case of a stock pair with very strong positive correlation \textit{and} a large dynamic time warping distance. All figures summarize data on Teradyne Inc. (TER) and Lam Research Corp. (LRCX) stock for the 2021 calendar year. \textbf{Top-Left} A graph showing the cumulative return of Teradyne Inc. and Lam Research Corp. stock with line segements connecting the indicies from the optimal warping path. The algorithm is run on the pair's cumulative return series (see equation \ref{eq:standard_price}). A 15-day Sakoe-Chiba window provides a global constraint. \textbf{Bottom-Left} The same cumulative price chart as the top-left but with Euclidean line segments. The line segments are vertical because there is no time dilation. The euclidean distance between the pair's normalized prices is 3.345. \textbf{Top-Right} A scatter-plot of unmodeled log-returns. The sample pearson correlation is 0.84. \textbf{Bottom-Right}. The fitted conditional variance from each series' esitmated ARMA-GARCH model.}
     \label{fig:dtw_plot_stock_price_index_matching}
 \end{figure}
 
@@ -287,7 +292,7 @@ The details in section \ref{sec:DTW_Algorithm} describe the classic dynamic time
 
 \subsection{Examples}
 
-To put these concepts into practice the dynamic time warping algorithm will be demonstrated on the stock prices for Teradyne Inc. (TER) and Lam Research Corp. (LRCX) for the 2021 calendar year. Instead of the original stock price each series is normalized by calculating the cumulative return of each stock's log-returns using equation \ref{eq:standard_price}. Figure \ref{fig:dtw_plot_cost_and_accum_cost} displays the cost matrix and accumulated cost matrix for the first ten trading days of the two series. The optimal warping path is annotated by the sequence of boxes outlined in white. Figure \ref{fig:dtw_plot_stock_price_index_matching} provides four graphs summarizing topics covered in this section. The top-left graph shows the cumulative return of Teradyne Inc. and Lam Research Corp. stock with line segements connecting the indicies from the optimal warping path. The algorithm is run on the pair's cumulative return series (see equation \ref{eq:standard_price}). A 15-day Sakoe-Chiba window provides a global constraint. The bottom-left graph is the same as the top-left but contains vertical line segments between synchronous points in time. The euclidean distance between the pair's normalized prices is 3.345. \textbf{Top-Rigt} A scatter-plot of un-modeled log-returns. The sample pearson correlation is 0.84. \textbf{Bottom-Right}. The fitted conditional variance from each series' esitmated ARMA-GARCH model.
+To put these concepts into practice the dynamic time warping algorithm will be demonstrated on the stock prices for Teradyne Inc. (TER) and Lam Research Corp. (LRCX) for the 2021 calendar year. Instead of the original stock price each series is normalized by calculating the cumulative return of their log-returns using equation \ref{eq:standard_price}. Figure \ref{fig:dtw_plot_cost_and_accum_cost} displays the cost matrix and the accumulated cost matrix for the first ten trading days of the two series. The optimal warping path is annotated by the sequence of boxes outlined in white. Figure \ref{fig:dtw_plot_stock_price_index_matching} provides four graphs summarizing topics covered in this section. The top-left graph shows the cumulative return of Teradyne Inc. and Lam Research Corp. stock with line segements connecting the indicies from the optimal warping path. The algorithm is run on the pair's cumulative return series (see equation \ref{eq:standard_price}). A 15-day Sakoe-Chiba window provides a global constraint. The bottom-left graph is the same as the top-left but contains vertical line segments between synchronous points in time. The euclidean distance between the pair's normalized prices is 3.345. On the top right is a scatter-plot of un-modeled log-returns. The sample pearson correlation is 0.84. And on the bottom right is the fitted conditional variance from each series' esitmated ARMA-GARCH model.
 
 
 \section{Pair Trading} \label{sec:PairTrading}
@@ -309,19 +314,8 @@ During the formation period the trader compares historical stock returns and use
     p_{t} = \prod_{1}^{t} (1 + r_{t})
 \end{equation}
 
-After pair selection the trader again uses the price history in the formation period to calculate a critical value for the price differential experienced by each pair. This article follows \cite{Gatev_et_al_2006} and uses a two standard deviation threshold as a signal to open a position on the pair during the trading period. That is if $p_{t}$ and $q_{t}$ are the two standardize prices for a pair and $\boldsymbol{d}$ is the vector of absolute price differentials with elements $d_{t} = |p_{t} - q_{t}|$, then over the entire formation period the threshold that acts as a signal to open a trading position is set to $\boldsymbol{\bar{d}} + 2 \sigma_{\boldsymbol{d}}$.
+After pair selection the trader again uses the price history in the formation period to calculate a critical value for the price differential experienced by each pair. This article follows \cite{Gatev_et_al_2006} and uses a two standard deviation threshold as a signal to open a position on the pair during the trading period. That is if $p_{t}$ and $q_{t}$ are the two standardize prices for a pair and $\boldsymbol{d}$ is the vector of absolute price differentials with elements $d_{t} = |p_{t} - q_{t}|$, then over the entire formation period the threshold that acts as a signal to open a trading position is set to $\boldsymbol{\bar{d}} + 2 \sigma_{\boldsymbol{d}}$. After price normalization four different portfolio collections are created using the distance measures discussed in section \ref{sec:Distance_Measures}: unadjusted and modeled correlation, euclidean distance, and dynamic time warping. Portfolios are formed by the closest 25, 50, and 100 pairs of stocks.
 
-After price normalization, four different portfolio collections are created based on how we want to measure similarity. In this article, the cost function used in the dynanimc time warping function is the $L^{2}$-norm. (see section \ref{sec:DTW} and equation \ref{eq:dtw_cost_matrix_definition}) is 
-
-
-As mentioned before the central task of this section is to compare the performance of portfolios whose pairs are selected using correlation versus pairs that are formed using dynamic time warping. gainst  this section is evaluating is how to formThere are different methods for chosing the association measure:
-
-\begin{enumerate}
-    \item Unadjusted Correlation: Measure closeness via correlation. Use static (unconditional) distributions and a two standard deviation threshold on the cumulative return differential as a signal to open positions.
-    \item Model Correlation: Model the univariate returns using the ARIMA-GARCH framework. This approach will enable the trader to study the return distribution of the market and control for any deviations from normality that commonly occur in finance. These deviations (from the Guassian benchmark) include return distributions that exhibit fat tails, asymmetry, and/or volatility clustering. For a given formation period we only consider stocks that have successfully passed a battery of diagnostics that test the fit of the ARIMA-GARCH model. In addition, this restriction to stocks with well-fitted ARIMA-GARGH specifications applies to portfolios formed using any one of the four approaches.
-    \item Euclidean Distance, a: Used as a practical baseline for multiple reasons. First, \cite{Gatev_et_al_2006} using euclidean distance in their pair trading strategy and including it will allow for direct comparison.
-    \item Dynamic Time Warping: Calculate the DTW metric between the cumulative returns of the pairs. Use synchronous L1 value and the two standard deviation signal to open positions.
-\end{enumerate}
 
 \subsubsection{Trading Period}
 
@@ -329,14 +323,15 @@ Given a single stock pair in a trader's portfolio a position is opened if the pr
 
 \subsection{Post Trade Analysis}
 
+Table \ref{tbl:PairsTradingReturns} provides summary results of the trading strategy contrasted by distance measure, portfolio size, and definition of "returns" to the portfolios constructed here. Section I records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. Section II of the table records fully invested returns where the total return of the portfolio during the trading period is divided by the number of total number of pairs selected in the portfolio. This is a more conservative estimate than committed returns. The third section records the returns on the portfolio if the trader had chosen to buy-and-hold the portfolio for the duration of the trading period.
 
-Hot takes on the return table:
-\begin{itemize}
-    \item For the correlation-based pair strategy there is benefit diversification. The standard deviation of the portfolio return decreases going from the top 25 to top 50. This does not hold true for the return distribution of the portfolio created with pairs formed with dtw.
-    \item As expected there does not appear to be significant arbitrage opportunities arbitrage opportunities. It's a bit surprising that dynamic time warping 
-\end{itemize}
-- For the correlation-based pair strategy there is benefit to 
+As expected there does not appear to be significant arbitrage opportunities from this strategy. There is a some evidence that dynamic time warping is a metric with practical use, though. The only statistically positive return on equity from the trading strategy comes from the smaller portfolio of top 25 pairs choosen by dynamic time warping. But the return is small in magnitude, especially compared to the alternative of the baseline long-postion as seen in section III. The DTW and euclidean measures perform better than the correlation measures in amost all categories. The only exception is the the one percent return of fully invested equity to the top 25 pairs chosen by unadjusted correlation, which beats out the portfolio construced by euclidean distance but not the portfolio constructed by dynamic time warping. This could be attributed to how the market signals are constructed during the formation period. Because we are forced to trade in syncronized time this may give euclidean distance an inherent advantage over correlation.
 
+Lookly closely at sections I and II in table \ref{tbl:PairsTradingReturns} the reader will notice that for DTW and Euclidean portfolios, returns on fully invested equity are close to the returns on committed equity across portfolio size. This stands in contrast to portfolios created with either correlation measure. The reason for this is simple. A sizeable proportion of the pairs formed with correlation are never traded because the differential in the cumulative return never exceeds the two standard deviation threshold estimated during the formation period. In fact for the portfolio of top 100 pairs choosen with correlation only 60\% of pairs are traded. This compares to 98\% of pairs formed using DTW or euclidean distance.
+
+Another contrast between the portfolios constructed with correlation versus DTW and euclidean distance is the sector-level diversification achieved by the latter. Pairs formed in the correlation based portfolios almost always come from the same sector but there is a substatial number of inter-sector pairs formed using DTW and euclidean distance (compare tables  \ref{tbl:pair_cross_sector_tabulation_correlation} and \ref{tbl:pair_cross_sector_tabulation_L2_measures}). This diversification effect of the DTW and Euclidean portfolios may explain their positive and statistically significant baseline long returns even as the comparable correlation portfolios see positive but non-statistically significant return values. 
+
+In figure \ref{fig:annual_returns_to_committed_capital_by_buy_signal}, several barcharts are presented summarizing the annual committed returns to the trading strategy under different buy signals and portfolio sizes. The return volatility to this pair trading strategy is cyclical in nature. The absolute value of returns are largest during and immediately following the three large financial crisis experienced over the time period studied: the follow-out from the dot-com bust in 2001 and 2002, the mortgage back security crisis in 2008 and 2009, and the shut-down economy of 2000.
 
 \begin{table}[hp]
     \fontsize{8pt}{8pt}\selectfont
@@ -407,10 +402,11 @@ Hot takes on the return table:
     \end{tabular}
     \caption{Average Annual Return Distribution}
     \begin{tablenotes}
-        \item{\footnotesize Three different measures of portfolio returns are summarized in this table. Section I records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. Section II of the table records fully invested returns where the total return of the portfolio during the trading period is devided by the number of pairs selected to trade. Section III records the annual return of the portfolio if the trader simply goes long in each pair at the beginning of the trading period.}
+        \item{\footnotesize Three different measures of portfolio returns are summarized in this table. Section I records committed returns where the total return of the portfolio during the trading period is divided by the number of pairs selected to trade. Section II of the table records fully invested returns where the total return of the portfolio during the trading period is divided by the number of total number of pairs in the portfolio. Section III records the annual return of the portfolio if the trader simply goes long in each pair at the beginning of the trading period.}
         \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
-        \item{\footnotesize $^{1}$Standard errors are Newey-West estimates and significant values are for normally distributed tails.} 
+        \item{\footnotesize $^{1}$ Standard errors are Newey-West estimates and significant values are for normally distributed tails.} 
     \end{tablenotes}
+    \label{tbl:PairsTradingReturns}
 \end{table}
 
 
@@ -420,6 +416,7 @@ Hot takes on the return table:
     <{\egroup}%
 }
 \newcommand*\rot{\multicolumn{1}{R{30}{1em}}}% no optional argument here, please!
+
 
 \begin{table}[hp]
     \fontsize{10pt}{10pt}\selectfont
@@ -462,11 +459,11 @@ Hot takes on the return table:
     \begin{tablenotes}
         \item{\footnotesize This table tabulates the sector distribution of all pairs in the annual portfolios constructed from 2011 to 2022. Two views are presented. On the left is the cross sector count of \textit{pairs}. On the right is the (marginal) sector count for all individual \textit{stocks} in the set of portfolios. Intra-industry pairs are the rule using either correlation based pairing strategy. The only few exceptions that are pairs between Real Estate and Materials stocks. Taken together the Financial, Real Estate, and Utility sectors account for 73.5 and 68.3 percent out of all stocks chosen in the unadjusted and modeled portfolios, respectively.}
     \end{tablenotes}
-    \label{tbl:pair_cross_sector_tabulation:correlation}
+    \label{tbl:pair_cross_sector_tabulation_correlation}
 \end{table}
 
 
-\begin{table}[!htb]
+\begin{table}[hp]
     \fontsize{10pt}{10pt}\selectfont
     \centering
     \begin{tabular}{l r r r r r r r r r r r | r r}
@@ -505,61 +502,231 @@ Hot takes on the return table:
     \end{tabular}
     \caption{Sector Distribution of Portfolio Pairs: Top 25 by $L^{2}$ Norm}
     \begin{tablenotes}
-        \item{\footnotesize This table tabulates the sector distribution of all pairs in the annual portfolios constructed from 2011 to 2022. Two views are presented. On the left is the cross sector count of \textit{pairs}. On the right is the (marginal) sector count for all individual \textit{stocks} in the set of portfolios. Diversification away from intra-industry pairs is the main differentiator between the portfolios summarized here versus those using correlation as captured in table \ref{tbl:pair_cross_sector_tabulation:correlation}. Taken together the Financial, Real Estate, and Utility sectors account for 64.8 and 72.9 percent out of all stocks chosen in the time-warped and euclidean portfolios, respectively.}
+        \item{\footnotesize This table tabulates the sector distribution of all pairs in the annual portfolios constructed from 2011 to 2022. Two views are presented. On the left is the cross sector count of \textit{pairs}. On the right is the (marginal) sector count for all individual \textit{stocks} in the set of portfolios. Diversification away from intra-sector pairs is the main differentiator between the portfolios summarized here versus those using correlation as captured in table \ref{tbl:pair_cross_sector_tabulation_correlation}. Taken together the Financial, Real Estate, and Utility sectors account for 64.8 and 72.9 percent out of all stocks chosen in the time-warped and euclidean portfolios, respectively.}
     \end{tablenotes}
+    \label{tbl:pair_cross_sector_tabulation_L2_measures}
 \end{table}
+
 
 \begin{landscape}
     \begin{figure}[hp]
         \includegraphics[width=1.3\textwidth]{Annual_Returns_to_Committed_Capital.png}
-        \caption{Barcharts indicating the annual committed returns of the trading strategy under different buy signals and portfolio sizes.}
+        \caption{Barcharts summarizing the annual committed returns of the trading strategy under different buy signals and portfolio sizes.}
         \label{fig:annual_returns_to_committed_capital_by_buy_signal}
     \end{figure}
 \end{landscape}
 
 \section{Testing for a Relationship Between Correlation and DTW} \label{sec:Corr_and_DTW_Relationship}
 
-In order to gauge the relationship between the DGP process of two time series and their resulting DTW value this article turns to simulation. There reason to turn to simulation is a simple one: at the time of writing, the authors have found no existing theory on the convergance of DTW when applied to time series that exhibit brownian motion, random walk, or other non-stationary behaviour. This may be due to the fact that dynamic time warping is not a valid metric. Although DTW takes non-negative values and is symmetric\footnote{Symmetry is not always guranteed. This article uses a symmetric cost function and a symmetric step-condition (see equation \ref{eq:local_cost_function} and condition \ref{eq:dtw_condition}). See one of the early authoritative works for a detailed discussion on global constraints and step-conditions \cite{SakoeChiba_IEEE_1978}.}, there is no gurantee that it satisfies the triangle inequality, $d(x, z) \leq d(x, y) + d(y, z)$. 
+At the time of writing the authors have found no existing theory on the convergence of dynamic time warping when applied to time series that exhibit brownian motion, random walk, or other non-stationary behavior. This may be due to the fact that dynamic time warping is not a valid metric. Although DTW takes non-negative values and is symmetric\footnote{Symmetry is not always guranteed. This article uses a symmetric cost function and a symmetric step-condition (see equation \ref{eq:local_cost_function} and condition \ref{eq:dtw_condition} in section \ref{sec:DTW}). See one of the early authoritative works \cite{SakoeChiba_IEEE_1978} for a detailed discussion on global constraints and step-conditions.}, there is no gurantee that it satisfies the triangle inequality\footnote{$d(x, z) \leq d(x, y) + d(y, z)$}. 
 
-A rigorous approach would require specifying  functional central limit theorem that is appropriate 
+In order to gauge the relationship between the bivariate DGP process of two financial time series and their resulting DTW value this section pursues two separate approaches. First, the relationship is investigated via simulation. Two sets of simulation exercises are carried out. The first simulation uses iid normal variates to produce time series of white noise, random walks without drift, and random walks with drift. A second, more sophisticated, simulation exercise uses a monte carlo approach to inference by combining the optimized ARMA-GARCH models from section \ref{sec:PairTrading} with the copula approach to modeling joint distributions.
 
-Points to make:
-\begin{enumerate}
-    \item Dyamic time warping is not a metric. 
-    \item The sample is created by stratifying across the observed correlation parameter. The range of correlation values is segmented into adjacent bins with a uniform width set to 0.05, e.g: [1, 0.95), [0.95, 0.9), ..., [-0.6, -0.65). For each bin 300 hundred stock pairs or randomly sampled. If a bin has less than 300 pairs then all pairs in that bin are included.
-\end{enumerate}
+In addition to the simulation studies, a second analysis uses regression to study the mean relationship between correlation and dynamic time warping on a sample of stock pairs created during the pair trading strategy of section \ref{sec:PairTrading}. The sample used for the regressions is the same sample used in the monte carlo exercises. Taken together the analysis in this section provide the contours of the realtionship between Pearson's correlation and dynamic time warping when estimated on a set of stock pairs. 
 
 \subsection{Uncorrelated White Noise and Random Walks} \label{sec:Uncorrelated_white_noise}
 
-For the first simulation a stationary process is developed with only two factors: an intercept and an error term.
+For the first simulation a stationary process is developed with only two factors: an intercept and an error term. The errors are independent and identical draws from the normal distribution. Equation \ref{eq:white_noise} below summarizes the process.
 
-\begin{equation}
+\begin{equation} \label{eq:white_noise}
     X_{t} = \omega + \epsilon_{t} \qquad \epsilon_{t} \thicksim \mathcal{N}(0, \sigma^{2})
 \end{equation}
 
-This stationary process represents a simplified ARIMA-GARCH model, replacing the conditional mean and variance with their unconditional equivalents. After fixing parameter values ($\omega_{A}$, $\sigma_{A}$, $\omega_{B}$, $\sigma_{B}$) we can sample from the normal distribution to produce stationary time series of arbitrary length. By sampling a series each from specifications A and B, then calculating the dynamic time-warping distance between the two, we can trace the effect of the parameters on the value of the DTW metric. By repeating this process N times we can build up a distribution of these values. A similar apprach can be used to capture the null distribution of the dynamic time-warping metric for two unit root processes that obey the following specification.
+After fixing parameter values ($\omega_{A}$, $\sigma_{A}$, $\omega_{B}$, $\sigma_{B}$), synthetic stationary series of arbitrary length can be produced by sampling from the normal distribution. By sampling a series from two separate specifications, A and B, and then calculating the dynamic time-warping distance between the two, a connection between the parameters and the estimated DTW metric can be established. By repeating this process N times a distribution of DTW values can be built up.
+
+A similar apprach can be used to capture the distribution of the dynamic time warping distance for two random walk processes. Instead of the stationary process defined in equation \ref{eq:white_noise}, two series can be constructed as a random walk that obey the following specification:
 
 \begin{equation} \label{eq:random_walk}
     X_{t} = \omega + X_{t-1} + \epsilon_{t} \qquad \epsilon_{t} \thicksim \mathcal{N}(0, \sigma^{2})
 \end{equation}
 
-From equation \ref{eq:random_walk} at any time $t$ we know both the expectation and the variance of both random walk processes:
+In equation \ref{eq:random_walk} the intercept term, $\omega$, captures the underlying drift of the random walk. By setting $\omega$ equal to zero a random walk processes absent of any drift can be simulated. If $\omega$ is set to a non-zero value this results in a random walk process with drift. Using equations \ref{eq:white_noise} and \ref{eq:random_walk} three different kinds of simulation exercises are conducted: white noise, random walk without drift, and random walk with drift. The length of the simulated series in this section is set to 252 to match the number of trading days in an average year. Choosing this length aligns these simulations with the annual formation and trading periods used in section \ref{sec:PairTrading} to backtest the pair-trading strategy. To further align the proceedure used in section \ref{sec:PairTrading} to these simulation exercises, this essay compares the results of unconstrained dynamic time warping to dynamic time warping using a 15-day Sakoe-Chiba global constraint. Results are contained in tables \ref{tbl:dtw_white_noise}, \ref{tbl:dtw_random_walk_no_drift}, and \ref{tbl:dtw_random_walk_with_drift}.
 
-\begin{equation}
-    X_{i,t} \thicksim \mathcal{N}(t\omega_{i}, \, t\sigma_{i}^{2})
-\end{equation}
+The results of dynamic time warping applied to a pair of stationary white noise series offers a natural starting point. Looking at the unconstrained section of table \ref{tbl:dtw_white_noise} a few items are worth noting. First, dynamic time warping values have a positive realtionship with the variance of the two series. As the variance increases so too does the range and central location of the DTW distributions. Contrasting the second section (constant $\sigma_{A}=1$ with increasing $\sigma_{B}$) with the third section (jointly increasing $\sigma_{A}$ and $\sigma_{B}$), the total variance of the two series matters less than the max value of the two variances. Second, dynamic time warping values increase as the intercept terms diverge in size (see the fourth section). This divergance in intercept between the two series has a greater impact on the size of the DTW values than increasing the the variance of one or both series. Third, the distribution of DTW values appears symmetric. The mean and median are close in value and when tested for normality using the Anderson-Darling test, only the simulation with $\omega_{A}=16$ and $\omega_{B}=0$ rejects the null of normality at the 0.05 significance level. Fourth, the constrained dynamic time warping values are slightly larger, at the mean, than their unconstrained analogue. This is unsurprising given the distance minimizing principle of the algorithm. Any constraints on the amount of time warping can only increase the value of the distance measure. Interesting enough, the Sakoe-Chiba constraints produces larger IQRs than the unconstrained version for the first three groups of simulations but acts in a constraining fashion when the intercept terms diverge and $\sigma_{A}$ is greater than two. See the last section of table \ref{tbl:dtw_white_noise}.
+
+When moving from a white-noise process to a random walk process the resulting dynamic time warping values are not only materially larger, the range of values explodes. As recorded in unconstrained part of table \ref{tbl:dtw_random_walk_no_drift}, the benchmark case ($\sigma_{A}=\sigma_{B}=1$) records a mean DTW value of 10.93, compared to 0.84 for its white-noise equivalent, and an interquartile range of 11.49, compared to 0.04. The distributions are no longer symmetric and all specifications reject the null hypothesis of a normal distribution when subjected to Anderson-Darling tests for normality. The disptributions have long tails extending into larger values of the distance measure. Counterintuitively, the random walk process with drift results in smaller dynamic time warping values than the random walk without drift.This can be seen by comparing the same specification in the first three sections of tables \ref{tbl:dtw_random_walk_no_drift} and \ref{tbl:dtw_random_walk_with_drift}. Having a shared drift paramter appears to keep the two simulated series in a closer relative neighborhood than two random walk series with no drift.
+
+\begin{table}[!ht]
+    \fontsize{10pt}{10pt}\selectfont
+    \begin{center}
+      \begin{tabular}{r r r r | r r r r r r r}
+        \multicolumn{11}{c}{\textbf{Unconstrained DTW}} \\
+        \midrule
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \midrule
+        0  & 0 & 1  & 1  & 0.76 & 0.82 & 0.84 & 0.84 & 0.86 & 0.94 & 0.04 \\
+        \midrule
+        0  & 0 & 1  & 2  & 0.92 & 1.03 & 1.06 & 1.07 & 1.10 & 1.25 & 0.06 \\
+        0  & 0 & 1  & 4  & 1.29 & 1.44 & 1.49 & 1.49 & 1.55 & 1.78 & 0.11 \\
+        0  & 0 & 1  & 8  & 1.82 & 2.08 & 2.16 & 2.16 & 2.24 & 2.55 & 0.16 \\
+        0  & 0 & 1  & 16 & 2.60 & 3.04 & 3.14 & 3.15 & 3.27 & 3.74 & 0.23 \\
+        \midrule
+        0  & 0 & 2  & 2  & 1.03 & 1.15 & 1.18 & 1.18 & 1.21 & 1.35 & 0.06 \\
+        0  & 0 & 4  & 4  & 1.49 & 1.63 & 1.68 & 1.68 & 1.72 & 1.88 & 0.10 \\
+        0  & 0 & 8  & 8  & 2.07 & 2.30 & 2.37 & 2.37 & 2.44 & 2.71 & 0.13 \\
+        0  & 0 & 16 & 16 & 2.97 & 3.26 & 3.36 & 3.36 & 3.44 & 3.74 & 0.18 \\
+        \midrule
+        2  & 0 & 1  & 1  &  1.26 &  1.39 &  1.44 &  1.44 &  1.47 &  1.67 & 0.08 \\
+        4  & 0 & 1  & 1  &  1.95 &  2.90 &  3.14 &  3.14 &  3.39 &  4.21 & 0.49 \\
+        8  & 0 & 1  & 1  &  9.43 & 10.61 & 10.93 & 10.90 & 11.22 & 12.20 & 0.61 \\
+        16 & 0 & 1  & 1  & 25.10 & 26.58 & 26.92 & 26.88 & 27.22 & 28.30 & 0.64 \\
+        \hline
+        \\
+        \\
+        \multicolumn{11}{c}{\textbf{Constrained DTW with a 15-day Sakoe-Chiba Window}} \\
+        \midrule
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \midrule
+        0  & 0 & 1  & 1  & 0.76 & 0.83 & 0.85 & 0.86 & 0.88 & 0.98 & 0.05 \\
+        \midrule
+        0  & 0 & 1  & 2  & 0.94 & 1.05 & 1.08 & 1.09 & 1.12 & 1.27 & 0.07 \\
+        0  & 0 & 1  & 4  & 1.30 & 1.46 & 1.51 & 1.52 & 1.57 & 1.83 & 0.11 \\
+        0  & 0 & 1  & 8  & 1.85 & 2.11 & 2.19 & 2.20 & 2.28 & 2.57 & 0.16 \\
+        0  & 0 & 1  & 16 & 2.63 & 3.09 & 3.20 & 3.20 & 3.32 & 3.76 & 0.23 \\
+        \midrule
+        0  & 0 & 2  & 2  & 1.03 & 1.18 & 1.21 & 1.21 & 1.24 & 1.38 & 0.07 \\
+        0  & 0 & 4  & 4  & 1.50 & 1.66 & 1.71 & 1.71 & 1.76 & 1.94 & 0.10 \\
+        0  & 0 & 8  & 8  & 2.07 & 2.35 & 2.42 & 2.42 & 2.49 & 2.79 & 0.14 \\
+        0  & 0 & 16 & 16 & 3.06 & 3.33 & 3.43 & 3.43 & 3.52 & 3.87 & 0.20 \\
+        \midrule
+        2  & 0 & 1  & 1  &  1.36 &  1.53 &  1.59 &  1.59 &  1.65 &  1.96 & 0.11 \\
+        4  & 0 & 1  & 1  &  3.53 &  4.22 &  4.39 &  4.39 &  4.56 &  5.19 & 0.34 \\
+        8  & 0 & 1  & 1  & 11.42 & 12.14 & 12.31 & 12.31 & 12.49 & 13.21 & 0.34 \\
+        16 & 0 & 1  & 1  & 27.49 & 28.11 & 28.29 & 28.28 & 28.45 & 29.05 & 0.35 \\
+        \hline
+      \end{tabular}
+    \caption{Stationary White Noise} \label{tbl:dtw_white_noise}
+    \end{center}
+    \begin{tablenotes}
+        \item{\footnotesize This table summarizes the distribution of DTW values estimated on pairs of stationary white noise processes. The length of the simulated series is set to 252. A total of 1000 simulations are run for each set of parameter values. The DTW values in table are divided by the series length.}
+        \item{\footnotesize \textbf{Note}: The distributions of the DTW samples are symmetric. The median and mean remain close in value over all configurations. With one exception, the simulated groups fail to reject the null hypothesis of a normal distribution when subjected to Anderson-Darling test. The sole exception is the last simulated group with $\omega_{A}=16$.}
+        \item{\footnotesize \textbf{Note}: For stationary series the deterministic component (distance between the mean values) plays the definitive role in the location of the center of the DTW distribution. This factor outweighs the role variance plays in the location of the DTW distribution. A pair with one relatively large variance has a similar DTW distribution than the DTW distribution where both series have large variances.}
+        \item{\footnotesize \textbf{Note}: All other factors equal, constrained DTW leads to slighly larger values of DTW than their unconstrained analogue. Another consequence of using constrained DTW is the fact that it restricts the dispersion (as measured by the inter-quartile range) of the DTW distributions as the absolute difference between $\omega_{A}$ and $\omega_{B}$ grows. This can seen by comparing the IQRs the last section of each table.}
+    \end{tablenotes}
+\end{table}
 
 
-\subsection{Monte Carlo Simulation based on the ARIMA-GARCH Framework} \label{sec:MC_sim_arma_garch}
+\begin{table}[!ht]
+    \fontsize{10pt}{10pt}\selectfont
+    \begin{center}
+      \begin{tabular}{r r r r | r r r r r r r}
+        \multicolumn{11}{c}{\textbf{Unconstrained DTW}} \\
+        \midrule
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \midrule
+        0 & 0 & 1  & 1  & 1.15 &  3.35 &  6.97 & 10.93 & 14.84 &  71.27 & 11.49  \\
+        \midrule
+        0 & 0 & 1  & 2  & 1.41 &  4.59 &  9.70 & 14.91 & 19.96 & 108.66 & 15.36  \\
+        0 & 0 & 1  & 4  & 2.27 &  7.07 & 14.46 & 21.91 & 30.33 & 105.10 & 23.26  \\
+        0 & 0 & 1  & 8  & 3.15 &  9.25 & 18.26 & 29.15 & 40.56 & 217.00 & 31.31  \\
+        0 & 0 & 1  & 16 & 4.48 & 13.90 & 28.54 & 43.11 & 59.89 & 242.73 & 45.99  \\
+        \midrule
+        0 & 0 & 2  & 2  & 1.26 &  4.27 &  8.64 & 13.22 & 17.66 & 101.12 & 13.39  \\
+        0 & 0 & 4  & 4  & 2.00 &  6.57 & 12.33 & 16.99 & 23.33 &  77.76 & 16.76  \\
+        0 & 0 & 8  & 8  & 3.13 &  9.67 & 16.79 & 23.33 & 31.23 & 141.76 & 21.57  \\
+        0 & 0 & 16 & 16 & 5.06 & 15.34 & 26.64 & 33.73 & 46.19 & 131.63 & 30.84  \\
+        \hline
+        \\
+        \\
+        \multicolumn{11}{c}{\textbf{Constrained DTW with a 15-day Sakoe-Chiba Window}} \\
+        \midrule
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \midrule
+        0 & 0 & 1  & 1  & 1.73 & 8.67 & 14.68 & 18.86 &  25.66 &  89.12 & 16.99  \\
+        \midrule
+        0 & 0 & 1  & 2  & 2.20 & 11.78 & 21.16 & 26.02 &  34.83 & 133.52 & 23.05  \\
+        0 & 0 & 1  & 4  & 3.49 & 17.99 & 31.58 & 38.64 &  52.47 & 135.20 & 34.48  \\
+        0 & 0 & 1  & 8  & 4.49 & 23.33 & 40.22 & 51.43 &  69.51 & 265.81 & 46.18  \\
+        0 & 0 & 1  & 16 & 4.88 & 33.55 & 60.11 & 75.34 & 102.81 & 319.32 & 69.26  \\
+        \midrule
+        0 & 0 & 2  & 2  & 1.63 & 10.33 & 18.44 & 22.76 &  31.39 & 122.94 & 21.07  \\
+        0 & 0 & 4  & 4  & 2.72 & 14.11 & 24.49 & 29.51 &  41.02 & 113.10 & 26.90  \\
+        0 & 0 & 8  & 8  & 3.70 & 19.03 & 31.46 & 39.69 &  52.57 & 173.66 & 33.54  \\
+        0 & 0 & 16 & 16 & 5.96 & 26.79 & 45.56 & 56.23 &  77.23 & 193.73 & 50.45  \\
+        \hline
+      \end{tabular}
+    \caption{Random Walk without Drift} \label{tbl:dtw_random_walk_no_drift}
+    \end{center}
+    \begin{tablenotes}
+        \item{\footnotesize This table summarizes the distribution of DTW values estimated on pairs of a random walk process without drift. The length of the simulated series is set to 252. A total of 1000 simulations are run for each set of parameter values. The DTW values in table are divided by the series length.}
+        \item{\footnotesize \textbf{Note}: The symmetry of the DTW distribution found in table \ref{tbl:dtw_white_noise} is lost when estimated on a pair of series evolving with random walk behavior. All distributions have much larger mean and median values than DTW estimated on white noise processes. The distribution of DTW values in this table are skewed toward higher values of DTW.}
+        \item{\footnotesize \textbf{Note}: All other factors equal, constrained DTW leads to significantly larger values of DTW than their unconstrained analogue. This a natural consequence of the unbounded evolution of the two simulated series.}
+    \end{tablenotes}
+\end{table}
 
-In section \ref{sec:PairTrading} a total of 10,018 ARIMA-GARCH models were estimated during the formation periods from 2000 to 2021 where each model was trained on a single year's worth of trading data. From these ten thousand marginal models a total of 2,199,276 pairs were formed and estimates of the pair's correlation and dynamic time warping distance were calculated over the duration of the study. These observed stock returns and the models optimized on top of them provide a diverse sample to study what, if any, relationship exists between correlation and dynamic time warping when estimtated on the same pair of stock price returns. Common sense would suggest that dynamic time warping values should be at their lowest when the correlation of the stock returns of the pair are at their highest, implying a negative relationship between the two. In the special case where the log price returns are perfectly correlated then the dynamic time warping value should be equal to zero. While this section does lay out evidence comfirming a negative relationship between the two we find that the variance of DTW values is significance at all levels of correlation. 
 
-Points to make:
-\begin{enumerate}
-    \item The sample is created by stratifying across the observed correlation parameter. The range of correlation values is segmented into adjacent bins with a uniform width set to 0.05, e.g: [1, 0.95), [0.95, 0.9), ..., [-0.6, -0.65). For each bin 300 hundred stock pairs or randomly sampled. If a bin has less than 300 pairs then all pairs in that bin are included.
-\end{enumerate}
+\begin{table}[!ht]
+    \fontsize{10pt}{10pt}\selectfont
+    \begin{center}
+      \begin{tabular}{r r r r | r r r r r r r}
+        \multicolumn{11}{c}{\textbf{Unconstrained DTW}} \\
+        \midrule
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \midrule
+        1  & 1 & 1  & 1  &    0.89 &    1.12 &    1.45 &    1.92 &    2.22 &   11.92 &  1.10 \\
+        \midrule
+        1  & 1 & 1  & 2  &    1.10 &    1.38 &    1.92 &    2.71 &    3.13 &   15.72 &  1.74 \\
+        1  & 1 & 1  & 4  &    1.45 &    1.95 &    2.71 &    3.90 &    4.76 &   23.09 &  2.81 \\
+        1  & 1 & 1  & 8  &    2.08 &    3.04 &    4.42 &    6.73 &    7.88 &   66.83 &  4.84 \\
+        1  & 1 & 1  & 16 &    3.08 &    5.09 &    7.71 &   11.96 &   15.20 &  100.90 & 10.12 \\
+        \midrule
+        1  & 1 & 2  & 2  &    1.23 &    1.61 &    2.27 &    3.29 &    4.00 &   21.91 &  2.38 \\
+        1  & 1 & 4  & 4  &    1.76 &    2.49 &    3.74 &    5.60 &    6.41 &   47.59 &  3.92 \\
+        1  & 1 & 8  & 8  &    2.53 &    4.09 &    6.40 &   10.49 &   14.32 &   65.27 & 10.23 \\
+        1  & 1 & 16 & 16 &    3.73 &    6.60 &   11.57 &   17.91 &   21.89 &  129.09 & 15.29 \\
+        \midrule
+        2  & 1 & 1  & 1  &   37.67 &   57.90 &   64.23 &   64.48 &   71.01 &   93.85 & 13.11 \\
+        4  & 1 & 1  & 1  &  235.92 &  276.81 &  286.75 &  286.26 &  295.34 &  342.13 & 18.53 \\
+        8  & 1 & 1  & 1  &  724.32 &  766.67 &  778.44 &  778.24 &  790.03 &  828.62 & 23.36 \\
+        16 & 1 & 1  & 1  & 1732.09 & 1772.40 & 1783.98 & 1784.40 & 1796.35 & 1841.19 & 23.95 \\
+        \hline
+        \\
+        \\
+        \multicolumn{11}{c}{\textbf{Constrained DTW with a 15-day Sakoe-Chiba Window}} \\
+        \midrule
+        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
+        \midrule
+        1  & 1 & 1  & 1  &    0.89 &    1.33 &    2.86 &    6.43 &    8.02 &   53.37 &  6.69 \\
+        \midrule
+        1  & 1 & 1  & 2  &    1.14 &    2.18 &    5.56 &   10.82 &   13.96 &   87.11 & 11.78 \\
+        1  & 1 & 1  & 4  &    1.45 &    4.55 &   10.93 &   17.21 &   24.25 &   99.93 & 19.70 \\
+        1  & 1 & 1  & 8  &    2.14 &    9.29 &   19.63 &   27.99 &   39.91 &  200.91 & 30.61 \\
+        1  & 1 & 1  & 16 &    3.65 &   17.01 &   32.24 &   44.84 &   61.00 &  226.39 & 43.99 \\
+        \midrule
+        1  & 1 & 2  & 2  &    1.27 &    3.40 &    8.82 &   14.63 &   20.51 &  110.96 & 17.11 \\
+        1  & 1 & 4  & 4  &    1.86 &    7.91 &   15.96 &   24.39 &   32.21 &  158.55 & 24.31 \\
+        1  & 1 & 8  & 8  &    3.17 &   16.01 &   32.29 &   44.41 &   63.89 &  236.21 & 47.88 \\
+        1  & 1 & 16 & 16 &    4.72 &   25.33 &   49.39 &   63.81 &   86.45 &  369.86 & 61.11 \\
+        \midrule
+        2  & 1 & 1  & 1  &  142.79 &  192.71 &  211.14 &  210.31 &  225.75 &  285.64 & 33.04 \\
+        4  & 1 & 1  & 1  &  591.19 &  670.46 &  687.05 &  686.34 &  703.69 &  775.79 & 33.24 \\
+        8  & 1 & 1  & 1  & 1545.19 & 1624.21 & 1641.39 & 1640.70 & 1658.21 & 1713.89 & 34.00 \\
+        16 & 1 & 1  & 1  & 3460.67 & 3530.21 & 3547.09 & 3547.86 & 3565.62 & 3629.28 & 35.40 \\
+        \hline
+      \end{tabular}
+    \caption{Random Walk with Drift} \label{tbl:dtw_random_walk_with_drift}
+    \end{center}
+    \begin{tablenotes}
+        \item{\footnotesize This table summarizes the distribution of DTW values estimated on pairs of a random walk process with drift. The length of the simulated series is set to 252. A total of 1000 simulations are run for each set of parameter values. The DTW values in table are divided by the series length.}
+        \item {\footnotesize \textbf{Note}: All other factors equal, constrained DTW leads to significantly larger values of DTW than their unconstrained analogue. This a natural consequence of the unbounded evolution of the two simulated series.}
+    \end{tablenotes}
+\end{table}
 
-These estimated models, combined with Copula theory, can be leveraged to study the range of dynamic time warping values that can be expected for a pair of stocks with a specific level of correlation (See section 2 of \cite{DowiakTV-COP} for more details on copulas and their applications). The simulation exercise has the following steps.
+
+\subsection{Monte Carlo Simulation based on the ARMA-GARCH Framework} \label{sec:MC_sim_arma_garch}
+
+One characteristic the white noise and random walk specifications in the preceeding section both share is independence between the two series. The error terms are drawn independently from each other and from all previous draws:
+
+\begin{align}
+    \mathbb{E}[\epsilon_{A,t}\epsilon_{B,s}] = 0 \quad \quad \forall t,s \\
+    \mathbb{E}[\epsilon_{A,t}\epsilon_{A,s}] = 0 \quad \quad \forall t,s
+\end{align}
+
+This restriction is convienent for simulation but does not accurately represent returns to many financial assets, especially stock returns which tend to be positively correlated with each other. In this section a suitable monte carlo framework is outlined to test if a dynamic time warping value observed between two stock prices is statistically rare for the observed correlation between the pair's returns. The results show that taking into account the time-varying mean and variance is necessary for proper inference.
+
+In section \ref{sec:PairTrading} a total of 10,018 ARMA-GARCH models were estimated during the formation periods from 2000 to 2021 where each model was trained on a single year's worth of trading data. From these ten thousand marginal models a total of 2,199,276 pairs were formed and estimates of the pair's correlation and dynamic time warping distance were calculated over the duration of the study. These observed stock returns and the models optimized on top of them provide a diverse sample to study what, if any, relationship exists between correlation and dynamic time warping when estimtated on the same pair of stock price returns. Common sense would suggest that dynamic time warping values should be at their lowest when the correlation of the stock returns of the pair are at their highest, implying a negative relationship between the two. In the special case where the log price returns are perfectly correlated the dynamic time warping value should be equal to zero. While this section does lay out evidence comfirming a negative relationship between the two we find that the variance of DTW values is significance at all levels of correlation. 
+
+Instead of analysing the entire 2.2 million pairs from section \ref{sec:PairTrading} a smaller sample is created using stratified sampling. The idea is to stratify across the correlation parameters observed correlation parameter. The range of correlation values is segmented into adjacent bins with a uniform width set to 0.05, e.g: [-0.65, -0.6), ..., [0.9, 0.95), [0.95, 1). For each bin 300 hundred stock pairs or randomly sampled. If a bin has less than 300 pairs then all pairs in that bin are included. In total there are 7,765 pairs selected for this simulation study. The optimized marginal ARMA-GARCH models for these pairs, combined with Copula theory, can be leveraged to study the range of dynamic time warping values that can be expected for a pair of stocks with a specific level of correlation (See section 2 of \cite{DowiakTV-COP} for more details on copulas and their applications). The simulation exercise has the following steps.
 
 \begin{enumerate}
     \item For two arbitrary stocks, $A$ and $B$, the conditional mean, conditionl variance, and conditional density of the returns are recorded for each asset: $\hat{\mu}_{A,\,t}$, $\hat{\sigma}^{2}_{A,\,t}$, $\hat{g}_{A}$, and $\hat{\mu}_{B,\,t}$, $\hat{\sigma}^{2}_{B,\,t}$, $\hat{g}_{B}$ (see equations \ref{eq:conditional_mean}, \ref{eq:conditional_var}, and \ref{eq:conditional_distr} from section \ref{sec:ARMAGARCH-benchmark}).
@@ -571,205 +738,116 @@ These estimated models, combined with Copula theory, can be leveraged to study t
         \hat{U}_{B} = \hat{F}_{B}(s) = \int_{-\infty}^{s} \frac{1}{\hat{\sigma}_{B,\,t}} \hat{g}_{B} \left(z | \hat{\mu}_{t}\right) dz
     \end{equation}
     The residuals, in their uniform representation [($\hat{u}_{A,\,1}$, $\hat{u}_{B,\,1}$), $\cdots$, ($\hat{u}_{A,\,T}$, $\hat{u}_{B,\,T}$)], are used to estimate a bivariate t-Copula which is defined by it's correlation $\rho_{A,B}$ and degrees-of-freedom $\nu_{A,B}$ parameters.
-    \item The estimated t-Copula is used as a data generating process to produce new sets of bivariate uniform distributions [($u^{(i)}_{A,\,1}$, $u^{(i)}_{B,\,1}$), $\cdots$, ($u^{(i)}_{A,\,T}$, $u^{(i)}_{B,\,T}$)]. Each observation $t$ in a new sample is centered and scaled according to the conditional mean and variance from the estimated ARIMA-GARCH models.
+    \item The estimated t-Copula is used as a data generating process to produce new sets of bivariate uniform distributions [($u^{(i)}_{A,\,1}$, $u^{(i)}_{B,\,1}$), $\cdots$, ($u^{(i)}_{A,\,T}$, $u^{(i)}_{B,\,T}$)]. Each observation $t$ in a new sample is centered and scaled according to the conditional mean and variance from the estimated ARIMA-GARCH models\footnote{All marginal return models estimated in section \ref{sec:PairTrading} have a time-varying variance equation (see equation \ref{eq:conditional_var}) but not every return series has a time-varying mean component (see equation \ref{eq:conditional_mean}). The automated modeling process allows for a constant term only for the mean equation. This can impact the dynamics of the sampling process in equations \ref{eq:MC_invF_distr_A} and \ref{eq:MC_invF_distr_B}: $\mu=\hat{\mu}_{i}$ for $i \in {A,B}$.}.
     \begin{equation} \label{eq:MC_invF_distr_A}
         r^{(i)}_{A,\,t} = \hat{F}^{-1}_{A} \left(u^{(i)}_{A,\,t}\,\,;\,\, \mu=\hat{\mu}_{A,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{A,\,t} \right)
     \end{equation}
     \begin{equation} \label{eq:MC_invF_distr_B}
         r^{(i)}_{B,\,t} = \hat{F}^{-1}_{B} \left(u^{(i)}_{B,\,t}\,\,;\,\, \mu=\hat{\mu}_{B,\,t},\, \sigma^{2}=\hat{\sigma}^{2}_{B,\,t} \right)
-    \end{equation}
-    \item After a new set of return series are generated they are transformed from returns to price level using the standard price equation \ref{eq:standard_price}.
+    \end{equation} 
+    \item After a new set of return series are generated they are transformed from returns to price level using the standard price equation defined in \ref{eq:standard_price}.
     \item Repeat steps one through four to build up a distribution of dynamic time warping values for a pair of stock prices with a specific correlation value
 \end{enumerate}
 
-By marrying the conditional return models with a copula-based resampling approach many of the important characteristics of stock returns can be included in the monte carlo samples. These include auto-correlation, asymmetric returns, fat-tails, and volatility clustering observed in individual stocks as well as high levels of correlation in price movements between stocks over time. The original association and tail-dependency observed in the stock pairs is preserved by the copula while the unique idiosyncracies (See section \ref{sec:ARMAGARCH-benchmark}) of each stock is retained by the marginal models. This leaves only the natural variation of the distribution $g$ to drive the variation in the dynamic time warping values calculated in step 4. Assuming multivariate t-distributions for this simulation exercise is well founded. In the model selection process described in section \ref{sec:ARMAGARCH-benchmark} The t-distribution is chosen for all 10,018 marginal models in this study. The symmetric t-distribution is chosen 9324 times while the remaining 694 models are modeled with a skewed t-distribution.
+By marrying the conditional return models with a copula-based resampling approach many of the important characteristics of stock returns can be included in the monte carlo samples. These include auto-correlation, asymmetric returns, fat-tails, and volatility clustering observed in individual stocks as well as high levels of correlation in price movements between stocks over time. The original (Pearson's) correaltion and tail-dependency observed in the stock pairs is preserved by the copula while the unique idiosyncracies (See section \ref{sec:ARMAGARCH-benchmark}) of each stock is retained by the marginal models. This leaves only the variance of the distributions ($g_{A},\,g_{B}$) to drive the variation in the dynamic time warping values calculated in step 4. Assuming multivariate t-distributions for this simulation exercise is well founded. In the model selection process described in section \ref{sec:ARMAGARCH-benchmark} the t-distribution is chosen for all 10,018 marginal models in this study. The symmetric t-distribution is chosen 9,324 times while the remaining 694 models are modeled with a skewed t-distribution.
 
-This article finds evidence that modeling the conditional mean and especially the conditional variance is materially important if the researcher wants to perform bootstrapped confidence intervals
+In the context of inference between correlation and dynamic time warping, the importance of capturing a stocks time-varying dynamics via the ARMA-GARCH model is assessed by running four different simulation exercises that alternate between using conditional and unconditional mean and variance specifications of equations \ref{eq:MC_invF_distr_A} and \ref{eq:MC_F_distr_B}. For all ARMA-GARCH specifications used in this essay, the unconditional mean and unconditional variance of a stock's return series can be estimated by the the fitted conditional models\footnote{The vignette \cite{Rugarch} summarizing the software implementation used in this essay provides the relationship between the conditional mean and variance equations with their unconditional analogues.}.
+
+This essay finds evidence that modeling the conditional mean, and especially the conditional variance, is materially important if the researcher wants to perform bootstrapped confidence intervals. The values in the table \ref{tbl:monte_carlo_confidence_intervals} represent the proportion of the sampled stock pairs from section \ref{sec:PairTrading} whose observed dynamic warping value falls outside the confidence intervals constructed using the Monte Carlo simulation approach described in this section. The sampled pairs are split into two categories based on the ARMA specification choosen for stock returns modeled in section \ref{sec:PairTrading}. On the left is a set of 5,087 pairs where one or more of the stocks in the pair were chosen to have an autoregressive or moving average component in their mean equation (see equation \ref{eq:conditional_mean}). The set of columns on the right are for pairs where both stocks were modeled with intercept terms only. In the latter case the conditional mean and the unconditional mean of the series are the same. Rows correspond to different model assumptions when simulating new pairs of return series described in equations \ref{eq:MC_invF_distr_A} and \ref{eq:MC_invF_distr_B}. It is clear that not controlling for time-varying variance (i.e. volatility clustering) can lead to improper inference. The simulations that use unconditional variances in equations \ref{eq:MC_invF_distr_A} and \ref{eq:MC_invF_distr_B} (first and second rows) create confidence intervals that are far too narrow. For pairs with at least one stock fitted with an AR or MA component (\textit{Time-Varying Mean Pair}), the proportion of pairs whose observed dynamic time warping value falls outside the monte carlo confidence intervals far exceeds the expected significance level. This bias is reduce somewhat for pairs where both stocks are estimated with a constant mean process (\textit{Constant Mean Pair}) but the bias remains significant. When adding the fitted conditional variance values to the simulation proceedure (third and fourth rows) the observed bias narrows considerably, resulting in confidence intervals where the proportion of observed dynamic time warping values falling outside of them aligns closely given the significance level. 
 
 
-\begin{table}
+\begin{table}[!ht]
+    \caption{Violations of Monte Carlo Confidence Intervals}
     \fontsize{11pt}{11pt}\selectfont
     \centering
     \begin{tabular}{r r r r r r r r r r}
-        \hline
-                          & \multicolumn{4}{c}{Time-Varying Mean Pair$^{1}$} & & \multicolumn{4}{c}{Constant Mean Pair$^{1}$} \\ \cline{2-10}
-                          & 1\%   & 5\%   & 10\%  & N     & & 1\%   & 5\%    & 10\%  & N  \\
-        Unconditional     & 0.108 & 0.151 & 0.190 & 5,087 & & 0.074 &  0.115 & 0.158 & 4,666 \\
-        Cond Mean         & 0.114 & 0.161 & 0.203 & 5,087 & &    -- &     -- &    -- &   -- \\
-        Cond Var          & 0.020 & 0.052 & 0.087 & 5,087 & & 0.022 &  0.055 & 0.090 & 2,333 \\
-        Cond Mean and Var & 0.026 & 0.061 & 0.106 & 5,087 & & 0.023 &  0.051 & 0.091 & 2,333 \\
-        \hline
+        \midrule
+         & \multicolumn{4}{c}{Time-Varying Mean Pair} & & \multicolumn{4}{c}{Constant Mean Pair}    \\
+        \midrule
+                                 & 1\%   & 5\%   & 10\%  & N     & & 1\%   & 5\%   d& 10\%  & N     \\
+        Unconditional Model      & 0.108 & 0.151 & 0.190 & 5,087 & & 0.075 & 0.114 & 0.155 & 2,333 \\
+        Conditional Mean         & 0.114 & 0.161 & 0.203 & 5,087 & &    -- &    -- &    -- &   --  \\
+        Conditional Variance     & 0.020 & 0.052 & 0.087 & 5,087 & & 0.022 & 0.055 & 0.090 & 2,333 \\
+        Conditional Mean and Var & 0.026 & 0.061 & 0.106 & 5,087 & & 0.023 & 0.051 & 0.091 & 2,333 \\
+        \cmidrule{1-10}
     \end{tabular}
-    \caption{Percent Violations of Monte Carlo Confidence Intervals}
     \begin{tablenotes}
-        \item{The values in the table represent the proportion of randomly sampled stock pairs from section \ref{sec:PairTrading} whose observed dynamic warping value falls outside the Monte Carlos confidence intervals constructed using the simulation approach described in section \ref{sec:MC_sim_arma_garch}. The left set of columns summarizes stock pairs where one or more of the stocks in the pair were chosen to have an autoregressive or moving average componennt in their mean equation (see equation \ref{eq:conditional_mean}). The set of columns on the right are for pairs where both stocks were modeled with intercept terms only. In this case the conditional mean and the unconditional mean are the same. Rows correspond to different model assumptions when simulating new pairs of return series described in equations \ref{eq:MC_invF_distr_A} annd \ref{eq:MC_invF_distr_B}.}
-        \item B = 250; Relatively small number of bootstraps helps explain the one percent
+        \item{The values in the table represent the proportion of randomly sampled stock pairs from section \ref{sec:PairTrading} whose observed dynamic warping value falls outside the Monte Carlo confidence intervals constructed using the simulation approach described in section \ref{sec:MC_sim_arma_garch}. The left set of columns summarizes stock pairs where one or more of the stocks in the pair were chosen to have an autoregressive or moving average componennt in their mean equation (see equation \ref{eq:conditional_mean}). The set of columns on the right are for pairs where both stocks were modeled with intercept terms only. In this case the conditional mean and the unconditional mean are the same. Rows correspond to different model assumptions when simulating new pairs of return series described in equations \ref{eq:MC_invF_distr_A} and \ref{eq:MC_invF_distr_B}.}
+        \item \textbf{Note:} The number of simulations is set to 250. The small number is due to the high computational cost of running the simulations. This relatively small number of simulations per pair may contribute to the consistent bais observed at the one percent significance level.
     \end{tablenotes}
     \label{tbl:monte_carlo_confidence_intervals}
 \end{table}
 
+\subsection{Regression Analysis}
 
-\begin{table}
-    \centering
-    \begin{tabular}{l r l r l}
-         & Estimate & Std Err & Estimate & Std Err \\
-        \hline
-        \vspace{-1mm} \\
-        Dependent Var.  & log(dtw)&                 & log(dtw)&                 \\
-        \\
-        Intercept       &   3.496 &  0.014{$^{**}$} &   3.552 & 0.043{$^{**}$}  \\
-        Abs-Mean-Diff   & 305.712 &  7.101{$^{**}$} & 275.777 & 7.383{$^{**}$}  \\
-        % TODO: Sum-of-Variance
-        Mean Variance   &   0.892 &  0.246{$^{**}$} &   0.490 & 0.244{$^{*}$}   \\
-        % TODO: Change to Model-Cor
-        1 - model cor 1 &  39.989 &  1.062{$^{**}$} &  50.439 & 1.344{$^{**}$}  \\
-        1 - model cor 2 & -17.317 &  0.880{$^{**}$} & -18.608 & 0.916{$^{**}$}  \\
-        Intra-Sector    &  -0.019 &  0.030{$^{  }$} &   0.071 & 0.030{$^{*}$}   \\
-        2001            &      -- &              -- &   0.058 & 0.055           \\
-        2002            &      -- &              -- &  -0.266 & 0.074{$^{**}$}  \\
-        2003            &      -- &              -- &   0.046 & 0.075           \\
-        2004            &      -- &              -- &  -0.283 & 0.073{$^{**}$}  \\
-        2005            &      -- &              -- &  -0.234 & 0.077{$^{**}$}  \\
-        2006            &      -- &              -- &  -0.120 & 0.069{$^{+}$}   \\
-        2007            &      -- &              -- &  -0.048 & 0.077           \\
-        2008            &      -- &              -- &   0.146 & 0.060{$^{*}$}   \\
-        2009            &      -- &              -- &   0.612 & 0.062{$^{**}$}  \\
-        2010            &      -- &              -- &   0.092 & 0.062           \\
-        2011            &      -- &              -- &   0.042 & 0.056           \\
-        2012            &      -- &              -- &  -0.220 & 0.068{$^{**}$}  \\
-        2013            &      -- &              -- &  -0.032 & 0.067           \\
-        2014            &      -- &              -- &  -0.336 & 0.065{$^{**}$}  \\
-        2015            &      -- &              -- &  -0.177 & 0.061{$^{**}$}  \\
-        2016            &      -- &              -- &  -0.020 & 0.052           \\
-        2017            &      -- &              -- &  -0.436 & 0.047{$^{**}$}  \\
-        2018            &      -- &              -- &  -0.207 & 0.058{$^{**}$}  \\
-        2019            &      -- &              -- &  -0.158 & 0.049{$^{**}$}  \\
-        2020            &      -- &              -- &   0.256 & 0.054{$^{**}$}  \\
-        2021            &      -- &              -- &  -0.040 & 0.047           \\
-        2022            &      -- &              -- &   0.165 & 0.053{$^{**}$}  \\
-        \vspace{-1mm} \\
-        \hline
-    \end{tabular}
+In this section regression analysis is used to identify the important features that can help explain the relationship between a pair of stock return's observed correlation and the dynamic time warping value of their standard prices. The regression sample is the same set of pairs that were created for the simulations in section \ref{sec:MC_sim_arma_garch}: 7,765 stock pairs formed during the annual formation periods while executing the pair-trading strategy. The results summarized in tables \ref{tbl:dtw_white_noise}, \ref{tbl:dtw_random_walk_no_drift}, and \ref{tbl:dtw_random_walk_with_drift} help inform this sections choice of explanatory variables.
+
+Each pair in the sample has an observed correlation and dynamic time warping value.
+
+\begin{equation}
+    \log(\widehat{dtw}) = \beta_{0} + \beta_{1} \hat{\rho} + \beta_{2} \hat{\rho}^{2} + \boldsymbol{\beta}_{3} \boldsymbol{X} + \epsilon
+\end{equation}
+
+\begin{table}[!ht]
+    \fontsize{8pt}{8pt}\selectfont
     \caption{Relationship between correlation and dynamic time warping}
+    \centering
+    \begin{tabular}{l r l r l r l r l}
+        \midrule
+         & Estimate & Std Err & Estimate & Std Err & Estimate & Std Err & Estimate & Std Err  \\
+        \midrule
+                                                                                                                                                  \\
+        Dependent Var.               & log(dtw)&              & log(dtw)&               &     log(dtw)&                & log(dtw)&                \\
+                                                                                                                                                  \\
+        Intercept                    &   3.842 & 0.000$^{**}$ &   3.413 & 0.000$^{**}$  &       3.589 & 0.000$^{**}$   &   3.523 & 0.000$^{**}$   \\
+        Pearson's $\rho$             & -46.914 & 0.000$^{**}$ & -40.856 & 0.000$^{**}$  &     -48.546 & 0.000$^{**}$   & -50.500 & 0.000$^{**}$   \\
+        (Pearson's $\rho$)$^{2}$     & -19.836 & 0.000$^{**}$ & -17.612 & 0.000$^{**}$  &     -17.660 & 0.000$^{**}$   & -18.263 & 0.000$^{**}$   \\
+                                                                                                                                                  \\        
+        $\Delta$ Unconditional Mean  &      -- & --           & 308.194 & 0.000$^{**}$  &     280.256 & 0.000$^{**}$   & 276.413 & 0.000$^{**}$   \\
+        Total Unconditional Var      &      -- & --           &   0.428 & 0.000$^{**}$  &       0.239 & 0.044$^{*}$    &   0.254 & 0.037$^{*}$    \\
+        Average Pair Persistance          &      -- & --           &   0.089 & 0.188         &      -0.034 & 0.697          &   0.015 & 0.841          \\
+        Intra-Sector Pair            &      -- & --           &      -- & --            &          -- & --             &   0.068 & 0.023$^{*}$    \\
+        No. of ARMA Par              &      -- & --           &      -- & --            &          -- & --             &   0.001 & 0.729          \\
+        No. of GARCH Par             &      -- & --           &      -- & --            &          -- & --             &  -0.003 & 0.802          \\
+                                                                                                                                                  \\      
+        2001                         &      -- & --           &      -- & --            &       0.071 & 0.194          &   0.043 & 0.449          \\
+        2002                         &      -- & --           &      -- & --            &      -0.266 & 0.000$^{**}$   &  -0.247 & 0.001$^{**}$   \\
+        2003                         &      -- & --           &      -- & --            &       0.059 & 0.426          &   0.048 & 0.519          \\
+        2004                         &      -- & --           &      -- & --            &      -0.276 & 0.000$^{**}$   &  -0.284 & 0.000$^{**}$   \\
+        2005                         &      -- & --           &      -- & --            &      -0.191 & 0.011$^{*}$    &  -0.215 & 0.006$^{**}$   \\
+        2006                         &      -- & --           &      -- & --            &      -0.114 & 0.096$^{+}$    &  -0.116 & 0.095$^{+}$    \\
+        2007                         &      -- & --           &      -- & --            &      -0.033 & 0.660          &  -0.026 & 0.740          \\
+        2008                         &      -- & --           &      -- & --            &       0.142 & 0.017$^{*}$    &   0.160 & 0.009$^{**}$   \\
+        2009                         &      -- & --           &      -- & --            &       0.604 & 0.000$^{**}$   &   0.628 & 0.000$^{**}$   \\
+        2010                         &      -- & --           &      -- & --            &       0.082 & 0.181          &   0.109 & 0.087$^{+}$    \\
+        2011                         &      -- & --           &      -- & --            &       0.049 & 0.373          &   0.057 & 0.316          \\
+        2012                         &      -- & --           &      -- & --            &      -0.203 & 0.002$^{**}$   &  -0.202 & 0.003$^{**}$   \\
+        2013                         &      -- & --           &      -- & --            &       0.008 & 0.902          &  -0.015 & 0.823          \\
+        2014                         &      -- & --           &      -- & --            &      -0.313 & 0.000$^{**}$   &  -0.329 & 0.000$^{**}$   \\
+        2015                         &      -- & --           &      -- & --            &      -0.162 & 0.006$^{**}$   &  -0.159 & 0.010$^{**}$   \\
+        2016                         &      -- & --           &      -- & --            &      -0.007 & 0.887          &  -0.008 & 0.873          \\
+        2017                         &      -- & --           &      -- & --            &      -0.403 & 0.000$^{**}$   &  -0.423 & 0.000$^{**}$   \\
+        2018                         &      -- & --           &      -- & --            &      -0.158 & 0.005$^{**}$   &  -0.185 & 0.002$^{**}$   \\
+        2019                         &      -- & --           &      -- & --            &      -0.135 & 0.005$^{**}$   &  -0.150 & 0.002$^{**}$   \\
+        2020                         &      -- & --           &      -- & --            &       0.262 & 0.000$^{**}$   &   0.263 & 0.000$^{**}$   \\
+        2021                         &      -- & --           &      -- & --            &      -0.020 & 0.659          &  -0.033 & 0.482          \\
+        2022                         &      -- & --           &      -- & --            &       0.163 & 0.002$^{**}$   &   0.172 & 0.001$^{**}$   \\
+                                                                                                                                                  \\
+        Vol Model: gjr-std           &      -- & --           &      -- & --            &          -- & --             &   0.005 & 0.852          \\
+        Vol Model: cs-std            &      -- & --           &      -- & --            &          -- & --             &   0.133 & 0.000$^{**}$   \\
+        Vol Model: cs-gjr            &      -- & --           &      -- & --            &          -- & --             &   0.014 & 0.855          \\
+        Vol Model: cs-cs             &      -- & --           &      -- & --            &          -- & --             &   0.099 & 0.704          \\
+        Vol Model: gjr-gjr           &      -- & --           &      -- & --            &          -- & --             &   0.125 & 0.132          \\
+        T-Dist: Skewed-Standard      &      -- & --           &      -- & --            &          -- & --             &  -0.061 & 0.014$^{*}$    \\
+        T-Dist: Skewed-Skewed        &      -- & --           &      -- & --            &          -- & --             &   0.072 & 0.438          \\
+        \midrule
+    \end{tabular}
     \begin{tablenotes}
-        \item{Regression analysis ran on the correlation between observed correlation and dynamic time warping values for a stratified sample of stock pairs modeled in section \ref{sec:PairTrading}}
         \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
+        \item{Regression analysis ran on the correlation between observed correlation and dynamic time warping values for a stratified sample of stock pairs modeled in section \ref{sec:PairTrading}}
     \end{tablenotes}
     \label{tbl:correlation_to_log_dtw_regression}
 \end{table}
-
-
-\pagebreak
-
-
-\begin{table}[!htb]
-    \begin{center}
-      \begin{tabular}{| r r r r | r r r r r r r |}
-        \hline
-        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
-        \hline
-        0  & 0 & 1  & 1  & 0.72  & 0.82  & 0.85  & 0.85  & 0.89  & 0.97  & 0.06 \\
-        \hline
-        0  & 0 & 1  & 2  & 0.86  & 1.04  & 1.08  & 1.09  & 1.13  & 1.25  & 0.09 \\
-        0  & 0 & 1  & 4  & 1.19  & 1.44  & 1.52  & 1.52  & 1.59  & 1.83  & 0.15 \\
-        0  & 0 & 1  & 8  & 1.72  & 2.07  & 2.18  & 2.19  & 2.29  & 2.70  & 0.22 \\
-        0  & 0 & 1  & 16 & 2.55  & 2.99  & 3.16  & 3.17  & 3.32  & 4.05  & 0.33 \\
-        \hline
-        0  & 0 & 2  & 2  & 0.99  & 1.16  & 1.22  & 1.21  & 1.26  & 1.42  & 0.10 \\
-        0  & 0 & 4  & 4  & 1.39  & 1.64  & 1.71  & 1.71  & 1.77  & 2.02  & 0.13 \\
-        0  & 0 & 8  & 8  & 2.06  & 2.32  & 2.42  & 2.42  & 2.51  & 2.93  & 0.18 \\
-        0  & 0 & 16 & 16 & 2.95  & 3.31  & 3.44  & 3.44  & 3.56  & 4.14  & 0.25 \\
-        \hline
-        2  & 0 & 1  & 1  &  1.23 &  1.41 &  1.48 &  1.48 &  1.53 &  1.80 & 0.12 \\
-        4  & 0 & 1  & 1  &  2.32 &  3.32 &  3.58 &  3.58 &  3.86 &  4.76 & 0.54 \\
-        8  & 0 & 1  & 1  &  9.47 & 11.06 & 11.41 & 11.39 & 11.75 & 12.86 & 0.69 \\
-        16 & 0 & 1  & 1  & 25.16 & 27.06 & 27.41 & 27.38 & 27.74 & 28.68 & 0.68 \\
-        \hline
-      \end{tabular}
-    \caption{Stationary White Noise}
-    \end{center}
-    \begin{tablenotes}
-        \item{\footnotesize N = 500; T = 100}
-        \item {\footnotesize \textbf{Note}: The DTW value is divided by the series length (T).}
-        \item {\footnotesize \textbf{Note}: The distributions of the DTW samples are really symmetric. The median and mean remain close in value over all configurations.}
-        \item{\footnotesize \textbf{Note}: For the stationary series the deterministic component (distance between the mean values) plays an influencial role in the location of the center of the DTW distribution.}
-    \end{tablenotes}
-    \label{tbl:dtw_white_noise}
-\end{table}
-
-\begin{table}[!htb]
-    \begin{center}
-      \begin{tabular}{| r r r r | r r r r r r r |}
-        \hline
-        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
-        \hline
-        0 & 0 & 1  & 1  & 0.84 &  2.36 &  4.42 &  7.17 &  9.31 &  46.87 &  6.94  \\
-        \hline
-        0 & 0 & 1  & 2  & 1.39 &  3.57 &  7.05 & 10.09 & 13.84 &  50.89 & 10.27  \\
-        0 & 0 & 1  & 4  & 1.70 &  4.87 &  9.01 & 12.88 & 17.17 &  74.00 & 12.29  \\
-        0 & 0 & 1  & 8  & 2.88 &  6.81 & 12.30 & 16.34 & 22.30 &  83.36 & 15.48  \\
-        0 & 0 & 1  & 16 & 3.97 & 10.93 & 18.41 & 23.23 & 32.04 & 101.38 & 21.11  \\
-        \hline
-        0 & 0 & 2  & 2  & 1.43 &  3.44 &  6.48 & 10.41 & 13.85 &  69.20 & 10.41  \\
-        0 & 0 & 4  & 4  & 1.73 &  4.83 &  8.98 & 14.41 & 19.41 &  91.95 & 14.58  \\
-        0 & 0 & 8  & 8  & 2.75 &  7.38 & 15.66 & 23.12 & 31.83 & 152.90 & 24.45  \\
-        0 & 0 & 16 & 16 & 4.26 & 10.05 & 19.77 & 31.23 & 40.61 & 251.30 & 30.56  \\
-        \hline
-      \end{tabular}
-    \caption{Random Walk without Drift}
-    \end{center}
-    \begin{tablenotes}
-        \item{\footnotesize N = 500; T = 100}
-        \item {\footnotesize \textbf{Note}: The DTW value is divided by the series length (T).}
-        \item{\footnotesize \textbf{Note}: }
-    \end{tablenotes}
-    \label{tbl:dtw_random_walk_no_drift}
-\end{table}
-
-\begin{table}[!htb]
-    \begin{center}
-      \begin{tabular}{| r r r r | r r r r r r r |}
-        \hline
-        $\omega_{A}$ & $\omega_{B}$ & $\sigma^{2}_{A}$ & $\sigma^{2}_{B}$ & Min & 1st Qu. & Median & Mean & 3rd Qu. & Max & IQR \\
-        \hline
-        1  & 1 & 1  & 1  & 0.85   & 1.12   & 1.48   &  1.97  &  2.36  &  8.62  & 1.24  \\
-        \hline
-        1  & 1 & 1  & 2  & 1.00   & 1.42   & 2.02   &  2.75  &  3.48  & 12.82  & 2.05  \\
-        1  & 1 & 1  & 4  & 1.31   & 1.97   & 2.79   &  4.01  &  4.62  & 19.91  & 2.64  \\
-        1  & 1 & 1  & 8  & 1.68   & 3.08   & 4.55   &  6.49  &  8.08  & 40.11  & 5.00  \\
-        1  & 1 & 1  & 16 & 2.88   & 5.19   & 7.64   & 11.02  & 13.26  & 68.12  & 8.07  \\
-        \hline
-        1  & 1 & 2  & 2  & 1.23   & 1.63   &  2.38  &  3.23  &  3.76  &  22.63 &  2.13  \\
-        1  & 1 & 4  & 4  & 1.73   & 2.43   &  3.66  &  5.62  &  7.60  &  36.24 &  5.17  \\
-        1  & 1 & 8  & 8  & 2.60   & 4.06   &  6.49  &  9.38  & 11.70  &  48.24 &  7.64  \\
-        1  & 1 & 16 & 16 & 3.93   & 6.57   & 10.87  & 17.00  & 20.03  & 108.67 & 13.46  \\
-        \hline
-        2  & 1 & 1  & 1  &  15.18 &  27.33 &  32.43 &  32.74 &  37.32 &  59.31 &  9.99  \\
-        4  & 1 & 1  & 1  & 115.79 & 136.75 & 143.33 & 143.48 & 150.31 & 181.75 & 13.56  \\
-        8  & 1 & 1  & 1  & 355.60 & 382.08 & 389.51 & 389.48 & 396.75 & 422.52 & 14.67  \\
-        16 & 1 & 1  & 1  & 854.08 & 883.86 & 891.20 & 891.33 & 899.22 & 927.54 & 15.36  \\
-        \hline
-      \end{tabular}
-    \caption{Random Walk with Drift}
-    \end{center}
-    \begin{tablenotes}
-        \item{\footnotesize N = 500; T = 100}
-        \item {\footnotesize \textbf{Note}: The DTW value is divided by the series length (T).}
-        \item {\footnotesize \textbf{Note}: The distributions are skewed towards larger values of the DTW metric (mean is greater than the median).}
-        \item{\footnotesize \textbf{Note}: Compare the last row of each section where variance or the distance between intercepts is set to 16. For the white noise process the strongest factor contributing to the mean DTW value is the difference between the mean values. In comparison, the response to an increase in the variance of either series is muted.}
-    \end{tablenotes}
-    \label{tbl:dtw_random_walk_with_drift}
-\end{table}
-
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=\textwidth]{ts_distance_method.png}
-    \caption{List of distance measures included in \cite{ElsingAgon2012}}
-    \label{fig:ds_dist_meas_table}
-\end{figure}
-
-
-\pagebreak
 
 \appendix 
 
