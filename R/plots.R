@@ -109,6 +109,18 @@ cluster_and_plot_series <- function(D, Price, k=3, return_melted=FALSE, ...)
 
 
 
+# Helper-function for plotting line segments in the dynamic time warping graphs
+draw_square <- function(x, y)
+{
+  o <- 1/2
+  segments(x0 = c(x - o, x - o, x + o, x + o),
+           y0 = c(y - o, y - o, y + o, y + o),
+           x1 = c(x - o, x + o, x + o, x - o),
+           y1 = c(y + o, y - o, y - o, y + o),
+           col="white")
+}
+
+
 # Modified plot from the dtw package
 dtwPlotTwoWay2 <- function (d, xts = NULL, yts = NULL, offset = 0, ts.type = "l", 
                             pch = 21, match.indices = NULL, match.col = "gray70", match.lty = 3, 
@@ -151,3 +163,139 @@ dtwPlotTwoWay2 <- function (d, xts = NULL, yts = NULL, offset = 0, ts.type = "l"
            ytso[d$index2[idx]], col = match.col, lty = match.lty)
   # par(def.par)
 }
+
+# Same as dtwPlotTwoWay2 but with line segments showing normal synchroneous time alignment
+plotTwoWayEuclid <- function (d, offset = 0, ts.type = "l", 
+                               pch = 21, match.indices = NULL, match.col = "gray70", match.lty = 3, 
+                               xlab = "Index", ylab = "Query value", ...) 
+{
+  xts <- d$query
+  yts <- d$reference
+  ytso <- yts + offset
+  maxlen <- max(length(xts), length(ytso))
+  length(xts) <- maxlen
+  length(ytso) <- maxlen
+  # def.par <- par(no.readonly = TRUE)
+  if (offset != 0) {
+    par(mar = c(5, 4, 4, 4) + 0.1)
+  }
+  matplot(cbind(xts, ytso), type = ts.type, pch = pch, xlab = xlab, 
+          ylab = ylab, axes = FALSE, ...)
+  box()
+  axis(1)
+  axis(2, at = pretty(xts))
+  if (offset != 0) {
+    rightTicks <- pretty(yts)
+    axis(4, at = rightTicks + offset, labels = rightTicks)
+  }
+  if (is.null(match.indices)) {
+    ml <- length(d$index1)
+    idx <- 1:ml
+  }
+  else if (length(match.indices) == 1) {
+    idx <- seq(from = 1, to = length(d$index1), length.out = match.indices)
+  }
+  else {
+    idx <- match.indices
+  }
+  segments(1:length(xts), xts[1:length(xts)], 1:length(ytso), ytso[1:length(ytso)], 
+           col = match.col, lty = match.lty)
+  # par(def.par)
+}
+
+
+
+# Missing data map used in the Data chapter
+dtf <- fread("data/SandP_log_return_history.csv")
+dtf[, first_day_of_year := Date == min(Date), by=year(Date)]
+numNAs <- dtf[, sapply(.SD, function(x) sum(is.na(x))), .SDcols=setdiff(names(dtf), "Date")]
+numNAs <- sort(numNAs, decreasing=TRUE)
+dtf[, Amelia::missmap(.SD, y.labels=2000:2023, y.at=which(first_day_of_year)[-1],
+                      ylab="", xlab="Stock Symbol"),
+    .SDcols=names(numNAs)]
+
+
+
+
+
+
+
+# Vanilla DTW vs Weighted DTW
+t1 <- "TER"; t2 <- "LRCX"
+yr_ <- 2021
+dtfReturns <- fread("data/SandP_log_return_history.csv")
+m1 <- readRDS(sprintf("data/model_objects/%d/%d_%s.rds", yr_, yr_, t1))
+m2 <- readRDS(sprintf("data/model_objects/%d/%d_%s.rds", yr_, yr_, t2))
+
+p <- cumprod(1 + dtfReturns[year(Date) == yr_, t1, with=F])[[1]]
+q <- cumprod(1 + dtfReturns[year(Date) == yr_, t2, with=F])[[1]]
+N <- length(p)
+
+unc_dtw <- dtw(p, q, keep.internals=TRUE, window.type="none")
+scb_dtw <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=15)
+
+# 4-way plot used in the Distance Measure chapter
+par(mfrow=c(2,2))
+
+# Top-left
+dtwPlotTwoWay2(scb_dtw, xlab=as.character(yr_), ylab="Cumulative Return")
+legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
+legend("bottomright", paste("dtw=", round(cor(X)[1,2],2)), bty="n")
+
+# Top-right
+X <- cbind(as.numeric(residuals(m1$model)), as.numeric(residuals(m2$model)))
+z <- kde2d(X[, 1], X[, 2], n=50)
+plot(X, xlab=t1, ylab=t2, pch=19, cex=.4)
+contour(z, drawlabels=FALSE, nlevels=9, add=TRUE)
+abline(h=mean(X[,2]), v=mean(X[,1]), lty=2)
+legend("topleft", paste("R=", round(cor(X)[1,2],2)), bty="n")
+
+# Bottom-left
+plotTwoWayEuclid(scb_dtw, xlab=as.character(yr_), ylab="Cumulative Return",)
+legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
+legend("bottom", paste("R=", round(cor(X)[1,2],2)), bty="n")
+
+# Bottom-right
+SIG <- cbind(m1$model@fit$sigma**2, m2$model@fit$sigma**2)
+plot(SIG[,1], type="l", ylim=c(0, 1.05 * max(SIG)), xlab=as.character(yr_), ylab="Variance")
+lines(SIG[,2], col="red", lty=2)
+legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
+
+
+dtfDist[model_cor > 0.8 & dtw < 15][sample.int(.N, 10)]
+
+
+
+# Cost Matrix and Accumulative Cost Matrix used in the Distance Measure chapter
+par(mfrow=c(1,2))
+tmpC <- round(scb_dtw$localCostMatrix[1:10, 1:10], 3)
+tmpA <- round(scb_dtw$costMatrix[1:10, 1:10], 3)
+par(mfrow=c(1, 2))
+image(x=1:10, y=1:10, z=tmpC, col=gray.colors(50),
+      main="Cost Matrix",
+      xlab="Teradyne Time Index", ylab="Lam Research Time Index",
+      bty="n")
+for (i in 1:10) {
+  for (j in 1:10) {
+    text(i, j, labels=as.character(tmpC[i,j]), cex=0.75,
+         col=ifelse(tmpC[i,j] >= 0.02, "black", "gray"))
+  }
+}
+for (i in 1:13) {
+  draw_square(scb_dtw$index1[i], scb_dtw$index2[i])
+}
+
+image(x=1:10, y=1:10, z=tmpA, col=gray.colors(50),
+      main="Accumulative Cost Matrix",
+      xlab="Teradyne Time Index", ylab="Lam Research Time Index",
+      bty="n")
+for (i in 1:10) {
+  for (j in 1:10) {
+    text(i, j, labels=as.character(tmpA[i,j]), cex=0.75,
+         col=ifelse(tmpA[i,j] >= 0.1, "black", "gray"))
+  }
+}
+for (i in 1:13) {
+  draw_square(scb_dtw$index1[i], scb_dtw$index2[i])
+}
+
