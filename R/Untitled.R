@@ -4,6 +4,21 @@ source("R/auto_marginal.R")
 source("R/plots.R")
 source("R/similarity_functions.R")# import read_and_melt, dynamic_time_warp from R/similarity_script.R
 
+
+
+# Delannoy Number
+function(x, y)
+{
+  L <- min(x, y)
+  out <- vector("numeric", L + 1)
+  for (k in seq(0, L)) {
+    out[k + 1] <- choose(x, k) * choose(y, k) * 2**k
+  }
+  return(sum(out))
+}
+
+
+
 dtfStdRes1920 <- fread("data/label_analysis/DA_2019_2020_std_resids.csv")
 dtfStdPrc1920 <- fread("data/label_analysis/DA_2019_2020_std_price.csv")
 ticks <- sort(setdiff(names(dtfStdRes1920), c("Date")))
