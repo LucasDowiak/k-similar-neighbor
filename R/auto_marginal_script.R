@@ -65,30 +65,3 @@ for (yr in as.character(2000:2022)) {
                                    write_output = TRUE)
   diagnostic[[yr]] <- model_diag
 }
-
-
-# QA on the model selection process --------------------------------------------
-# DEPRECATED - Uses old system where the model specification, and not a ugarch obj,
-#              is serialized in json
-lst_files <- list.files('data', pattern = "marginal_specifications_[0-9]{4}.json",
-                        full.names = TRUE)
-gvb <- lapply(lst_files, good_vs_bad_symbols)
-o <- lapply(gvb, `[[`, 'fail_ticks')
-names(o) <- lst_files
-
-all_fails <- Reduce(union, o)
-univ_intersect <- Reduce(intersect, lapply(gvb, `[[`, 'pass_ticks'))
-gvb_sums <- t(sapply(gvb,
-                     function(x) c(pass_ticks=length(x$pass_ticks),
-                                   fail_ticks=length(x$fail_ticks),
-                                   not_run=length(x$not_run_ticks))))
-
-
-SPEC_PATH <- "data/marginal_specifications_20200323_20210219.json"
-st_date <- "2020-03-23"
-ed_date <- "2021-02-19"
-
-tmp <- good_vs_bad_symbols(SPECS)
-tickers <- c(tmp$fail_ticks, tmp$not_run_ticks)
-# Pull the tickers from the json files
-tickers <- sapply(strsplit(dir("data/raw_json", pattern="json$"), "\\."), `[[`, 1)
