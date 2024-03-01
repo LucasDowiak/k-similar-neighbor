@@ -159,6 +159,8 @@ dtwPlotTwoWay2 <- function (d, xts = NULL, yts = NULL, offset = 0, ts.type = "l"
   else {
     idx <- match.indices
   }
+  # For the diss only show every-other line to make it more visually appealing
+  idx <- idx[idx %% 2 == 0]
   segments(d$index1[idx], xts[d$index1[idx]], d$index2[idx], 
            ytso[d$index2[idx]], col = match.col, lty = match.lty)
   # par(def.par)
@@ -198,6 +200,8 @@ plotTwoWayEuclid <- function (d, offset = 0, ts.type = "l",
   else {
     idx <- match.indices
   }
+  # For the diss only show every-other line to make it more visually appealing
+  idx <- idx[idx %% 2 == 0]
   segments(1:length(xts), xts[1:length(xts)], 1:length(ytso), ytso[1:length(ytso)], 
            col = match.col, lty = match.lty)
   # par(def.par)
@@ -227,42 +231,102 @@ dtfReturns <- fread("data/SandP_log_return_history.csv")
 m1 <- readRDS(sprintf("data/model_objects/%d/%d_%s.rds", yr_, yr_, t1))
 m2 <- readRDS(sprintf("data/model_objects/%d/%d_%s.rds", yr_, yr_, t2))
 
-p <- cumprod(1 + dtfReturns[year(Date) == yr_, t1, with=F])[[1]]
-q <- cumprod(1 + dtfReturns[year(Date) == yr_, t2, with=F])[[1]]
+P <- dtfReturns[year(Date) == yr_, t1, with=F]
+Q <- dtfReturns[year(Date) == yr_, t2, with=F]
+p <- cumprod(1 + P)[[1]]
+q <- cumprod(1 + Q)[[1]]
 N <- length(p)
 
 unc_dtw <- dtw(p, q, keep.internals=TRUE, window.type="none")
 scb_dtw <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=15)
 
-# 4-way plot used in the Distance Measure chapter
+
+# 3x2 plot to compare Euclidean Distance, Constrained DTW, and Unconstrained DTW
+par(mfrow=c(3, 2))
+
+plotTwoWayEuclid(scb_dtw, xlab=as.character(yr_), match.lty=2, match.col="gray70",
+                 ylab="Standardized Price",
+                 main="A. Standard Squared Distance")
+legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
+legend("bottomright", legend=sprintf("D=%.*f", 2, sum((p - q)**2)), bty="n")
+
+plot(seq_along(p), seq_along(q), type="l",
+     main="A. Optimal Warping Path",
+     xlab=sprintf("%s Index", t1),
+     ylab=sprintf("%s Index", t2))
+abline(15, 1, lty=3)
+abline(-15, 1, lty=3)
+
+
+dtwPlotTwoWay2(scb_dtw, xlab=as.character(yr_), match.lty=2, match.col="gray70",
+               ylab="Standardized Price",
+               main="B. Constrained DTW")
+legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
+legend("bottomright", legend=sprintf("D=%.*f", 2, scb_dtw$distance), bty="n")
+
+plot(scb_dtw, type="alignment",
+     main="B. Constrained Optimal Warping Path",
+     xlab=sprintf("%s Index", t1), ylab=sprintf("%s Index", t2))
+abline(15, 1, lty=3)
+abline(-15, 1, lty=3)
+
+
+dtwPlotTwoWay2(unc_dtw, xlab=as.character(yr_), match.lty=2, match.col="gray90",
+               ylab="Standardized Price",
+               main="C. Unconstrained DTW")
+legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
+legend("bottomright", legend=sprintf("D=%.*f", 2, unc_dtw$distance), bty="n")
+
+plot(unc_dtw, type="alignment",
+     main="C. Unconstrained Optimal Warping Path",
+     xlab=sprintf("%s Index", t1), ylab=sprintf("%s Index", t2))
+abline(15, 1, lty=3)
+abline(-15, 1, lty=3)
+
+
+# 2x2 plot used in the Distance Measure chapter
+X <- scale(cbind(P, Q))
+
 par(mfrow=c(2,2))
 
 # Top-left
-dtwPlotTwoWay2(scb_dtw, xlab=as.character(yr_), ylab="Cumulative Return")
-legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
-legend("bottomright", paste("dtw=", round(cor(X)[1,2],2)), bty="n")
+levs <- c(0.0001, 0.001, 0.01, 0.05, 0.25, 0.5)
+f1 <- fitdist(distribution="std", X[, 1])
+u1 <- pdist("std", X[,1], mu=f1$pars['mu'], sigma=f1$pars['sigma'], shape=f1$pars['shape'])
+f2 <- fitdist(distribution="std", X[, 2])
+u2 <- pdist("std", X[,2], mu=f2$pars['mu'], sigma=f2$pars['sigma'], shape=f2$pars['shape'])
+estTCop_nomodel <- BiCopEst(u1, u2, family=2, se=TRUE)
+plot(estTCop_nomodel, "contour", levels=levs, drawlabels=FALSE,
+     xlim=c(-4,4), ylim=c(-4,4), xlab=t1, ylab=t2,
+     main="A. Unadjusted Cor")
+points(X, cex=0.2)
+legend("topleft", expression(rho==0.86, nu==4.79), bty="n")
 
 # Top-right
-X <- cbind(as.numeric(residuals(m1$model)), as.numeric(residuals(m2$model)))
-z <- kde2d(X[, 1], X[, 2], n=50)
-plot(X, xlab=t1, ylab=t2, pch=19, cex=.4)
-contour(z, drawlabels=FALSE, nlevels=9, add=TRUE)
-abline(h=mean(X[,2]), v=mean(X[,1]), lty=2)
-legend("topleft", paste("R=", round(cor(X)[1,2],2)), bty="n")
+estTCop_garch <- BiCopEst(pit(m1$model), pit(m2$model), family=2, se=TRUE)
+plot(estTCop_garch, "contour", levels=levs, drawlabels=FALSE,
+     xlim=c(-4,4), ylim=c(-4,4), xlab=t1, ylab=t2,
+     main="B. Modeled Cor")
+points(X, cex=0.2)
+legend("topleft", expression(rho==0.84, nu==9.01), bty="n")
 
-# Bottom-left
-plotTwoWayEuclid(scb_dtw, xlab=as.character(yr_), ylab="Cumulative Return",)
-legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
-legend("bottom", paste("R=", round(cor(X)[1,2],2)), bty="n")
 
-# Bottom-right
+# Bottom-Left
 SIG <- cbind(m1$model@fit$sigma**2, m2$model@fit$sigma**2)
-plot(SIG[,1], type="l", ylim=c(0, 1.05 * max(SIG)), xlab=as.character(yr_), ylab="Variance")
+plot(SIG[,1], type="l", ylim=c(0, 1.05 * max(SIG)), xlab=as.character(yr_),
+     ylab="Variance",
+     main="C. Fitted Variance")
 lines(SIG[,2], col="red", lty=2)
-legend("topleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
+legend("bottomleft", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
 
 
-dtfDist[model_cor > 0.8 & dtw < 15][sample.int(.N, 10)]
+# Bottom-Right
+MU <- cbind(m1$model@fit$fitted.values, m2$model@fit$fitted.values)
+plot(MU[,2], type="l", ylim=c(0.95 * min(MU), 1.05 * max(MU)), xlab=as.character(yr_),
+     ylab="Expected Return", col="red", lty=2,
+     main="D. Fitted Mean")
+lines(MU[,1], col="black", lty=1, lwd=2)
+legend("topright", legend=c(t1, t2), col=c("black", "red"), lty=c(1,2), bty="n")
 
 
 
