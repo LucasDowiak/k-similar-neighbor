@@ -46,7 +46,7 @@ This essay focuses on the application of \textit{dynamic time warping} (DTW) in 
 \rho(\boldsymbol{x}, \boldsymbol{y}) = \frac{ \sum_{t=1}^{T} (x_{t} - \bar{x}) (y_{t} - \bar{y})}{ \sqrt{\sum_{t=1}^{T} (x_{t} - \bar{x})^{2} \sum_{t=1}^{T} (y_{t} - \bar{y})^{2}}}
 \end{equation}
 
-When looking at the covariance component in the numerator of equation (\ref{eq:intro_pearsons_rho}), the statistic's assessment of association is based on the synchronous co-movements of the two variables. Suppose, for instance, there is a sample of T draws from the following multivariate normal distribution
+When looking at the covariance component in the numerator of equation (\ref{eq:intro_pearsons_rho}), the statistic's assessment of association is based on the synchronous co-movements of the two variables. Now, suppose there is a sample of T draws from the following multivariate normal distribution
 
 \begin{equation}
     \boldsymbol{Z_{t}} \thicksim N(\boldsymbol{0}, \boldsymbol{\Sigma})
@@ -61,7 +61,7 @@ with
     \end{bmatrix}
 \end{equation}
 
-and the sample is given an integer valued time index from one to T. Consider the variance-covariance matrix estimated from the given sample. No one would be surprised to find that the sample statistics are close to their population values: $\sigma_{1} \approx \hat{s}_{1}$, $\sigma_{2} \approx \hat{s}_{2}$, and $\rho \approx \hat{\rho}$. Now, if a second multivariate sample is created $\boldsymbol{Z}^\prime = [\boldsymbol{Z}_{(-T), 1}, \, \boldsymbol{Z}_{(-1), 2}]$ where the first column is all values of $\boldsymbol{Z}_{1}$ but the last one and the second column is all values of $\boldsymbol{Z}_{2}$ but the first one. In this case we still have $\sigma^{\prime}_{1} \approx \hat{s}^{\prime}_{1}$ and $\sigma^{\prime}_{2} \approx \hat{s}^{\prime}_{2}$ but $\hat{\rho}^{\prime}$ will be a completely untrustworthy estimate of the original correlation because of the misalignment of the time index. This does not mean that the two variables are unrelated---they still are---but the relationship has been masked by the one day lag between the two series. Now consider if $\boldsymbol{x}$ and $\boldsymbol{y}$ are two different lengths or have missing values. Without some kind of preliminary data processing or imputation method the correlation value can not be calculated at all.
+and the sample is given an integer valued time index from one to T. Consider the variance-covariance matrix estimated from the given sample. No one would be surprised to find that the sample statistics are close to their population values: $\sigma_{1} \approx \hat{s}_{1}$, $\sigma_{2} \approx \hat{s}_{2}$, and $\rho \approx \hat{\rho}$. If a second multivariate sample is created $\boldsymbol{Z}^\prime = [\boldsymbol{Z}_{(-T), 1}, \, \boldsymbol{Z}_{(-1), 2}]$ where the first column is all values of $\boldsymbol{Z}_{1}$ but the last one and the second column is all values of $\boldsymbol{Z}_{2}$ but the first one. In this case we still have $\sigma^{\prime}_{1} \approx \hat{s}^{\prime}_{1}$ and $\sigma^{\prime}_{2} \approx \hat{s}^{\prime}_{2}$ but $\hat{\rho}^{\prime}$ will be a completely untrustworthy estimate of the original correlation because of the misalignment of the time index. This does not mean that the two variables are unrelated---they still are---but the relationship has been masked by the one day lag between the two series. Now consider if $\boldsymbol{x}$ and $\boldsymbol{y}$ are two different lengths or have missing values. Without some kind of preliminary data processing or imputation method the correlation value can not be calculated at all.
 
 As documented below, DTW is already present in the finance and economics fields. What is missing from the literature, though, is consideration of how non-stationary behavior impacts the outcome of the dynamic time warping algorithm. This essay aims to fill that gap as well as provide context to using DTW as a complement, or even as a substitute, to correlation in certain situations. The rest of this section discusses some of the existing literature of DTW applied to fields of economics and finance and the data source used in this essay. Section \ref{sec:Distance_Measures} formally defines dynamic time warping, correlation, and euclidean distance. The latter two measures will be used as benchmarks to ground the analysis of DTW. Sector \ref{sec:PairTrading} directly compares DTW to Pearson's Correlation in their ability to form profitable portfolios while executing a specific pair-trading strategy. Section \ref{sec:Corr_and_DTW_Relationship} conducts two separate simulation exercises to study the impact that non-stationarity has on the DTW algorithm. Section \ref{sec:Regression_Analysis} uses regression analysis to analyze the mean relationship between DTW and correlation while Section \ref{sec:Conclusion} concludes.
 
@@ -725,23 +725,29 @@ This essay finds evidence that modeling the conditional mean, and especially the
 
 \chapter{Regression Analysis} \label{sec:Regression_Analysis}
 
-In this section, regression analysis is used to identify the important features that can help explain the relationship between a pair of stock return's observed correlation and the dynamic time warping value of their standard prices. The regression sample is the same set of pairs that was constructed for the simulations in Section \ref{sec:MC_sim_arma_garch}: 7,765 stock pairs formed during the annual formation periods while executing the pair-trading strategy. The results summarized in Tables \ref{tbl:dtw_white_noise}, \ref{tbl:dtw_random_walk_no_drift}, and \ref{tbl:dtw_random_walk_with_drift} help inform this section's choice of explanatory variables. Each pair in the sample has an observed correlation and dynamic time warping value. This essay will focus on the general regression equation described below\footnote{The hats are kept to reinforce the fact that we are regressing on the observed values from Section \ref{sec:PairTrading}}.
+In this section, regression analysis is used to identify the important features that can help explain the relationship between a pair of stock return's observed correlation and the dynamic time warping value of their standard prices. The regression sample is the same set of pairs that was constructed for the simulations in Section \ref{sec:MC_sim_arma_garch}: 7,765 stock pairs formed during the annual formation periods while executing the pair-trading strategy. The results summarized in Tables \ref{tbl:dtw_white_noise}, \ref{tbl:dtw_random_walk_no_drift}, and \ref{tbl:dtw_random_walk_with_drift} help inform this section's choice of explanatory variables. Each pair in the sample has an observed correlation and dynamic time warping value. This essay will focus on the following general regression equation described below\footnote{The hats are kept to reinforce the fact that we are regressing on the optimal DTW value and modeled correlation values from Section \ref{sec:PairTrading}}.
 
 \begin{equation} \label{eq:regression_equation}
     \log(\widehat{dtw}) = \beta_{0} + \beta_{1} \hat{\rho} + \beta_{2} \hat{\rho}^{2} + \boldsymbol{\beta}_{3} \boldsymbol{X} + \varepsilon
 \end{equation}
 
-The main relationship of interest, between the observed correlation and dynamic time warping values, is written explicitly in equation (\ref{eq:regression_equation}). It has two important features. One is the log-transformation that is applied to the observed dynamic time warping values. The second is the quadratic polynomial applied to the correlation parameter obtained by fitting a t-Copula to a stock pairs return series. Since many of the remaining explanatory variables used in this section---captured by $\boldsymbol{X}$ in equation (\ref{eq:regression_equation})---are derived from the optimized ARMA-GARCH models, the estimated correlation value used in the regression is the modeled correlation described in equation (\ref{eq:t_copula}). Informed by Tables \ref{tbl:dtw_white_noise} through \ref{tbl:dtw_random_walk_with_drift} two variables are constructed to capture the difference in expected return and the aggregate volatility of the two return series for each pair in the sample. A third variable is constructed to capture the strength of "mean-reversion" in each stock's return series:
+The main relationship of interest, between the observed correlation and dynamic time warping values, is written explicitly in equation (\ref{eq:regression_equation}). It has two important features. One is the log-transformation that is applied to the observed dynamic time warping values. The second is the quadratic polynomial applied to the correlation parameter obtained by fitting a t-Copula to a stock pairs return series. The true specification is, of course, unknown. A second set of regressions are run with the same specification as (\ref{eq:regression_equation}), but rather than using the fitted correlation value from a pair's optimized t-Copula, the Pearson's correlation coefficient from the unadjusted return series is in its place. The results are presented in a separate table.
+
+Since many of the remaining explanatory variables used in this section---captured by $\boldsymbol{X}$ in equation (\ref{eq:regression_equation})---are derived from the optimized ARMA-GARCH models, the estimated correlation value used in the regression is the modeled correlation described in equation (\ref{eq:t_copula}). Informed by Tables \ref{tbl:dtw_white_noise} through \ref{tbl:dtw_random_walk_with_drift} two variables are constructed to capture the difference in unconditional mean return and the unconditional volatility process of the two return series for each pair in the sample. A third variable captures the total unconditional volatility of a pair and a fourth variable is constructed to capture the strength of "mean-reversion" in each stock's return series.
 
 \begin{enumerate}
-    \item \textbf{$\Delta$ Unconditional Mean}: The absolute difference between the unconditional mean return for each stock in the pair
+    \item \textbf{$\Delta$ Unconditional Mean}: The absolute difference between the unconditional mean return of each stock in the pair
     \begin{equation}
         |\mu_{A} - \mu_{B}|
     \end{equation}
     \item \textbf{Total Unconditional Variance}: The sum of unconditional volatility model by each stock's ARMA-GARCH model
     \begin{equation}
         \sigma^{2}_{A} + \sigma^{2}_{B}
-    \end{equation} 
+    \end{equation}
+    \item \textbf{$\Delta$ Unconditional Var}: The absolute difference between the unconditional variance of each stock in the pair
+    \begin{equation}
+        |\sigma^{2}_{A} - \sigma^{2}_{B}|
+    \end{equation}
     \item \textbf{Average Pair Persistence}: The geometric average of each stock return's persistence as estimated by each series' optimized ARMA model. Persistence is a measure of a series' \textit{memory} or how long a small perturbation at a point in time effects the future values of the series. It takes values on the unit interval with a value of one indicating an infinitely long memory.
 \end{enumerate}
 
@@ -756,75 +762,150 @@ Additional explanatory variables are added to help isolate the relationship betw
     \item \textbf{No. of GARCH Parameters}: The total number of parameters in the conditional variance equations from both marginal models
 \end{enumerate}
 
-Results for the applied regressions are summarized in Table \ref{tbl:correlation_to_log_dtw_regression}.
+Results for the Regressions (\ref{eq:regression_equation}) using the correlation paramter from an estimated t-Copula are summarized in Table \ref{tbl:correlation_to_log_dtw_regression} while results for Regressions (\ref{eq:regression_equation}) using Pearson's correlation coefficient are summarized in Table \ref{tbl:correlation_to_log_dtw_regression_pearson}.
 
-\begin{table}[!ht]
+Starting with Table \ref{tbl:correlation_to_log_dtw_regression}, the fitted quadratic equation form is roughly symmetric around the y-axis since the coefficient $\beta_{1}$ is not found to be significantly different than zero. The $\beta_{1}$ from Specification (\ref{tbl:correlation_to_log_dtw_regression}.D) is significant at the 10\% significance level, but given the coefficient value from the other specifications, this is not very convincing. The coefficient on the quadratic term, $\beta_{2}$, is consistently significant at the 1\% significance level and takes values from -2.316 to -2.143. The variables that capture the important characteristics of the model dynamics are, for the most part, very influential. The only exception is the average persistence of the two ARMA-GARCH models which seems to have very little explanatory power. On the other hand, the coefficients on the difference in average return, difference in average volatility, and total volatility indicate large and statistically significant effect sizes. This reinforces the results from the simulation exercises in Sections \ref{sec:MC_sim_arma_garch} and \ref{sec:MC_sim_arma_garch}. Adding indicator variables for each year has a noticeable impact on the estimated coefficients of the variables just mentioned. Compared to Specification (\ref{tbl:correlation_to_log_dtw_regression}.B), the magnitude of the coefficients in Specifications (\ref{tbl:correlation_to_log_dtw_regression}.C) and (\ref{tbl:correlation_to_log_dtw_regression}.D) are all reduced. The coefficients on the annual fixed effects echo the cyclical pattern found in the portfolio returns of Section \ref{sec:PairTrading}. The coefficients tend to be negative during periods of low absolute returns and turn positive during years with large positive or negative returns. On a contradictory note, in Specification (\ref{tbl:correlation_to_log_dtw_regression}.D) the coefficient on the intra-industry indicator variable is positive at the 1\% significance level. From Tables \ref{tbl:pair_cross_sector_tabulation_correlation} it is clear that correlation is highest amongst intra-industry pairs. It's suprising, then, that the regression would indicate that intra-industry pairs would have larger dynamic time warping values, on average, than inter-industry pairs. Interesting, two of the cofficients from the categorical variables recording the volatility specification and the distribution of the ARMA-GARCH models are found to be significant. Pairs where one stock is modeled with a component-GARCH model and the other a standard GARCH model have slightly larger dynamic time warping values while pairs where one stock is modeled with a standard t-distribution and the other a skewed t-distribution have slightly smaller dynamic time warping values. There is no clear theoretical reason these combinations would be impactful. Additional analysis needs to be conducted to rule out convergence problems during the batch modeling efforts required in Section \ref{sec:PairTrading}.
+
+When considering Table \ref{tbl:correlation_to_log_dtw_regression_pearson}, it appears that many of the conclusions drawn from Table \ref{tbl:correlation_to_log_dtw_regression} remain the same when regressing Pearson's correlation coefficient, instead of the t-Copula correlation parameter, against the log of dynamic time warping value. Some differences are worth noting, though. Changing the correlation value used in the regression has a material impact on the main relationship of interest. While the intercept terms are comparable across the two sets of regressions, the interplay between the linear and quadratic has changed. The coefficients on the linear term are now statistcally non-zero and negative while the magnitude of coefficients on the squared term are lower. The variables that capture the important characteristics of the model dynamics are less significant as a group. The difference in the unconditional means is still very relevant but the coefficients on the two unconditional variance terms are now inconsequential once the annual fixed effects are applied. The cyclical relationship of annual fixed effects remains intact. The counterintuitive impact of being an intra-sector stock pair remains positive and significant while a small but statistically positive effect is captures for the variable that counts the total number of ARMA parameters.
+
+\begin{table}
     \fontsize{8pt}{8pt}\selectfont
-    \caption{Relationship between correlation and dynamic time warping}
+    \caption{Regression Summary with Copula Correlation Parameter}
     \centering
     \begin{tabular}{l r l r l r l r l}
         \midrule
+         & \multicolumn{2}{c}{(A)} & \multicolumn{2}{c}{(B)} & \multicolumn{2}{c}{(C)} & \multicolumn{2}{c}{(D)}  \\
          & Coef & Std Err & Coef & Std Err & Coef & Std Err & Coef & Std Err  \\
         \midrule
-                                                                                                                                                        \\
-        Dependent Var.                     & log(dtw)&              & log(dtw)&               &     log(dtw)&                & log(dtw)&                \\
-                                                                                                                                                        \\
-        Intercept                          &   3.842 & 0.000$^{**}$ &   3.413 & 0.000$^{**}$  &       3.589 & 0.000$^{**}$   &   3.523 & 0.000$^{**}$   \\
-        Fitted Corr. $\hat{\rho}$          & -46.914 & 0.000$^{**}$ & -40.856 & 0.000$^{**}$  &     -48.546 & 0.000$^{**}$   & -50.500 & 0.000$^{**}$   \\
-        (Fitted Cor. $\hat{\rho}$)$^{2}$   & -19.836 & 0.000$^{**}$ & -17.612 & 0.000$^{**}$  &     -17.660 & 0.000$^{**}$   & -18.263 & 0.000$^{**}$   \\
-                                                                                                                                                        \\        
-        $\Delta$ Unconditional Mean$^{a}$  &      -- & --           & 308.194 & 0.000$^{**}$  &     280.256 & 0.000$^{**}$   & 276.413 & 0.000$^{**}$   \\
-        Total Unconditional Var$^{b}$      &      -- & --           &   0.428 & 0.000$^{**}$  &       0.239 & 0.044$^{*}$    &   0.254 & 0.037$^{*}$    \\
-        Average Pair Persistence$^{c}$     &      -- & --           &   0.089 & 0.188         &      -0.034 & 0.697          &   0.015 & 0.841          \\
-        Intra-Sector Pair                  &      -- & --           &      -- & --            &          -- & --             &   0.068 & 0.023$^{*}$    \\
-        No. of ARMA Par$^{d}$              &      -- & --           &      -- & --            &          -- & --             &   0.001 & 0.729          \\
-        No. of GARCH Par$^{d}$             &      -- & --           &      -- & --            &          -- & --             &  -0.003 & 0.802          \\
-                                                                                                                                                        \\      
-        2001$^{e}$                         &      -- & --           &      -- & --            &       0.071 & 0.194          &   0.043 & 0.449          \\
-        2002                               &      -- & --           &      -- & --            &      -0.266 & 0.000$^{**}$   &  -0.247 & 0.001$^{**}$   \\
-        2003                               &      -- & --           &      -- & --            &       0.059 & 0.426          &   0.048 & 0.519          \\
-        2004                               &      -- & --           &      -- & --            &      -0.276 & 0.000$^{**}$   &  -0.284 & 0.000$^{**}$   \\
-        2005                               &      -- & --           &      -- & --            &      -0.191 & 0.011$^{*}$    &  -0.215 & 0.006$^{**}$   \\
-        2006                               &      -- & --           &      -- & --            &      -0.114 & 0.096$^{+}$    &  -0.116 & 0.095$^{+}$    \\
-        2007                               &      -- & --           &      -- & --            &      -0.033 & 0.660          &  -0.026 & 0.740          \\
-        2008                               &      -- & --           &      -- & --            &       0.142 & 0.017$^{*}$    &   0.160 & 0.009$^{**}$   \\
-        2009                               &      -- & --           &      -- & --            &       0.604 & 0.000$^{**}$   &   0.628 & 0.000$^{**}$   \\
-        2010                               &      -- & --           &      -- & --            &       0.082 & 0.181          &   0.109 & 0.087$^{+}$    \\
-        2011                               &      -- & --           &      -- & --            &       0.049 & 0.373          &   0.057 & 0.316          \\
-        2012                               &      -- & --           &      -- & --            &      -0.203 & 0.002$^{**}$   &  -0.202 & 0.003$^{**}$   \\
-        2013                               &      -- & --           &      -- & --            &       0.008 & 0.902          &  -0.015 & 0.823          \\
-        2014                               &      -- & --           &      -- & --            &      -0.313 & 0.000$^{**}$   &  -0.329 & 0.000$^{**}$   \\
-        2015                               &      -- & --           &      -- & --            &      -0.162 & 0.006$^{**}$   &  -0.159 & 0.010$^{**}$   \\
-        2016                               &      -- & --           &      -- & --            &      -0.007 & 0.887          &  -0.008 & 0.873          \\
-        2017                               &      -- & --           &      -- & --            &      -0.403 & 0.000$^{**}$   &  -0.423 & 0.000$^{**}$   \\
-        2018                               &      -- & --           &      -- & --            &      -0.158 & 0.005$^{**}$   &  -0.185 & 0.002$^{**}$   \\
-        2019                               &      -- & --           &      -- & --            &      -0.135 & 0.005$^{**}$   &  -0.150 & 0.002$^{**}$   \\
-        2020                               &      -- & --           &      -- & --            &       0.262 & 0.000$^{**}$   &   0.263 & 0.000$^{**}$   \\
-        2021                               &      -- & --           &      -- & --            &      -0.020 & 0.659          &  -0.033 & 0.482          \\
-        2022                               &      -- & --           &      -- & --            &       0.163 & 0.002$^{**}$   &   0.172 & 0.001$^{**}$   \\
-                                                                                                                                                  \\
-        Vol Model: gjr-std$^{f}$           &      -- & --           &      -- & --            &          -- & --             &   0.005 & 0.852          \\
-        Vol Model: cs-std$^{f}$            &      -- & --           &      -- & --            &          -- & --             &   0.133 & 0.000$^{**}$   \\
-        Vol Model: cs-gjr$^{f}$            &      -- & --           &      -- & --            &          -- & --             &   0.014 & 0.855          \\
-        Vol Model: cs-cs$^{f}$             &      -- & --           &      -- & --            &          -- & --             &   0.099 & 0.704          \\
-        Vol Model: gjr-gjr$^{f}$           &      -- & --           &      -- & --            &          -- & --             &   0.125 & 0.132          \\
-        T-Dist: Skewed-Standard$^{g}$      &      -- & --           &      -- & --            &          -- & --             &  -0.061 & 0.014$^{*}$    \\
-        T-Dist: Skewed-Skewed$^{g}$        &      -- & --           &      -- & --            &          -- & --             &   0.072 & 0.438          \\
+                                                                                                                                                \\
+        Dependent Var.                     & log(dtw)&              & log(dtw)&              & log(dtw)&              & log(dtw)&               \\
+                                                                                                                                                \\
+        Intercept                          &   4.374 & 0.013$^{**}$ &   3.898 & 0.063$^{**}$ &   4.132 & 0.070$^{**}$ &   4.089 & 0.075$^{**}$  \\
+        Fitted Corr. $\hat{\rho}$          &   0.012 & 0.062        &   0.089 & 0.056        &  -0.099 & 0.066        &  -0.113 & 0.066$^{+}$   \\
+        (Fitted Cor. $\hat{\rho}$)$^{2}$   &  -2.316 & 0.087$^{**}$ &  -2.143 & 0.078$^{**}$ &  -2.192 & 0.083$^{**}$ &  -2.301 & 0.094$^{**}$  \\  \\        
+        $\Delta$ Unconditional Mean$^{a}$  &      -- & --           & 306.257 & 6.879$^{**}$ & 280.713 & 7.176$^{**}$ & 281.441 & 7.176$^{**}$  \\
+        $\Delta$ Unconditional Var$^{b}$   &      -- & --           &  -3.261 & 0.607$^{**}$ &  -2.015 & 0.641$^{**}$ &  -1.992 & 0.641$^{**}$  \\
+        Total Unconditional Var$^{c}$      &      -- & --           &   3.489 & 0.584$^{**}$ &   2.180 & 0.626$^{**}$ &   2.161 & 0.626$^{**}$  \\
+        Average Pair Persistence$^{d}$     &      -- & --           &   0.065 & 0.068        &  -0.034 & 0.068        &   0.002 & 0.070         \\
+        Intra-Sector Pair                  &      -- & --           &      -- & --           &         &              &   0.085 & 0.029$^{**}$  \\
+        No. of ARMA Par$^{e}$              &      -- & --           &      -- & --           &         &              &  -0.001 & 0.004         \\
+        No. of GARCH Par$^{e}$             &      -- & --           &      -- & --           &         &              &  -0.009 & 0.013         \\  \\      
+        2001$^{f}$                         &      -- & --           &      -- & --           &   0.047 & 0.055        &   0.039 & 0.056         \\
+        2002                               &      -- & --           &      -- & --           &  -0.284 & 0.074$^{**}$ &  -0.265 & 0.074$^{**}$  \\
+        2003                               &      -- & --           &      -- & --           &   0.014 & 0.075        &   0.020 & 0.075         \\
+        2004                               &      -- & --           &      -- & --           &  -0.310 & 0.072$^{**}$ &  -0.310 & 0.072$^{**}$  \\
+        2005                               &      -- & --           &      -- & --           &  -0.216 & 0.076$^{**}$ &  -0.198 & 0.076$^{**}$  \\
+        2006                               &      -- & --           &      -- & --           &  -0.136 & 0.069$^{*}$  &  -0.133 & 0.069$^{+}$   \\
+        2007                               &      -- & --           &      -- & --           &  -0.051 & 0.076        &  -0.030 & 0.076         \\
+        2008                               &      -- & --           &      -- & --           &   0.124 & 0.060$^{*}$  &   0.159 & 0.061$^{**}$  \\
+        2009                               &      -- & --           &      -- & --           &   0.574 & 0.062$^{**}$ &   0.608 & 0.063$^{**}$  \\
+        2010                               &      -- & --           &      -- & --           &   0.061 & 0.062        &   0.091 & 0.063         \\
+        2011                               &      -- & --           &      -- & --           &   0.054 & 0.055        &   0.103 & 0.057$^{+}$   \\
+        2012                               &      -- & --           &      -- & --           &  -0.223 & 0.067$^{**}$ &  -0.199 & 0.068$^{**}$  \\
+        2013                               &      -- & --           &      -- & --           &  -0.008 & 0.066        &   0.011 & 0.067         \\
+        2014                               &      -- & --           &      -- & --           &  -0.331 & 0.064$^{**}$ &  -0.320 & 0.065$^{**}$  \\
+        2015                               &      -- & --           &      -- & --           &  -0.152 & 0.060$^{*}$  &  -0.124 & 0.060$^{*}$   \\
+        2016                               &      -- & --           &      -- & --           &  -0.008 & 0.051        &   0.008 & 0.052         \\
+        2017                               &      -- & --           &      -- & --           &  -0.385 & 0.047$^{**}$ &  -0.375 & 0.047$^{**}$  \\
+        2018                               &      -- & --           &      -- & --           &  -0.177 & 0.057$^{**}$ &  -0.152 & 0.057$^{**}$  \\
+        2019                               &      -- & --           &      -- & --           &  -0.102 & 0.048$^{*}$  &  -0.085 & 0.049$^{+}$   \\
+        2020                               &      -- & --           &      -- & --           &   0.193 & 0.056$^{**}$ &   0.220 & 0.057$^{**}$  \\
+        2021                               &      -- & --           &      -- & --           &  -0.010 & 0.046        &   0.003 & 0.046         \\
+        2022                               &      -- & --           &      -- & --           &   0.153 & 0.052$^{**}$ &   0.178 & 0.053$^{**}$  \\  \\
+        Vol Model: gjr-std$^{g}$           &      -- & --           &      -- & --           &      -- & --           &   0.000 & 0.024         \\
+        Vol Model: cs-std$^{g}$            &      -- & --           &      -- & --           &      -- & --           &   0.122 & 0.033$^{**}$  \\
+        Vol Model: cs-gjr$^{g}$            &      -- & --           &      -- & --           &      -- & --           &   0.044 & 0.075         \\
+        Vol Model: cs-cs$^{g}$             &      -- & --           &      -- & --           &      -- & --           &   0.095 & 0.260         \\
+        Vol Model: gjr-gjr$^{g}$           &      -- & --           &      -- & --           &      -- & --           &   0.120 & 0.081         \\
+        T-Dist: Skewed-Standard$^{h}$      &      -- & --           &      -- & --           &      -- & --           &  -0.047 & 0.024$^{*}$   \\
+        T-Dist: Skewed-Skewed$^{h}$        &      -- & --           &      -- & --           &      -- & --           &   0.099 & 0.092         \\  \\
+        R$^{2}$                            &   0.316 & --           &   0.463 & --           &   0.496 & --           &   0.498 & --            \\
+        Residual Standard Error            &   0.847 & --           &   0.751 & --           &   0.729 & --           &   0.728 & --            \\
         \midrule
     \end{tabular}
     \begin{tablenotes}
         \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
-        \item {$^{a}$ The absolute difference between the unconditional mean return for each stock in the pair}
-        \item {$^{b}$ The sum of the unconditional variances from each stock's return series in the pair}
-        \item {$^{c}$ The geometric average of each stock return's persistence as estimated by each series' optimized ARMA model. Persistence a measure of the a series' \textit{memory} or how long a small perturbation at a point in time effects the future values of the series. It takes values on the unit interval with a value of one indicating an infinitely long memory.}
-        \item {$^{d}$ The total number of ARMA or GARCH parameters across both pairs.}
-        \item {$^{e}$ A set of indicator variables for annual fixed effects}
-        \item {$^{f}$ Indicator variable that uniquely identifies what kind of volatility models are used for each stock in the pair. Three choices are available for each marginal model. \textbf{std}: the standard GARCH model of \cite{Bollerslev1986Garch}. \textbf{gjr}: a GARCH model from \cite{GJR1993Garch} that allows for asymmetric responses to positive or negative returns. \textbf{cs}: The component-GARCH model from \cite{EngleLee1993APA}.}
-        \item {$^{g}$ Indicator variable that uniquely identifies what kind of distributions models are used for each stock in the pair. Two choices are available for each marginal model. \textbf{Standard}: The standard t-Distribution. \textbf{Skewed}: The skewed t-Distribution of \cite{FernandezSteel1998}.}
+        \item {$^{a}$ The absolute difference between the unconditional mean return of each stock in the pair}
+        \item {$^{b}$ The absolute difference between the unconditional variance of each stock in the pair}
+        \item {$^{c}$ The sum of the unconditional variances from each stock's return series in the pair}
+        \item {$^{d}$ The geometric average of each stock return's persistence as estimated by each series' optimized ARMA model. Persistence a measure of the a series' \textit{memory} or how long a small perturbation at a point in time effects the future values of the series. It takes values on the unit interval with a value of one indicating an infinitely long memory.}
+        \item {$^{e}$ The total number of ARMA or GARCH parameters across both pairs.}
+        \item {$^{f}$ A set of indicator variables for annual fixed effects}
+        \item {$^{g}$ Indicator variable that uniquely identifies what kind of volatility models are used for each stock in the pair. Three choices are available for each marginal model. \textbf{std}: the standard GARCH model of \cite{Bollerslev1986Garch}. \textbf{gjr}: a GARCH model from \cite{GJR1993Garch} that allows for asymmetric responses to positive or negative returns. \textbf{cs}: The component-GARCH model from \cite{EngleLee1993APA}.}
+        \item {$^{h}$ Indicator variable that uniquely identifies what kind of distributions models are used for each stock in the pair. Two choices are available for each marginal model. \textbf{Standard}: The standard t-Distribution. \textbf{Skewed}: The skewed t-Distribution of \cite{FernandezSteel1998}.}
     \end{tablenotes}
     \label{tbl:correlation_to_log_dtw_regression}
 \end{table}
 
+
+\begin{table}
+    \fontsize{8pt}{8pt}\selectfont
+    \caption{Regression with Pearson's Correlation Coefficient}
+    \centering
+    \begin{tabular}{l r l r l r l r l}
+        \midrule
+        & \multicolumn{2}{c}{(A)} & \multicolumn{2}{c}{(B)} & \multicolumn{2}{c}{(C)} & \multicolumn{2}{c}{(D)}  \\
+         & Coef & Std Err & Coef & Std Err & Coef & Std Err & Coef & Std Err  \\
+        \midrule
+                                                                                                                                                 \\
+        Dependent Var.                     & log(dtw)&              & log(dtw)&               & log(dtw)&              & log(dtw)&               \\
+                                                                                                                                                 \\
+        Intercept                          &  4.363 & 0.013$^{**}$  &   3.843 & 0.064$^{**}$ &   4.132 & 0.070$^{**}$  &   4.068 & 0.074$^{**}$  \\
+        Fitted Corr. $\dot{\rho}$          & -0.149 & 0.060$^{*}$   &  -0.101 & 0.053$^{+}$  &  -0.371 & 0.062$^{**}$  &  -0.398 & 0.063$^{**}$  \\
+        (Fitted Cor. $\dot{\rho}$)$^{2}$   & -1.978 & 0.084$^{**}$  &  -1.789 & 0.075$^{**}$ &  -1.848 & 0.078$^{**}$  &  -1.910 & 0.088$^{**}$  \\  \\
+        $\Delta$ Unconditional Mean$^{a}$  &     -- & --            & 307.901 & 6.908$^{**}$ & 276.985 & 7.150$^{**}$  & 277.368 & 7.151$^{**}$  \\
+        $\Delta$ Unconditional Var$^{b}$   &     -- & --            &  -3.155 & 0.609$^{**}$ &  -0.657 & 0.635         &  -0.668 & 0.636         \\
+        Total Unconditional Var$^{c}$      &     -- & --            &   3.417 & 0.587$^{**}$ &   0.782 & 0.620         &   0.801 & 0.622         \\
+        Average Pair Persistence$^{d}$     &     -- & --            &   0.116 & 0.068$^{+}$  &  -0.032 & 0.068         &   0.000 & 0.070         \\
+        Intra-Sector Pair                  &     -- & --            &      -- & --           &      -- & --            &   0.065 & 0.029$^{*}$   \\
+        No. of ARMA Par$^{e}$              &     -- & --            &      -- & --           &      -- & --            &   0.008 & 0.004$^{*}$   \\
+        No. of GARCH Par$^{e}$             &     -- & --            &      -- & --           &      -- & --            &  -0.008 & 0.013         \\  \\
+        2001$^{f}$                         &     -- & --            &      -- & --           &   0.063 & 0.055         &   0.037 & 0.055         \\
+        2002                               &     -- & --            &      -- & --           &  -0.252 & 0.073$^{**}$  &  -0.223 & 0.074$^{**}$  \\
+        2003                               &     -- & --            &      -- & --           &   0.052 & 0.074         &   0.051 & 0.074         \\
+        2004                               &     -- & --            &      -- & --           &  -0.305 & 0.071$^{**}$  &  -0.295 & 0.072$^{**}$  \\
+        2005                               &     -- & --            &      -- & --           &  -0.217 & 0.075$^{**}$  &  -0.194 & 0.075$^{**}$  \\
+        2006                               &     -- & --            &      -- & --           &  -0.134 & 0.068$^{*}$   &  -0.121 & 0.068$^{+}$   \\
+        2007                               &     -- & --            &      -- & --           &  -0.039 & 0.075         &  -0.009 & 0.076         \\
+        2008                               &     -- & --            &      -- & --           &   0.231 & 0.060$^{**}$  &   0.261 & 0.061$^{**}$  \\
+        2009                               &     -- & --            &      -- & --           &   0.650 & 0.061$^{**}$  &   0.685 & 0.062$^{**}$  \\
+        2010                               &     -- & --            &      -- & --           &   0.137 & 0.061$^{*}$   &   0.178 & 0.062$^{**}$  \\
+        2011                               &     -- & --            &      -- & --           &   0.211 & 0.055$^{**}$  &   0.256 & 0.057$^{**}$  \\
+        2012                               &     -- & --            &      -- & --           &  -0.238 & 0.067$^{**}$  &  -0.207 & 0.067$^{**}$  \\
+        2013                               &     -- & --            &      -- & --           &  -0.022 & 0.065         &   0.000 & 0.066         \\
+        2014                               &     -- & --            &      -- & --           &  -0.330 & 0.064$^{**}$  &  -0.312 & 0.064$^{**}$  \\
+        2015                               &     -- & --            &      -- & --           &  -0.150 & 0.059$^{*}$   &  -0.120 & 0.060$^{*}$   \\
+        2016                               &     -- & --            &      -- & --           &  -0.009 & 0.051         &   0.011 & 0.051         \\
+        2017                               &     -- & --            &      -- & --           &  -0.409 & 0.047$^{**}$  &  -0.391 & 0.047$^{**}$  \\
+        2018                               &     -- & --            &      -- & --           &  -0.151 & 0.056$^{**}$  &  -0.115 & 0.057$^{*}$   \\
+        2019                               &     -- & --            &      -- & --           &  -0.137 & 0.048$^{**}$  &  -0.134 & 0.049$^{**}$  \\
+        2020                               &     -- & --            &      -- & --           &   0.429 & 0.056$^{**}$  &   0.436 & 0.058$^{**}$  \\
+        2021                               &     -- & --            &      -- & --           &  -0.024 & 0.046         &  -0.014 & 0.046         \\
+        2022                               &     -- & --            &      -- & --           &   0.130 & 0.051$^{*}$   &   0.164 & 0.052$^{**}$  \\  \\
+        Vol Model: gjr-std$^{g}$           &     -- & --            &      -- & --           &      -- & --            &   0.010 & 0.024         \\
+        Vol Model: cs-std$^{g}$            &     -- & --            &      -- & --           &      -- & --            &   0.115 & 0.033$^{**}$  \\
+        Vol Model: cs-gjr$^{g}$            &     -- & --            &      -- & --           &      -- & --            &   0.042 & 0.075         \\
+        Vol Model: cs-cs$^{g}$             &     -- & --            &      -- & --           &      -- & --            &   0.089 & 0.259         \\
+        Vol Model: gjr-gjr$^{g}$           &     -- & --            &      -- & --           &      -- & --            &   0.139 & 0.080$^{+}$   \\
+        T-Dist: Skewed-Standard$^{h}$      &     -- & --            &      -- & --           &      -- & --            &  -0.047 & 0.024$^{*}$   \\
+        T-Dist: Skewed-Skewed$^{h}$        &     -- & --            &      -- & --           &      -- & --            &   0.080 & 0.092         \\  \\
+        R$^{2}$                            &  0.309 & --            &   0.458 & --           &   0.501 & --            &   0.502 & --            \\
+        Residual Standard Error            &  0.852 & --            &   0.755 & --           &   0.725 & --            &   0.725 & --            \\
+        \midrule
+    \end{tabular}
+    \begin{tablenotes}
+        \item{\footnotesize \textbf{Signif. Codes:} 0 '**' 0.01 '*' 0.05 '+' 0.1 ' ' 1}
+        \item {$^{a}$ The absolute difference between the unconditional mean return of each stock in the pair}
+        \item {$^{b}$ The absolute difference between the unconditional variance of each stock in the pair}
+        \item {$^{c}$ The sum of the unconditional variances from each stock's return series in the pair}
+        \item {$^{d}$ The geometric average of each stock return's persistence as estimated by each series' optimized ARMA model. Persistence a measure of the a series' \textit{memory} or how long a small perturbation at a point in time effects the future values of the series. It takes values on the unit interval with a value of one indicating an infinitely long memory.}
+        \item {$^{e}$ The total number of ARMA or GARCH parameters across both pairs.}
+        \item {$^{f}$ A set of indicator variables for annual fixed effects}
+        \item {$^{g}$ Indicator variable that uniquely identifies what kind of volatility models are used for each stock in the pair. Three choices are available for each marginal model. \textbf{std}: the standard GARCH model of \cite{Bollerslev1986Garch}. \textbf{gjr}: a GARCH model from \cite{GJR1993Garch} that allows for asymmetric responses to positive or negative returns. \textbf{cs}: The component-GARCH model from \cite{EngleLee1993APA}.}
+        \item {$^{h}$ Indicator variable that uniquely identifies what kind of distributions models are used for each stock in the pair. Two choices are available for each marginal model. \textbf{Standard}: The standard t-Distribution. \textbf{Skewed}: The skewed t-Distribution of \cite{FernandezSteel1998}.}
+    \end{tablenotes}
+    \label{tbl:correlation_to_log_dtw_regression_pearson}
+\end{table}
 
 \chapter{Conclusion} \label{sec:Conclusion}
 
@@ -911,16 +992,14 @@ A full grid-search over these dimensions is time-consuming and impractical. To r
     
     With these dimensions, a total of 36 volatility models are available to choose from.
 
-    \item \textbf{Select the best model specification.} The fitted residuals of a model are checked against a battery of tests to confirm the independent and identical assumptions as well as to verify the correct distribution has been selected. The tests used include: (a) Moment LM tests to check for any remaining auto-correlation in the first four moments, (b) Kolmogorov-Smirnov test to check the residuals against the chosen theoretical distribution, (c) Hong and Li \cite{HongLi2005} non-parametric density test jointly for i.i.d and correct distribution specification, (d) Shapiro-Wilks \cite{ShapiroWilks1965} test for normality, and (e) Jarque-Bera \cite{JarqueBera1980} test for joint normality for skew and kurtosis.
-    
-    With these tests in hand, finding the best model reduces to selecting the GARCH specification that:
+    \item \textbf{Select the best model specification.} The fitted residuals of a model are checked against a battery of tests to confirm the independent and identical assumptions as well as to verify the correct distribution has been selected. The tests used include: (a) Weighted moment LM tests to check for any remaining auto-correlation in the first two moments and (b) additional weighted LM tests to check for the correct ARCH specification. Both tests come from \cite{Fisher_and_Gallagher_2012}. (c) To verify the choice of the conditional distribution, g, a Pearson’s Goodness-of-Fit Test is used to compare the histograms of the standard residuals and the theoretical distribution. The test is run multiple times with different number of bins. (d) The fourth diagnonstic test comes from \cite{Engle_and_Ng_1993} and checks for the presence of asymmetric effects in the residuals of the ARMA-GARCH models. With these tests in hand, finding the best model reduces to selecting the GARCH specification that:
     
     \begin{itemize}
-        \item Passes all five distributional tests
+        \item Passes all four distributional tests
         \item Minimizes the Bayesian information criterion (BIC)
     \end{itemize}
 
-    If no specifications pass all five tests, then the one that minimizes the BIC across the 36 candidate models is selected.
+    If no specifications pass all four tests, then the one that minimizes the BIC across the 36 candidate models is selected.
 
 \end{enumerate}
 
