@@ -4,8 +4,6 @@ source("R/auto_marginal.R")
 source("R/plots.R")
 source("R/similarity_functions.R")# import read_and_melt, dynamic_time_warp from R/similarity_script.R
 
-
-
 # Delannoy Number
 function(x, y)
 {
@@ -19,48 +17,30 @@ function(x, y)
 
 
 
-dtfStdRes1920 <- fread("data/label_analysis/DA_2019_2020_std_resids.csv")
-dtfStdPrc1920 <- fread("data/label_analysis/DA_2019_2020_std_price.csv")
-ticks <- sort(setdiff(names(dtfStdRes1920), c("Date")))
-
-m_dtw <- dynamic_time_warp("A", ticks, dtfStdPrc1920[, -c("Date")])
-m_cor <- correlation("A", ticks, dtfStdRes1920[, -c("Date")])
-dtfM1920 <- data.table(dtw=c(m_dtw), cor=c(m_cor), tick=colnames(m_dtw))
-plot(dtfM$cor, dtfM$dtw, ylim=c(0, 700), xlim=c(0, 1), main="2019-2020", ylab="dtw", xlab="cor")
-
-
-dtfStdRes0708 <- fread("data/label_analysis/DA_2007_2008_std_resids.csv")
-dtfStdPrc0708 <- fread("data/label_analysis/DA_2007_2008_std_price.csv")
-ticks <- sort(setdiff(names(dtfStdRes0708), c("Date")))
-
-
-m_dtw <- dynamic_time_warp("A", ticks, dtfStdPrc0708[, -c("Date")])
-m_cor <- correlation("A", ticks, dtfStdRes0708[, -c("Date")])
-dtfM0708 <- data.table(dtw=c(m_dtw), cor=c(m_cor), tick=colnames(m_dtw))
-plot(dtfM0708$cor, dtfM0708$dtw, ylim=c(0, 700), xlim=c(0, 1), main="2007-2008", ylab="dtw", xlab="cor")
-
-
 # Vanilla DTW vs Weighted DTW vs 
-t1 <- "MSFT"; t2 <- "ADBE"
-dtfStdPrc <- fread("data/label_analysis/2018_std_price.csv")
-m1 <- readRDS(sprintf("data/model_objects/2018/2018_%s.rds", t1))
-m2 <- readRDS(sprintf("data/model_objects/2018/2018_%s.rds", t2))
+t1 <- "TER"; t2 <- "LRCX"
+yr <- 2021
+dtfStdPrc <- fread(sprintf("data/label_analysis/%d_std_price.csv", yr))
+dtfLogR <- fread("data/SandP_log_return_history.csv")
+m1 <- readRDS(sprintf("data/model_objects/%d/%d_%s.rds", yr, yr, t1))
+m2 <- readRDS(sprintf("data/model_objects/%d/%d_%s.rds", yr, yr, t2))
+
+dtfLogR[year(Date) == 2021, .SD, .SDcols=c("Date", t1, t2)]
 
 p <- dtfStdPrc[[t1]]
 q <- dtfStdPrc[[t2]]
-N <- dtfStdPrc[, .N]
 
-summary(c(C))
-image(D**2, y=1:505, col=grDevices::terrain.colors(100), x=1:505, 
-      main=sprintf("Beta: %s", beta))
-contour(D**2, x = 1:505, y = 1:505, add = TRUE)
+
+plot(estTCop, "surface")
+plot(estTCop, "contour")
+plot(estTCop, "lambda")
+BiCopEst(as.numeric(pit(m1$model)), as.numeric(pit(m2$model)),
+         family = 2)
+
 
 
 unc_dtw <- dtw(p, q, keep.internals=TRUE, window.type="none")
 scb_dtw <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=15)
-
-unc_wgt_dtw <- dtw(C, keep.internals=TRUE, window.type="none")
-scb_wgt_dtw <- dtw(C, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(w * N))
 
 image(W, col = grDevices::terrain.colors(100), x = 1:505, 
       y = 1:505)
@@ -91,57 +71,6 @@ plot(sigma(m1$model))
 plot(sigma(m2$model))
 
 
-# Calculate dtw metrics
-# ------------------------------------------------------------------------------
-dtfSandP <- read_SandP_data()
-dtfStdPrc1920 <- fread("data/label_analysis/DA_2019_2020_std_price.csv")
-Rho1920 <- read.table("data/association_results/archive/corr_2019_2020", sep="\t",
-                      header=TRUE, row.names = 1)
-Rho1920 <- read.table("data/association_results/archive/corr_2019_2020", header=TRUE, row.names=1)
-Rho1920 <- as.matrix(Rho1920)
-
-
-
-ticks <- setdiff(names(dtfStdPrc1920), "Date")
-w <- 0.1
-N <- dtfStdPrc1920[,.N]
-log_fun <- function(x, g, c0, wm=1)
-{
-  wm / (1 + exp(-g * (x - c0)))
-}
-W <- outer(1:N, 1:N, function(i, j) log_fun(abs(i - j), g=0.03, c0=N/4))
-
-W_0 <- W_SCB <- W_WTD <- matrix(NA_real_, nrow=length(ticks), ncol=length(ticks),
-                                dimnames = list(ticks, ticks))
-tpairs <- combn(ticks, 2, simplify = FALSE)
-
-for (tt in seq_along(tpairs)) {
-  if (tt %% 250 == 0)
-    print(sprintf("%d of %d started at %s", tt, length(tpairs), Sys.time()))
-  t1 <- tpairs[[tt]][1]; t2 <- tpairs[[tt]][2]
-  
-  p <- dtfStdPrc1920[[t1]]
-  q <- dtfStdPrc1920[[t2]]
-  
-  D <- outer(p, q, function(i, j) abs(i - j))
-  C <- (D * W)**2
-  
-  dtw_0 <- dtw(p, q, keep.internals=TRUE, window.type="none")
-   dtw_scb <- dtw(p, q, keep.internals=TRUE, window.type=sakoeChibaWindow, window.size=round(w * N))
-  dtw_wgt <- dtw(C, keep.internals=TRUE, window.type="none")
-  
-  W_0[t1, t2] <- W_0[t2, t1] <- dtw_0$distance
-  W_SCB[t1, t2] <- W_SCB[t2, t1] <- dtw_scb$distance
-  W_WTD[t1, t2] <- W_WTD[t2, t1] <- dtw_wgt$distance
-}
-
-diag(W_0) <- 0
-diag(W_SCB) <- 0
-diag(W_WTD) <- 0
-
-write.table(W_0, file="data/association_results/DA_2019_2020_dtw_unconstrained", sep="\t")
-write.table(W_SCB, file="data/association_results/DA_2019_2020_dtw_sakoechiba", sep="\t")
-write.table(W_WTD, file="data/association_results/DA_2019_2020_dtw_logweights", sep="\t")
 
 
 # Use DTW distance to cluster stock series & test group statistics
@@ -334,89 +263,4 @@ bb <- cluster_and_plot_series(D=results[["2011"]], Price=lst_years[["2011"]],
                               k=9, return_melted = TRUE, method="ward")
 
 # ------------------------------------------------------------------------------
-
-
-# Troubleshoot model diagnostics for failed model specifications 
-# ------------------------------------------------------------------------------
-spec0708 <- read_json("data/marginal_specifications_2007_2008.json")
-gvbt <- good_vs_bad_symbols(spec0708)
-
-
-gvbt$fail_ticks
-
-tick_ <- "MTB"
-dtfU <- data.table(parse_json(tick_))
-u <- dtfU[year(Date) %in% c(2007, 2008), diff(log(close))]
-
-
-fit <- spec0708[[tick_]][1:7]
-spec_mod <- ugarchspec(
-  variance.model = list(model=fit$garchmod[[1]], garchOrder=c(as.integer(fit$arch[[1]]), as.integer(fit$garch[[1]]))),
-  mean.model = list(armaOrder=c(fit$ar[[1]], fit$ma[[1]]), include.mean=TRUE),
-  distribution.model = fit$distr[[1]]
-)
-
-
-fit_ <- try(ugarchfit(spec=spec_mod, data=u))
-marg_tests <- marginal_tests(fit_, print=TRUE, plot=TRUE)
-verify_marginal_test(marg_tests)
-
-
-summary(u)
-(min_u <- which.min(u))
-dtfU[year(Date) %in% 2007:2008][(min_u - 5):(min_u + 5)]
-u <- u[-which.min(u)]
-
-fit <- auto_fit(u, 3, 3)
-spec_mod <- ugarchspec(
-  variance.model = list(model=fit$garchmod, garchOrder=c(as.integer(fit$arch), as.integer(fit$garch))),
-  mean.model = list(armaOrder=c(fit$ar, fit$ma), include.mean=TRUE),
-  distribution.model = fit$distr
-)
-
-fit_ <- try(ugarchfit(spec=spec_mod, data=u))
-marg_tests <- marginal_tests(fit_, print=TRUE, plot=TRUE)
-verify_marginal_test(marg_tests)
-# ------------------------------------------------------------------------------
-
-
-# Simulate GARCH models
-# -------------------------------------------------
-spec0708 <- read_json("data/marginal_specifications_2007_2008.json")
-gvbt <- good_vs_bad_symbols(spec0708)
-
-gvbt$fail_ticks
-
-tickU <- "GOOGL"
-tickV <- "LEG"
-dtfU <- data.table(parse_json(tickU))
-dtfV <- data.table(parse_json(tickV))
-u <- dtfU[year(Date) %in% c(2007, 2008), diff(log(close))]
-v <- dtfV[year(Date) %in% c(2007, 2008), diff(log(close))]
-
-specU <- spec0708[[tickU]][1:7]
-ugarchspecU <- ugarchspec(
-  variance.model = list(model=specU$garchmod[[1]], garchOrder=c(as.integer(specU$arch[[1]]), as.integer(specU$garch[[1]]))),
-  mean.model = list(armaOrder=c(specU$ar[[1]], specU$ma[[1]]), include.mean=TRUE),
-  distribution.model = specU$distr[[1]]
-)
-fitU <- try(ugarchfit(spec=ugarchspecU, data=u))
-
-specV <- spec0708[[tickV]][1:7]
-ugarchspecV <- ugarchspec(
-  variance.model = list(model=specV$garchmod[[1]], garchOrder=c(as.integer(specV$arch[[1]]), as.integer(specV$garch[[1]]))),
-  mean.model = list(armaOrder=c(specV$ar[[1]], specV$ma[[1]]), include.mean=TRUE),
-  distribution.model = specV$distr[[1]]
-)
-fitV <- try(ugarchfit(spec=ugarchspecV, data=v))
-
-
-simU <- ugarchsim(fit=fitU, n.sim=400, n.start=100, m.sim=1)
-simV <- ugarchsim(fit=fitV, n.sim=400, n.start=100, m.sim=1)
-cor(simU@simulation$seriesSim, simV@simulation$seriesSim)
-
-
-# ------------------------------------------------------------------------------
-
-
 
