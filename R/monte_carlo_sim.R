@@ -29,13 +29,23 @@ setnames(dtfModSum, "label", "year")
 
 
 files_ <- list.files("data/association_results/", pattern = "model_cor", full.names=TRUE)
-lstCors <- lapply(files_, read_association_table)
-names(lstCors) <- sapply(files_, function(x) strsplit(x, "//")[[1]][2])
-dtfCors <- rbindlist(lapply(names(lstCors), melt_unique_assc_matrix, lst=lstCors))
-setnames(dtfCors, "value", "model_cor")
-dtfCors[, year := substring(label, 1, 4)]
-dtfCors[, label := NULL]
-dtfCors[, cor_bin := cut(model_cor, dtfCors[, hist(model_cor, breaks=40, plot=FALSE)]$breaks)]
+lstMCors <- lapply(files_, read_association_table)
+names(lstMCors) <- sapply(files_, function(x) strsplit(x, "//")[[1]][2])
+dtfMCors <- rbindlist(lapply(names(lstMCors), melt_unique_assc_matrix, lst=lstMCors))
+setnames(dtfMCors, "value", "model_cor")
+dtfMCors[, year := substring(label, 1, 4)]
+dtfMCors[, label := NULL]
+dtfMCors[, mcor_bin := cut(model_cor, dtfMCors[, hist(model_cor, breaks=40, plot=FALSE)]$breaks)]
+
+
+files_ <- list.files("data/association_results/", pattern = "unadjusted_cor", full.names=TRUE)
+lstUCors <- lapply(files_, read_association_table)
+names(lstUCors) <- sapply(files_, function(x) strsplit(x, "//")[[1]][2])
+dtfUCors <- rbindlist(lapply(names(lstUCors), melt_unique_assc_matrix, lst=lstUCors))
+setnames(dtfUCors, "value", "unadjusted_cor")
+dtfUCors[, year := substring(label, 1, 4)]
+dtfUCors[, label := NULL]
+dtfUCors[, ucor_bin := cut(unadjusted_cor, dtfUCors[, hist(unadjusted_cor, breaks=40, plot=FALSE)]$breaks)]
 
 
 files_ <- list.files("data/association_results/", pattern="dtw", full.names=TRUE)
@@ -46,8 +56,7 @@ dtfDTW[, year := substring(label, 1, 4)]
 dtfDTW[, label := NULL]
 setnames(dtfDTW, "value", "dtw")
 
-
-dtfDist <- merge(dtfCors, dtfDTW)
+dtfDist <- Reduce(merge, list(dtfMCors, dtfDTW), dtfUCors)
 dtfDist[, year := as.integer(year)]
 dtfDist[, tick1 := as.character(tick1)]
 dtfDist[, tick2 := as.character(tick2)]
@@ -55,7 +64,6 @@ dtfDist[, tick2 := as.character(tick2)]
 # dtfSmp1 <- dtfCors[, sample_cor_bin(.SD, 300), by=cor_bin][order(cor_bin)]
 # dtfSmp1 <- merge(dtfSmp1, dtfDTW)
 # fwrite(dtfSmp1, file="data/monte_carlo/sample_20240118_1.csv")
-dtf <- fread("data/monte_carlo/")
 
 
 # Extract fitted distribution from uGARCH-fit and perform monte-carlo sampling
@@ -227,8 +235,21 @@ ggplot(dtf, aes(model_cor, log(dtw))) +
 summary(lm(log(dtw) ~ poly(model_cor, 2), data=dtf))
 
 # ------------------------------------------------
+t1 <- "CTSH"
+t2 <- "VRTX"
+yr_lb <- "2012"
+tblUnadj <- read_association_table(sprintf("data/association_results/%s_unadjusted_cor.tsv", yr_lb))
+tblDTW <- read_association_table(sprintf("data/association_results/%s_dtw.tsv", yr_lb))
+tblMod <- read_association_table(sprintf("data/association_results/%s_model_cor.tsv", yr_lb))
+
+tblUnadj[t1, t2]
+tblDTW[t1, t2]
+tblMod[t1, t2]
 
 
+
+dtf2[, plot(model_cor, log(dtw), main="model_cor", xlim=c(-0.6, 1.1))]
+dtf2[, plot(rho_m, log(dtw), main="rho_m", xlim=c(-0.6, 1.1))]
 # ------------------------------------------------
 
 # Regression Stats: Unc Mean, Unc Variance, Persistance, Halflife
@@ -246,32 +267,41 @@ for (i in 1:nrow(dtf)) {
   
   mod1 <- readRDS(t1_file_loc)
   mod2 <- readRDS(t2_file_loc)
+  tCop <- BiCopEst(as.numeric(pit(mod1$model)),
+                   as.numeric(pit(mod2$model)),
+                   family = 2, max.df = 30, se=TRUE)
   out <- data.table(tick1=t1, tick2=t2, year=as.character(yr_lb),
                     t1_unc_mean=uncmean(mod1$model), t1_unc_var=uncvariance(mod1$model),
                     t1_pers=persistence(mod1$model), t1_haflife=halflife(mod1$model),
                     t1_omega=coef(mod1$model)["omega"], t1_vmodel=mod1$model@model$modeldesc$vmodel,
                     t1_distr=mod1$model@model$modeldesc$distribution,
+                    t1_n_arma=sum(mod1$model@model$modelinc[1:3]) - 1,
+                    t1_n_garch=sum(mod1$model@model$modelinc[7:9]) - 3,
                     t2_unc_mean=uncmean(mod2$model), t2_unc_var=uncvariance(mod2$model),
                     t2_pers=persistence(mod2$model), t2_haflife=halflife(mod2$model),
                     t2_omega=coef(mod2$model)["omega"], t2_vmodel=mod2$model@model$modeldesc$vmodel,
-                    t2_distr=mod2$model@model$modeldesc$distribution)
+                    t2_distr=mod2$model@model$modeldesc$distribution,
+                    t2_n_arma=sum(mod2$model@model$modelinc[1:3]) - 1,
+                    t2_n_garch=sum(mod2$model@model$modelinc[7:9]) - 3,
+                    rho_m=tCop$par)
   collect3[[i]] <- out
 }
 dtfModStats <- rbindlist(collect3)
 dtfModStats[, year := as.character(year)]
 
-dtfSPComp <- fread("data/SandP_companies.csv")
+dtfSPComp <- fread("data/SandP_companies3.csv")
 dtf2 <- merge(dtf, dtfModStats)
 dtf2 <- merge(dtf2, dtfSPComp[, .(ticker, t1_sector=sector, t1_subindustry=subindustry)],
               by.x="tick1", by.y="ticker", all.x=TRUE)
 dtf2 <- merge(dtf2, dtfSPComp[, .(ticker, t2_sector=sector, t2_subindustry=subindustry)],
               by.x="tick2", by.y="ticker", all.x=TRUE)
 sub_industry_levels <- sort(unique(dtfSPComp$subindustry))
-dtf2[, t1_sector := factor(t1_sector, levels=sort(unique(t1_sector)))]
+sector_levels <- sort(unique(dtfSPComp$sector))
+dtf2[, t1_sector := factor(t1_sector, levels=sector_levels)]
 dtf2[, t1_subindustry := factor(t1_subindustry, levels=sub_industry_levels)]
 dtf2[, t1_vmodel := factor(t1_vmodel)]
 dtf2[, t1_distr := factor(t1_distr)]
-dtf2[, t2_sector := factor(t2_sector, levels=sort(unique(t2_sector)))]
+dtf2[, t2_sector := factor(t2_sector, levels=sector_levels)]
 dtf2[, t2_subindustry := factor(t2_subindustry, levels=sub_industry_levels)]
 dtf2[, t2_vmodel := factor(t2_vmodel)]
 dtf2[, t2_distr := factor(t2_distr)]
@@ -282,19 +312,50 @@ dtf2[, abs_omega_diff := abs(t1_omega - t2_omega)]
 dtf2[, mean_var := apply(.SD, 1, mean), .SDcols=c("t1_unc_var", "t2_unc_var")]
 dtf2[, sum_var := apply(.SD, 1, sum), .SDcols=c("t1_unc_var", "t2_unc_var")]
 dtf2[, max_var := apply(.SD, 1, max), .SDcols=c("t1_unc_var", "t2_unc_var")]
+dtf2[, abs_var_diff := apply(.SD, 1, function(x) abs(diff(x))), .SDcols=c("t1_unc_var", "t2_unc_var")]
 dtf2[, lm_year := factor(year, levels=sort(unique(year)))]
 dtf2[, pers_geom_avg := apply(.SD, 1, function(x) sqrt(prod(x))), .SDcols=c("t1_pers", "t2_pers")]
+dtf2[, vmodel_pair := apply(.SD, 1, function(x) paste(sort(c(x)), collapse="_")), .SDcols=c("t1_vmodel", "t2_vmodel")]
+dtf2[, distr_pair := apply(.SD, 1, function(x) paste(sort(c(x)), collapse="_")), .SDcols=c("t1_distr", "t2_distr")]
+dtf2[, vmodel_pair := factor(vmodel_pair, levels=c("sGARCH_sGARCH", "gjrGARCH_sGARCH", "csGARCH_sGARCH",
+                                                   "csGARCH_gjrGARCH", "csGARCH_csGARCH", "gjrGARCH_gjrGARCH"))]
+dtf2[, distr_pair := factor(distr_pair, levels=c("std_std", "sstd_std", "sstd_sstd"))]
+dtf2[, total_mean_par := apply(.SD, 1, sum), .SDcols=c("t1_n_arma", "t2_n_arma")]
+dtf2[, total_var_par := apply(.SD, 1, sum), .SDcols=c("t1_n_garch", "t2_n_garch")]
+
+
+# Degree 2 Polynomial and Intercept
+lm_2i_0 <- lm(log(dtw) ~ I(rho_m) + I((rho_m)**2), data=dtf2)
+lm_2i_1 <- lm(log(dtw) ~ I(rho_m) + I((rho_m)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg,
+              data=dtf2)
+lm_2i_2 <- lm(log(dtw) ~ I(rho_m) + I((rho_m)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + lm_year,
+              data=dtf2)
+lm_2i_3 <- lm(log(dtw) ~ I(rho_m) + I((rho_m)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + intra_sector + total_mean_par + total_var_par + lm_year + vmodel_pair + distr_pair,
+              data=dtf2)
+
+round(summary(lm_2i_0)$coefficients, 3)
+round(summary(lm_2i_1)$coefficients, 3)
+round(summary(lm_2i_2)$coefficients, 3)
+round(summary(lm_2i_3)$coefficients, 3)
+
+# Degree 2 Polynomial and constrained 
+lm_2_0 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2), data=dtf2)
+lm_2_1 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg,
+              data=dtf2)
+lm_2_2 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + lm_year,
+              data=dtf2)
+lm_2_3 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + intra_sector + total_mean_par + total_var_par + lm_year + vmodel_pair + distr_pair,
+              data=dtf2)
+
+round(summary(lm_2_0)$coefficients, 3)
+round(summary(lm_2_1)$coefficients, 3)
+round(summary(lm_2_2)$coefficients, 3)
+round(summary(lm_2_3)$coefficients, 3)
 
 
 
-summary(lm(log(dtw) ~ abs_mean_diff + sum_var + pers_geom_avg + poly(model_cor, 2) + intra_sector,
-               data=dtf2))
-summary(lm(log(dtw) ~ abs_mean_diff + sum_var + pers_geom_avg + poly(model_cor, 2) + intra_sector + lm_year,
-           data=dtf2))
-summary(lm(log(dtw) ~ abs_mean_diff + sum_var + pers_geom_avg + poly(model_cor, 2) + intra_sector + lm_year + t1_distr * t2_distr + t1_vmodel * t2_vmodel,
-           data=dtf2))
+dtf2[, plot(rho_m, log(dtw))]
+dtf2[, lines(sort(rho_m), fitted(lm_2_0)[order(rho_m)], col='gold', type='b')]
 
 
-round(summary(lm_model)$coefficients, 3)
-round(summary(lm_model_year)$coefficients, 3)
-
+# ------------------------------------------------
