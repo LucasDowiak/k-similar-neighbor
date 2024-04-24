@@ -254,6 +254,7 @@ dtf2[, plot(rho_m, log(dtw), main="rho_m", xlim=c(-0.6, 1.1))]
 
 # Regression Stats: Unc Mean, Unc Variance, Persistance, Halflife
 # ------------------------------------------------
+dtfLogR <- fread("data/SandP_log_return_history.csv")
 dtf <- fread("data/Sample_pairs_corr_to_dtw.csv")
 dtf[, year := as.character(year)]
 collect3 <- vector("list", dtf[,.N])
@@ -270,6 +271,9 @@ for (i in 1:nrow(dtf)) {
   tCop <- BiCopEst(as.numeric(pit(mod1$model)),
                    as.numeric(pit(mod2$model)),
                    family = 2, max.df = 30, se=TRUE)
+  pearson_cor <- dtfLogR[year(Date)==as.integer(yr_lb),
+                         cor(.SD, method="pearson"),
+                         .SDcols=c(t1, t2)]
   out <- data.table(tick1=t1, tick2=t2, year=as.character(yr_lb),
                     t1_unc_mean=uncmean(mod1$model), t1_unc_var=uncvariance(mod1$model),
                     t1_pers=persistence(mod1$model), t1_haflife=halflife(mod1$model),
@@ -283,7 +287,8 @@ for (i in 1:nrow(dtf)) {
                     t2_distr=mod2$model@model$modeldesc$distribution,
                     t2_n_arma=sum(mod2$model@model$modelinc[1:3]) - 1,
                     t2_n_garch=sum(mod2$model@model$modelinc[7:9]) - 3,
-                    rho_m=tCop$par)
+                    rho_m=tCop$par,
+                    pearson_rho_m=pearson_cor[1,2])
   collect3[[i]] <- out
 }
 dtfModStats <- rbindlist(collect3)
@@ -339,12 +344,12 @@ round(summary(lm_2i_2)$coefficients, 3)
 round(summary(lm_2i_3)$coefficients, 3)
 
 # Degree 2 Polynomial and constrained 
-lm_2_0 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2), data=dtf2)
-lm_2_1 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg,
+lm_2_0 <- lm(log(dtw) ~ I(pearson_rho_m) + I(pearson_rho_m**2), data=dtf2)
+lm_2_1 <- lm(log(dtw) ~ I(pearson_rho_m) + I(pearson_rho_m**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg,
               data=dtf2)
-lm_2_2 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + lm_year,
+lm_2_2 <- lm(log(dtw) ~ I(pearson_rho_m) + I(pearson_rho_m**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + lm_year,
               data=dtf2)
-lm_2_3 <- lm(log(dtw) ~ -1 + I(rho_m - 1) + I((rho_m - 1)**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + intra_sector + total_mean_par + total_var_par + lm_year + vmodel_pair + distr_pair,
+lm_2_3 <- lm(log(dtw) ~ I(pearson_rho_m) + I(pearson_rho_m**2) + abs_mean_diff + abs_var_diff + sum_var + pers_geom_avg + intra_sector + total_mean_par + total_var_par + lm_year + vmodel_pair + distr_pair,
               data=dtf2)
 
 round(summary(lm_2_0)$coefficients, 3)
